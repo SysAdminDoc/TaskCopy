@@ -1,0 +1,78 @@
+# AI working files (local-only, never commit)
+CLAUDE.md
+CODEX_CHANGELOG.md
+.claude/
+.codex/
+
+# Visual Studio / .NET
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userprefs
+*.swp
+*.swo
+*.pdb
+*.exe
+*.dll
+!src/**/Assets/*.dll
+*.cache
+*.log
+*.tlog
+*.tmp
+*.idb
+*.ilk
+*.opendb
+*.VC.db
+*.VC.opendb
+
+# Rider / ReSharper
+.idea/
+*.DotSettings.user
+
+# Build output
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+*.nuget.props
+*.nuget.targets
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Local SQLite (dev)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Local artifacts
+artifacts/
+publish/
+*.zip
+
+# Windhawk mod scratch (mod source itself stays tracked under windhawk/)
+windhawk/build/
