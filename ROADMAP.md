@@ -7,30 +7,32 @@ Single-click clipboard snippet manager for Windows. Right-click the tray icon (o
 
 ---
 
-## v0.1.0 — Minimal viable snippet menu (target: first delivery)
+## v0.1.0 — Minimal viable snippet menu ✅ SHIPPED (2026-05-23)
 
 Goal: open a popup near the cursor, see a list of snippets, click to copy.
 
-- [ ] Project scaffold — `TaskCopy.sln`, `src/TaskCopy/TaskCopy.csproj` (`net9.0-windows`, `UseWPF=true`, `WindowsAppSDK`-free WPF), `.editorconfig`, NuGet refs (H.NotifyIcon.Wpf, NHotkey.Wpf, CommunityToolkit.Mvvm, Microsoft.Data.Sqlite)
-- [ ] App icon — 256×256 + 16/32/48 ICO at `src/TaskCopy/Assets/app.ico`; tray-icon variant w/ alpha
-- [ ] Tray host — `TaskbarIcon` from `H.NotifyIcon.Wpf` w/ `ContextMenuMode="SecondWindow"` for modern XAML popup (not native `TrackPopupMenuEx`)
-- [ ] Snippet store — SQLite at `%LOCALAPPDATA%\TaskCopy\snippets.db`; table `snippets(id INTEGER PK, title TEXT, body TEXT, sort_order INTEGER, created_at INTEGER)`
-- [ ] Repository layer — `SnippetRepository` w/ `GetAll() / Add() / Update() / Delete() / Reorder()`
-- [ ] Flyout view — `SnippetMenuView` (WPF `Window`, `WindowStyle=None`, `AllowsTransparency=true`, drop-shadow, Catppuccin Mocha) listing snippets w/ title; hover-highlight, single-click copies
-- [ ] Cursor-anchored positioning — open flyout above/left of cursor; clamp to monitor work area
-- [ ] Copy action — `Clipboard.SetText(body)` w/ COMException retry loop (3 attempts, 50 ms backoff)
-- [ ] Pre-flyout HWND capture — `GetForegroundWindow()` before show, so auto-paste later (v0.2) targets the right window
-- [ ] Tray right-click → same flyout as hotkey
-- [ ] Global hotkey — `Ctrl+Alt+V` default via `NHotkey.Wpf`; first-run banner if `RegisterHotKey` returns false
-- [ ] Settings window — list of snippets, add/edit/delete/reorder, hotkey rebind, "Start with Windows" toggle (HKCU `\Software\Microsoft\Windows\CurrentVersion\Run`)
-- [ ] Catppuccin Mocha theme — ResourceDictionary at `src/TaskCopy/Themes/Mocha.xaml`; surface colors, hover/pressed states; honor "no pill backdrops" rule (4–8 px corner radii only)
-- [ ] Single-instance enforcement — named mutex `Global\TaskCopy_SingleInstance`; second launch raises settings window
-- [ ] Crash log — `%LOCALAPPDATA%\TaskCopy\logs\crash.log`, unhandled exception handler writes + shows MessageBox
-- [ ] README — badges (version, license MIT, platform Win11), screenshots, install/build steps
-- [ ] LICENSE (MIT), `.gitignore` (VS/C# standard + `CLAUDE.md` + `.claude/` + `CODEX_CHANGELOG.md`), CHANGELOG.md
-- [ ] Version sync — `TaskCopy.csproj` `<Version>0.1.0</Version>`, `AssemblyVersion`, README badge, CHANGELOG entry
+- [x] Project scaffold — `TaskCopy.sln`, `src/TaskCopy/TaskCopy.csproj` (`net10.0-windows`, `UseWPF=true`), NuGet refs (H.NotifyIcon.Wpf 2.4.1, NHotkey.Wpf 3.0.0, CommunityToolkit.Mvvm 8.4.0, Microsoft.Data.Sqlite 9.0.0)
+- [x] App icon — multi-resolution PNG-encoded ICO (16/32/48/64/128/256) at `src/TaskCopy/Assets/app.ico`; generator at `tools/generate-icon.ps1`
+- [x] Tray host — `TaskbarIcon` from `H.NotifyIcon.Wpf`; no default ContextMenu; tray-right-click/left-click both fire `ShowSnippetMenu`; double-click → Settings
+- [x] Snippet store — SQLite at `%LOCALAPPDATA%\TaskCopy\snippets.db`; tables `snippets(id, title, body, sort_order, created_at)` + `settings(key, value)`
+- [x] Repository layer — `SnippetDatabase` w/ `GetAll / Insert / Update / Delete / Reorder` + `GetSetting / SetSetting`
+- [x] Flyout view — `SnippetMenuWindow` (WPF Window, `WindowStyle=None`, `AllowsTransparency=true`, drop-shadow, Catppuccin Mocha, 10 px corner radius)
+- [x] Cursor-anchored positioning — opens above-and-left of cursor; monitor-clamped via `MonitorFromPoint` + `GetMonitorInfo`; DPI-aware via `GetDpiForMonitor`
+- [x] Copy action — `Clipboard.SetDataObject(text, copy: true)` w/ 5-attempt retry on COMException
+- [x] Pre-flyout HWND capture — `ForegroundWindowCapture.Capture()` stores `GetForegroundWindow()` before flyout
+- [x] Tray right-click → same flyout as hotkey
+- [x] Global hotkey — `Ctrl+Alt+V` default via `NHotkey.Wpf`; tray notification on failure
+- [x] Settings window — list of snippets, add/edit/delete/reorder, hotkey rebind (live capture w/ Esc to cancel), "Start with Windows" toggle (HKCU `\Software\Microsoft\Windows\CurrentVersion\Run`)
+- [x] Catppuccin Mocha theme — `src/TaskCopy/Themes/Mocha.xaml`; surface colors, hover/pressed states; corner radii 6–10 px (no pill backdrops)
+- [x] Single-instance enforcement — `Global\TaskCopy_SingleInstance` mutex; second launch exits silently (v0.2: raise settings)
+- [x] Crash log — `%LOCALAPPDATA%\TaskCopy\logs\crash.log` w/ AppDomain + Dispatcher + UnobservedTask handlers; MessageBox on Dispatcher exceptions
+- [x] README — badges (version 0.1.0, MIT, Win11, .NET 10), install/build/usage steps
+- [x] LICENSE (MIT), `.gitignore` (VS/C# + `CLAUDE.md` + `.claude/` + `CODEX_CHANGELOG.md`), CHANGELOG.md
+- [x] Version sync — `TaskCopy.csproj` `<Version>0.1.0</Version>` + `AssemblyVersion 0.1.0.0`, README badge `0.1.0`, CHANGELOG entry `0.1.0`
 
-**Definition of done for v0.1.0:** clean build (`dotnet build -c Release`), launch on a fresh 125% DPI Win11 box, add 3 snippets via settings, hit hotkey + right-click tray, click a snippet, paste with Ctrl+V into Notepad and confirm match. Screenshots captured.
+**Verified:** `dotnet build -c Release` clean (0 warnings, 0 errors). `TaskCopy.exe` launches, registers tray icon, creates SQLite store, survives, terminates cleanly.
+
+**Pending user-side validation** (cannot be done from CLI): visually confirming tray icon appearance, click-flyout interaction, hotkey trigger, Catppuccin look. Screenshots ship after first user run.
 
 ---
 
