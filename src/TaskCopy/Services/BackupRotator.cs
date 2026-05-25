@@ -49,6 +49,27 @@ public static class BackupRotator
             fs.Flush(flushToDisk: true);
         }
         catch { /* best-effort */ }
+
+        // F41 / B20: verify the just-written backup is openable + uncorrupted.
+        // PRAGMA quick_check on a freshly-VACUUMed file is ~µs and catches the
+        // (rare) case where VACUUM INTO claimed success but the resulting file
+        // is unusable (bad sector, half-flushed cache, etc.). On failure we
+        // drop the broken file so the prior slot 0 (now at .bak.1) remains
+        // the most recent good snapshot.
+        try
+        {
+            var status = SnippetDatabase.IntegrityCheck(fresh);
+            if (!string.Equals(status, "ok", StringComparison.OrdinalIgnoreCase))
+            {
+                CrashLog.Write("BackupRotator.Rotate.Verify",
+                    new Exception($"PRAGMA quick_check on '{fresh}' returned: {status}. Deleting the broken backup; prior snapshots are intact."));
+                TryDelete(fresh);
+            }
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("BackupRotator.Rotate.VerifyException", ex);
+        }
     }
 
     private static void TryDelete(string path)

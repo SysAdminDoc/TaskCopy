@@ -1,6 +1,6 @@
 # TaskCopy
 
-[![Version](https://img.shields.io/badge/version-0.4.2-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.3-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://www.microsoft.com/windows)
 [![Stack](https://img.shields.io/badge/stack-.NET%2010%20%2F%20WPF-512BD4)](https://dotnet.microsoft.com)
@@ -124,7 +124,7 @@ TaskCopy.exe --settings      # explicit Settings
 TaskCopy.exe --flyout        # open the snippet picker at the cursor
 TaskCopy.exe --copy <id|title>   # copy that snippet to the clipboard (no paste)
 TaskCopy.exe --paste <id|title>  # copy + auto-paste into the foreground window
-TaskCopy.exe --list          # write all snippets as "id\tTitle" to stdout (best-effort)
+TaskCopy.exe --list          # write all snippets as "id\tTitle" lines to %LOCALAPPDATA%\TaskCopy\snippets.list
 ```
 
 Useful from PowerToys Run, Flow Launcher, the Win+R dialog, or any task scheduler.

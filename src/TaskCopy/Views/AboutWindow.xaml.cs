@@ -21,9 +21,11 @@ public partial class AboutWindow : Window
 
     private void OnOpenLicense(object sender, MouseButtonEventArgs e)
     {
-        var exe = Assembly.GetEntryAssembly()?.Location;
-        var dir = string.IsNullOrEmpty(exe) ? null : Path.GetDirectoryName(exe);
-        var local = dir is null ? null : Path.Combine(dir, "LICENSE");
+        // Single-file publish makes Assembly.Location return empty (IL3000).
+        // AppContext.BaseDirectory points at the exe's directory whether the
+        // build is single-file or classic — same lookup, single-file safe.
+        var dir = AppContext.BaseDirectory;
+        var local = string.IsNullOrEmpty(dir) ? null : Path.Combine(dir, "LICENSE");
         if (!string.IsNullOrEmpty(local) && File.Exists(local))
         {
             OpenUrl(local);

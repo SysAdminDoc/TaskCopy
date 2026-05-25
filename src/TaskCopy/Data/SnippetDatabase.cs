@@ -482,6 +482,33 @@ public sealed class SnippetDatabase
     }
 
     /// <summary>
+    /// F41: run PRAGMA quick_check against an arbitrary SQLite file (read-only
+    /// open, separate connection). Used by BackupRotator to verify the snapshot
+    /// it just wrote before declaring success. Returns "ok" on success.
+    /// </summary>
+    public static string IntegrityCheck(string explicitPath)
+    {
+        try
+        {
+            var cs = new SqliteConnectionStringBuilder
+            {
+                DataSource = explicitPath,
+                Mode = SqliteOpenMode.ReadOnly,
+            }.ToString();
+            using var conn = new SqliteConnection(cs);
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "PRAGMA quick_check;";
+            var result = cmd.ExecuteScalar() as string;
+            return string.IsNullOrEmpty(result) ? "ok" : result;
+        }
+        catch (Exception ex)
+        {
+            return $"check failed: {ex.Message}";
+        }
+    }
+
+    /// <summary>
     /// Best-effort snippet count for a backup file. Opens the file read-only
     /// in a separate connection so the live DB is untouched.
     /// </summary>

@@ -64,6 +64,16 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.4.3 — "Make it build" ✅ SHIPPED (2026-05-25)
+
+Phase A from `RESEARCH_FEATURE_PLAN.md` — restores green CI and closes the v0.4.x backup-safety + theme-runtime gaps.
+
+- [x] **B16 — fix the 5 `-warnaserror` CI errors** (App.xaml.cs CS8604 guard, SettingsWindow.xaml.cs CS0103 using, SettingsViewModel.cs CS9273+CS9258 `field` rename, AboutWindow.xaml.cs IL3000 → `AppContext.BaseDirectory`).
+- [x] **B17 — `Theme.Auto` follows runtime OS theme** via `SystemEvents.UserPreferenceChanged` + `ThemeService.SystemThemeChanged` event + I16-A relaunch prompt reuse.
+- [x] **F41 / B20 — Backup snapshot verify** via `PRAGMA quick_check` against the freshly-written `.bak.0.db`; broken file is deleted and logged.
+- [x] **B18 — README `--list` doc correction** (writes `%LOCALAPPDATA%\TaskCopy\snippets.list`, not stdout).
+- [x] **B21 — Win+\* combos rejected in `IsReservedCombo`** with TaskCopy's tailored message.
+
 ## v0.4.2 — Async paste path ✅ SHIPPED (2026-05-25)
 
 - [x] **I22** — `AutoPasteService.TryAutoPasteDetailedAsync` replaces the `Thread.Sleep`-on-dispatcher path with `await Task.Delay`. Sync overloads kept for callers not yet async-aware.

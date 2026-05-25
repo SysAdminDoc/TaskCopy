@@ -107,6 +107,15 @@ public partial class App : Application
         try { ThemeService.Apply(ThemeService.Resolve(_settings.Theme)); }
         catch (Exception ex) { CrashLog.Write("ThemeService.Apply", ex); }
 
+        // B17: when Theme.Auto is selected, monitor OS theme changes so the
+        // user gets the same I16-A relaunch prompt the Settings dropdown uses.
+        try
+        {
+            ThemeService.StartSystemThemeWatcher(_settings.Theme);
+            ThemeService.SystemThemeChanged += OnSystemThemeChanged;
+        }
+        catch (Exception ex) { CrashLog.Write("ThemeService.StartSystemThemeWatcher", ex); }
+
         // Daily-rotated 3-deep VACUUM INTO backups + 30-day trash purge,
         // ran off the UI thread so startup latency stays unchanged.
         // Backup runs at most once per 24h so frequent relaunches don't burn
@@ -238,7 +247,7 @@ public partial class App : Application
 
     private void ShowSnippetMenu()
     {
-        if (_db is null || _clipboard is null || _foreground is null) return;
+        if (_db is null || _clipboard is null || _foreground is null || _settings is null) return;
 
         _foreground.Capture();
 
@@ -648,6 +657,18 @@ public partial class App : Application
     }
 
     /// <summary>
+    /// B17: OS theme flipped while we're in Theme.Auto and the resolved
+    /// palette would change. Same prompt-and-relaunch UX as the manual theme
+    /// dropdown — UserPreferenceChanged fires on a non-UI thread, so dispatch
+    /// the MessageBox onto the UI thread.
+    /// </summary>
+    private void OnSystemThemeChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(() =>
+            OfferThemeRelaunch("System theme — TaskCopy is in Auto mode"));
+    }
+
+    /// <summary>
     /// I16 (Option A): theme changes can't propagate into already-shown windows
     /// because brushes are bound via StaticResource. Offer an explicit relaunch
     /// that restores Settings on the other side via the --settings CLI handoff.
@@ -719,6 +740,8 @@ public partial class App : Application
     {
         try
         {
+            ThemeService.SystemThemeChanged -= OnSystemThemeChanged;
+            ThemeService.StopSystemThemeWatcher();
             _clipboardWatcher?.Dispose();
             _pipeServer?.Stop();
             _hotkeys?.Unregister();

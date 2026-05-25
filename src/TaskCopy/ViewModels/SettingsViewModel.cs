@@ -112,7 +112,9 @@ public partial class SettingsViewModel : ObservableObject
                 var ctx = new TemplatingContext
                 {
                     PreviousClipboard = "<clipboard>",
-                    PromptFor = field => $"<{field}>",
+                    // Lambda param is named `f` because `field` is a contextual
+                    // keyword in property accessors as of C# 14 (CS9273/CS9258).
+                    PromptFor = f => $"<{f}>",
                     Now = DateTime.Now,
                 };
                 var result = SnippetTemplating.Expand(body, ctx);
@@ -283,6 +285,11 @@ public partial class SettingsViewModel : ObservableObject
             if (key is Key.C or Key.V or Key.X or Key.Z or Key.Y or Key.A
                        or Key.S or Key.N or Key.O or Key.P or Key.F or Key.W or Key.T) return true;
         }
+        // B21: anything containing the Windows key is OS-reserved or grabbed
+        // by Microsoft (Win+V, Win+R, Win+L, Win+D, etc.). RegisterHotKey would
+        // refuse most of these anyway, but the generic NHotkey error is a poor
+        // user message. Reject up front with our own copy.
+        if ((modifiers & ModifierKeys.Windows) == ModifierKeys.Windows) return true;
         // No combo with no modifiers — caller already filters this, but defensive.
         if (modifiers == ModifierKeys.None) return true;
         return false;
@@ -347,6 +354,9 @@ public partial class SettingsViewModel : ObservableObject
             if (value is null) return;
             if (_settings.Theme == value.Value) return;
             _settings.Theme = value.Value;
+            // B17: keep the system-theme watcher in sync so it stops firing
+            // after the user moves away from Auto, and starts when they pick it.
+            ThemeService.UpdatePreference(value.Value);
             OnPropertyChanged();
 
             // I16 Option A: offer immediate-apply via relaunch since the brushes

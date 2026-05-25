@@ -5,6 +5,27 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] — 2026-05-25
+
+### Fixed
+- **CI was red since v0.4.0 (B16, 5 errors).** All five `-warnaserror` violations resolved:
+  - `App.xaml.cs:251` CS8604 — guard `_settings` in `ShowSnippetMenu`'s early-out.
+  - `Views/SettingsWindow.xaml.cs:140` CS0103 — added `using System.Windows.Automation;` for `AutomationProperties.GetName` lookup.
+  - `ViewModels/SettingsViewModel.cs:115` CS9273+CS9258 — renamed the `PromptFor` lambda parameter from `field` (a C# 14 contextual keyword in property accessors) to `f`.
+  - `Views/AboutWindow.xaml.cs:24` IL3000 — replaced `Assembly.GetEntryAssembly()?.Location` (always empty in single-file publish) with `AppContext.BaseDirectory` for the side-by-side `LICENSE` lookup.
+
+### Added
+- **`Theme.Auto` follows OS theme changes at runtime (B17).** Subscribes to `SystemEvents.UserPreferenceChanged` and, when the resolved palette would actually change, surfaces the same I16-A relaunch prompt the Settings dropdown uses. Listener only fires while the user has Auto selected — `ThemeService.UpdatePreference` keeps the state machine in sync when the user manually switches.
+- **Backup snapshot verification (F41 / B20).** After `BackupRotator.Rotate` writes the new `.bak.0.db` via `VACUUM INTO` + fsync, it runs `PRAGMA quick_check` against the file in a fresh read-only connection. On non-"ok" the broken backup is deleted (the prior slot 0 — now at .bak.1 — remains intact) and a CrashLog entry records the corruption. Catches the rare case where VACUUM INTO claimed success but the file on disk is unusable.
+- **Win+\* reserved-combo coverage (B21).** `SettingsViewModel.IsReservedCombo` now rejects any combo containing `ModifierKeys.Windows` so the user gets TaskCopy's "reserved by Windows" message instead of NHotkey's generic registration error.
+
+### Changed
+- **README CLI section corrected (B18)** — `--list` writes `id\tTitle` lines to `%LOCALAPPDATA%\TaskCopy\snippets.list` (the implementation never used stdout, since TaskCopy is a `WinExe` without an attached console).
+
+### Architecture
+- `Services/ThemeService` gains `SystemThemeChanged` event + `StartSystemThemeWatcher` / `StopSystemThemeWatcher` / `UpdatePreference` API.
+- `Data/SnippetDatabase.IntegrityCheck(string path)` static overload runs quick_check against an explicit file path in read-only mode — used by `BackupRotator` for the new verification step.
+
 ## [0.4.2] — 2026-05-25
 
 ### Changed
