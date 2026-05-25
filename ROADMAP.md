@@ -45,8 +45,8 @@ Goal: turn TaskCopy from "fancy clipboard" into "muscle-memory text expander."
 ### P0 features
 
 - [x] **F1 — Finish auto-paste** (`Services/ForegroundWindowCapture` + new `Services/AutoPasteService` using `SendInput`; enable settings checkbox)
-- [ ] **F2 — Search + type-ahead filter in the flyout** (`SnippetMenuViewModel.Filter`, `SnippetMenuWindow` TextBox row + keyboard nav)
-- [ ] **F3 — Number-key quick-pick `1`..`9`** (flyout `OnKeyDown` + row index glyph)
+- [x] **F2 — Search + type-ahead filter in the flyout** (`SnippetMenuViewModel.Filter`, `SnippetMenuWindow` TextBox row + keyboard nav)
+- [x] **F3 — Number-key quick-pick `1`..`9`** (flyout `OnKeyDown` + row index glyph)
 - [x] **F4 — Tray right-click → Settings / Quit / About / Open snippets context menu** (move flyout to left-click only, add native context menu; also add Settings + Quit + About rows to flyout footer)
 
 ### P0 bug fixes
@@ -71,7 +71,7 @@ Goal: turn TaskCopy from "fancy clipboard" into "muscle-memory text expander."
 ### Reliability
 
 - [ ] **I2 — Debounce snippet editor writes (300 ms idle)**
-- [ ] **I3 — Tame `Deactivated → Close` race** (so F2 typing doesn't dismiss the flyout)
+- [x] **I3 — Tame `Deactivated → Close` race** (so F2 typing doesn't dismiss the flyout)
 - [ ] **F11 — Second-instance handoff via named pipe `\\.\pipe\TaskCopy`** (signals first instance to open Settings; reuses IPC for v0.4 Windhawk mod)
 - [ ] **I4 — Crash log rotation + "Open log folder" button in Settings**
 

@@ -4,7 +4,6 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:TaskCopy.ViewModels"
-        xmlns:models="clr-namespace:TaskCopy.Models"
         mc:Ignorable="d"
         Title="TaskCopy"
         WindowStyle="None"
@@ -30,8 +29,8 @@
             BorderThickness="1"
             CornerRadius="10"
             Margin="12"
-            MinWidth="320"
-            MaxWidth="420">
+            MinWidth="340"
+            MaxWidth="440">
         <Border.Effect>
             <DropShadowEffect BlurRadius="18"
                               ShadowDepth="2"
@@ -44,7 +43,8 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" MaxHeight="420" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" MaxHeight="440" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -57,39 +57,102 @@
                        Style="{StaticResource Mocha.Body.Header}"
                        Margin="16,4,16,8" />
 
+            <!-- Search box (visible only when there are any snippets at all) -->
+            <TextBox Grid.Row="1"
+                     x:Name="SearchBox"
+                     Style="{StaticResource Mocha.TextBox}"
+                     Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="12,0,12,8"
+                     ToolTip="Type to filter; Up/Down to navigate; Enter to copy; Esc to clear/close; 1-9 to pick"
+                     Visibility="{Binding HasAnySnippets, Converter={StaticResource BoolToVisibilityConverter}}" />
+
             <!-- Separator -->
-            <Border Grid.Row="1" Style="{StaticResource Mocha.Separator}" />
+            <Border Grid.Row="2" Style="{StaticResource Mocha.Separator}" />
 
             <!-- Snippet list -->
-            <ScrollViewer Grid.Row="2"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled"
-                          Visibility="{Binding HasSnippets, Converter={StaticResource BoolToVisibilityConverter}}">
-                <ItemsControl ItemsSource="{Binding Snippets}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type models:Snippet}">
-                            <Button Style="{StaticResource Mocha.SnippetRow}"
-                                    Command="{Binding DataContext.CopyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    CommandParameter="{Binding}">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title}"
-                                               Style="{StaticResource Mocha.Body}"
-                                               ToolTip="{Binding Title}" />
-                                    <TextBlock Text="{Binding Preview}"
-                                               Style="{StaticResource Mocha.Body.Subtle}"
-                                               Margin="0,2,0,0"
-                                               ToolTip="{Binding Body}" />
-                                </StackPanel>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <ListBox Grid.Row="3"
+                     x:Name="SnippetList"
+                     ItemsSource="{Binding Snippets}"
+                     SelectedIndex="{Binding SelectedIndex}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="0"
+                     Focusable="False"
+                     KeyboardNavigation.TabNavigation="None"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     Visibility="{Binding HasSnippets, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="4,1" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="Foreground" Value="{StaticResource Mocha.Text.Brush}" />
+                        <Setter Property="Cursor" Value="Hand" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Focusable" Value="False" />
+                        <EventSetter Event="MouseLeftButtonUp" Handler="OnSnippetRowClicked" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Bg"
+                                            Background="{TemplateBinding Background}"
+                                            CornerRadius="6"
+                                            Padding="12,8">
+                                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Mocha.Surface0.Brush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Mocha.Surface1.Brush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:SnippetRow}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="22" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding IndexLabel}"
+                                       Style="{StaticResource Mocha.Body.Subtle}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,6,0" />
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding Title}"
+                                           Style="{StaticResource Mocha.Body}"
+                                           ToolTip="{Binding Title}" />
+                                <TextBlock Text="{Binding Preview}"
+                                           Style="{StaticResource Mocha.Body.Subtle}"
+                                           Margin="0,2,0,0"
+                                           ToolTip="{Binding Body}" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
 
-            <!-- Empty state -->
-            <Border Grid.Row="2"
-                    Padding="20,16"
-                    Visibility="{Binding HasSnippets, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+            <!-- Empty state (no snippets at all) -->
+            <Border Grid.Row="3"
+                    Padding="20,16">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasAnySnippets}" Value="False">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <StackPanel>
                     <TextBlock Text="No snippets yet"
                                Style="{StaticResource Mocha.Body}"
@@ -101,25 +164,53 @@
                 </StackPanel>
             </Border>
 
+            <!-- No-match state (has snippets, but filter matches nothing) -->
+            <Border Grid.Row="3"
+                    Padding="20,16">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding HasAnySnippets}" Value="True" />
+                                    <Condition Binding="{Binding HasSnippets}" Value="False" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Visibility" Value="Visible" />
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel>
+                    <TextBlock Text="No matches"
+                               Style="{StaticResource Mocha.Body}"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="Press Esc to clear the filter."
+                               Style="{StaticResource Mocha.Body.Subtle}"
+                               HorizontalAlignment="Center"
+                               Margin="0,4,0,0" />
+                </StackPanel>
+            </Border>
+
             <!-- Separator -->
-            <Border Grid.Row="3" Style="{StaticResource Mocha.Separator}" />
+            <Border Grid.Row="4" Style="{StaticResource Mocha.Separator}" />
 
             <!-- Settings -->
-            <Button Grid.Row="4"
+            <Button Grid.Row="5"
                     Style="{StaticResource Mocha.SnippetRow}"
                     Command="{Binding EditCommand}">
                 <TextBlock Text="Settings…" Style="{StaticResource Mocha.Body}" />
             </Button>
 
             <!-- About -->
-            <Button Grid.Row="5"
+            <Button Grid.Row="6"
                     Style="{StaticResource Mocha.SnippetRow}"
                     Command="{Binding AboutCommand}">
                 <TextBlock Text="About" Style="{StaticResource Mocha.Body}" />
             </Button>
 
             <!-- Quit -->
-            <Button Grid.Row="6"
+            <Button Grid.Row="7"
                     Style="{StaticResource Mocha.SnippetRow}"
                     Command="{Binding QuitCommand}">
                 <TextBlock Text="Quit TaskCopy" Style="{StaticResource Mocha.Body}" />

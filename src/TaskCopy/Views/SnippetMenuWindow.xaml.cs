@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using TaskCopy.Services;
 using TaskCopy.ViewModels;
@@ -8,6 +9,7 @@ namespace TaskCopy.Views;
 public partial class SnippetMenuWindow : Window
 {
     private readonly SnippetMenuViewModel _vm;
+    private readonly uint _ownPid = (uint)Environment.ProcessId;
 
     public SnippetMenuWindow(SnippetMenuViewModel vm)
     {
@@ -15,14 +17,91 @@ public partial class SnippetMenuWindow : Window
         DataContext = vm;
         InitializeComponent();
 
-        Deactivated += (_, _) => Close();
-        KeyDown += OnKeyDown;
+        Deactivated += OnDeactivated;
+        PreviewKeyDown += OnPreviewKeyDown;
         vm.SnippetCopied += (_, _) => Dispatcher.Invoke(Close);
     }
 
-    private void OnKeyDown(object sender, KeyEventArgs e)
+    private void OnDeactivated(object? sender, EventArgs e)
     {
-        if (e.Key == Key.Escape) Close();
+        // Stay open if focus moved to another TaskCopy window (e.g. Settings
+        // about to open, an in-process popup). Close on third-party focus.
+        var fg = NativeMethods.GetForegroundWindow();
+        if (fg == IntPtr.Zero) { Close(); return; }
+        NativeMethods.GetWindowThreadProcessId(fg, out var pid);
+        if (pid != _ownPid) Close();
+    }
+
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Escape:
+                if (_vm.ClearFilterIfAny())
+                {
+                    SearchBox.CaretIndex = 0;
+                    e.Handled = true;
+                    return;
+                }
+                Close();
+                e.Handled = true;
+                return;
+
+            case Key.Down:
+                _vm.MoveSelection(+1);
+                SnippetList.ScrollIntoView(SnippetList.SelectedItem);
+                e.Handled = true;
+                return;
+
+            case Key.Up:
+                _vm.MoveSelection(-1);
+                SnippetList.ScrollIntoView(SnippetList.SelectedItem);
+                e.Handled = true;
+                return;
+
+            case Key.PageDown:
+                _vm.MoveSelection(+8);
+                SnippetList.ScrollIntoView(SnippetList.SelectedItem);
+                e.Handled = true;
+                return;
+
+            case Key.PageUp:
+                _vm.MoveSelection(-8);
+                SnippetList.ScrollIntoView(SnippetList.SelectedItem);
+                e.Handled = true;
+                return;
+
+            case Key.Enter:
+                _vm.CopySelected();
+                e.Handled = true;
+                return;
+        }
+
+        // Number-key quick-pick (Alt+1..9). Plain 1..9 stays available for the
+        // search box (e.g. searching "PO #1"); Alt is the unambiguous picker.
+        if (Keyboard.Modifiers == ModifierKeys.Alt
+            && e.SystemKey >= Key.D1 && e.SystemKey <= Key.D9)
+        {
+            _vm.CopyAtVisibleIndex((int)(e.SystemKey - Key.D0));
+            e.Handled = true;
+            return;
+        }
+        if (Keyboard.Modifiers == ModifierKeys.Alt
+            && e.SystemKey >= Key.NumPad1 && e.SystemKey <= Key.NumPad9)
+        {
+            _vm.CopyAtVisibleIndex((int)(e.SystemKey - Key.NumPad0));
+            e.Handled = true;
+            return;
+        }
+    }
+
+    private void OnSnippetRowClicked(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is ListBoxItem { DataContext: SnippetRow row })
+        {
+            _vm.CopyCommand.Execute(row.Snippet);
+            e.Handled = true;
+        }
     }
 
     public void ShowAtCursor()
@@ -54,6 +133,7 @@ public partial class SnippetMenuWindow : Window
 
         Show();
         Activate();
-        Focus();
+        SearchBox.Focus();
+        Keyboard.Focus(SearchBox);
     }
 }
