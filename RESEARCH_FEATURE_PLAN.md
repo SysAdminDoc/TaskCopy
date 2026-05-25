@@ -1,5 +1,7 @@
 # TaskCopy — Research and Feature Plan (post-v0.4.2 audit)
 
+> **Archive note (2026-05-25):** This file is retained as research evidence and detailed rationale only. Its old checklists have been consolidated into `ROADMAP.md`, which is the single active to-do source. Completed work is recorded in `CHANGELOG.md`.
+
 **Date:** 2026-05-25 (later that day, post-CI verdict)
 **Branch / head:** `master` @ `a6fdb61` (release: v0.4.2 "Async paste path")
 **Reviewer:** autonomous research pass (no implementation in this pass)
@@ -564,7 +566,9 @@ Same order as prior plan; F27/F28/V3-V4 migrations now in the top 3:
 
 ---
 
-## Prioritized Roadmap
+## Archived Prioritized Roadmap
+
+This section records the original v0.4.2 audit sequencing. It is no longer an active checklist; use `ROADMAP.md` for remaining work.
 
 ### Phase A — v0.4.3 "Make it build" (P0 only)
 
@@ -696,4 +700,4 @@ Only questions that can't be answered by inspecting the project or researching p
 
 ---
 
-*End of report. ROADMAP.md remains the user-facing source of truth. Next implementation pass should start with Phase A v0.4.3 — fix B16 / B17 / B20 first to unblock everything else.*
+*End of report. ROADMAP.md is the active source of truth; this file is archived research context.*

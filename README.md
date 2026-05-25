@@ -1,19 +1,19 @@
 # TaskCopy
 
-[![Version](https://img.shields.io/badge/version-0.5.3-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.4-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://www.microsoft.com/windows)
 [![Stack](https://img.shields.io/badge/stack-.NET%2010%20%2F%20WPF-512BD4)](https://dotnet.microsoft.com)
 
 Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the tray icon and a Catppuccin Mocha flyout pops up at your cursor with every snippet you've saved. Click one and it's copied (and optionally auto-pasted into the window you were just in).
 
-> **About the name:** TaskCopy was originally specced as "right-click the bottom taskbar to see snippets." Windows 11's taskbar is a XAML Islands surface inside `explorer.exe` with no third-party context-menu API — direct extension requires DLL injection via [Windhawk](https://windhawk.net). The default build delivers the same UX through a tray icon + global hotkey (the same pattern Ditto and CopyQ use); a Windhawk companion mod is on the roadmap for v0.4 to add the literal taskbar trigger for power users. See [research/architecture-research.md](research/architecture-research.md) for the full rationale.
+> **About the name:** TaskCopy was originally specced as "right-click the bottom taskbar to see snippets." Windows 11's taskbar is a XAML Islands surface inside `explorer.exe` with no third-party context-menu API — direct extension requires DLL injection via [Windhawk](https://windhawk.net). The default build delivers the same UX through a tray icon + global hotkey (the same pattern Ditto and CopyQ use); a Windhawk companion mod remains a future power-user add-on for the literal taskbar trigger. See [research/architecture-research.md](research/architecture-research.md) for the full rationale.
 
 ## Status
 
-**v0.4.0** — "Polish & distribution." Free-form quick-hotkeys, Trash bin UI, recent-clips flyout pivot, group pivot, restore-from-backup, live placeholder preview, clipboard transforms, fuzzy search, send-as-keystrokes paste mode, CLI scripting (`--copy`/`--paste`/`--list`), per-monitor DPI v2, single-file publish + GitHub Actions release pipeline. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
+**v0.5.4** — "Espanso import." TaskCopy now imports static Espanso `matches:` YAML files alongside `.taskpack` and JSON snippets. The v0.5 line also includes encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
 
-## Features (v0.4.0)
+## Features (v0.5.4)
 
 ### Picker & paste
 - **Tray icon** — left-click opens snippet flyout at the cursor; right-click opens a native Mocha/Latte menu (Open snippets / Settings / About / Quit); double-click opens Settings.
@@ -24,14 +24,14 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 - **Auto-paste** — after copy, TaskCopy restores the previously focused window and synthesises `Ctrl+V`. Per-snippet "Type characters" mode for apps that swallow `Ctrl+V` (legacy terminals, RDP sessions, password fields). Default ON; toggle in Settings.
 
 ### Snippet content
-- **Placeholders** — `{{date}}` `{{date:format}}` `{{time}}` `{{time:format}}` `{{clipboard}}` `{{cursor}}` `{{ask:Field}}` `{{form:Field1|Field2}}`. Pipe-chained transforms: `{{clipboard|upper}}`, `{{clipboard|trim|lower}}`, `{{clipboard|jsonpretty}}`, `{{clipboard|urldecode}}`, `{{clipboard|base64decode}}`, `{{clipboard|sha256}}`. Live preview in the editor.
+- **Placeholders** — `{{date}}` `{{date:format}}` `{{time}}` `{{time:format}}` `{{clipboard}}` `{{cursor}}` `{{ask:Field}}`. Pipe-chained transforms: `{{clipboard|upper}}`, `{{clipboard|trim|lower}}`, `{{clipboard|jsonpretty}}`, `{{clipboard|urldecode}}`, `{{clipboard|base64decode}}`, `{{clipboard|sha256}}`. Live preview in the editor.
 - **Groups** — organize snippets via the Manage groups dialog; per-snippet Group dropdown; flyout chip strip.
 - **Pin to top** + flyout sort modes — Manual / Most used (decay-weighted frecency, pinned on top) / Recently used (pinned on top).
 - **Monospace toggle** per snippet — editor + flyout tooltip switch to Cascadia Mono for code.
 
 ### Reliability & data safety
 - **SQLite store** at `%LOCALAPPDATA%\TaskCopy\snippets.db` — schema migrations via `PRAGMA user_version`, `journal_mode = WAL`, FK enforcement, startup `PRAGMA quick_check` integrity check with one-click restore.
-- **JSON import/export** + **automatic on-startup backup** via `VACUUM INTO` (3-deep rotation, throttled to once per 24 h).
+- **JSON / `.taskpack` / Espanso YAML import** + **JSON export**. Espanso static `matches:` entries become snippets; unsupported dynamic matches are skipped. Automatic on-startup backup uses `VACUUM INTO` (3-deep rotation, throttled to once per 24 h).
 - **Restore from backup…** — Settings → Diagnostics lists the available snapshots and swaps them in atomically (with a pre-restore rollback snapshot in case the user changes their mind).
 - **Soft-delete trash** — confirm-delete then 30-day auto-purge. Trash window in Settings shows trashed snippets with per-row Restore / Delete Permanently / Empty Trash.
 - **Single-instance handoff** via named pipe; subsequent launches focus an existing window or take a CLI directive.
@@ -55,6 +55,7 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 - [NHotkey.Wpf 3.0.0](https://github.com/thomaslevesque/NHotkey) — global hotkey
 - [CommunityToolkit.Mvvm 8.4.0](https://github.com/CommunityToolkit/dotnet) — MVVM primitives
 - [Microsoft.Data.Sqlite 9.0.0](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/) — snippet store
+- [YamlDotNet 16.1.0](https://github.com/aaubry/YamlDotNet) — Espanso YAML import
 
 ## Install
 

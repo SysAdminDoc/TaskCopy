@@ -64,6 +64,10 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.4 — "Espanso import" ✅ SHIPPED (2026-05-25)
+
+- [x] **F38 — YAML import (Espanso compat)** — Settings import picker accepts `.yml` / `.yaml`; static Espanso `matches:` entries import as snippets grouped under the YAML filename. Dynamic Espanso behaviors (`regex`, `vars`, `form`, `image_path`, `html`, `markdown`) are skipped rather than converted incorrectly.
+
 ## v0.5.3 — Build hotfix ✅ SHIPPED (2026-05-25)
 
 - [x] **MVVMTK0034 in `RevertBackupEncryptedBinding`** (v0.5.2 broke CI) — refactored to set the generated property under the suppress flag instead of `SetProperty(ref _field, ...)`.
@@ -140,31 +144,35 @@ Phase A from `RESEARCH_FEATURE_PLAN.md` — restores green CI and closes the v0.
 - [x] **B14** — `{{cursor}}` cap warning toast when offset > 5000.
 - [x] **B15** — Registry-canonical Start-with-Windows reconcile on load.
 
-## v0.5.0 — Future (not committed)
+## Active backlog — future releases
 
-- [ ] **Windhawk companion mod** (`windhawk/taskcopy-taskbar-menu.wh.cpp`) — depends on F18+F29 stable IPC primitive.
-  - Hook `TaskbarResources::OnTaskListButtonContextRequested` (Win11) + `CTaskListWnd::_HandleContextMenu` (Win10)
-  - Inject "TaskCopy ▶" submenu populated from named-pipe IPC + `--copy <id>` callback
-  - README install steps + submit to `ramensoftware/windhawk-mods` (self-host fallback)
-- [ ] **F26 — Velopack in-app auto-update** — depends on F18 release pipeline being stable.
-- [ ] **F30 — Encrypted snippet store** (BYO password; SQLCipher dep swap). Non-trivial dep change.
-- [ ] **F31 — BYO cloud sync** (S3 / B2 / Dropbox via user creds).
-- [ ] **F32 — Multi-clip paste** (assemble several entries then paste once).
-- [ ] **F33 — Image clipboard support** (CF_DIB + thumbnails).
-- [ ] **F34 — Open body in external editor** ($EDITOR / `code` / `notepad++`).
-- [ ] **F35 — Per-app rules** (`target_app_glob` column).
-- [ ] **F36 — Multi-field forms** (`{{form:Field1|Field2}}`).
-- [ ] **F37 — Usage statistics** ("you saved 4 minutes today").
-- [ ] **F38 — YAML import** (Espanso compat).
-- [ ] **F39 — `{{shell:cmd}}` evaluation** (opt-in per-snippet, warning dialog).
-- [ ] **F40 — Syntax-highlighted body editor** (AvalonEdit when `IsMonospace`).
+This is the only active to-do checklist. `RESEARCH_FEATURE_PLAN.md` is archived evidence and acceptance detail; completed work belongs in `CHANGELOG.md`.
+
+### App features
+
+- [ ] **F36 — Multi-field forms** (`{{form:Field1|Field2}}`) — one modal gathers several values and makes them reusable across a snippet expansion.
+- [ ] **F33 — Image clipboard support** — capture/paste CF_DIB with thumbnails and explicit privacy limits.
+- [ ] **F39 — `{{shell:cmd}}` evaluation** — opt-in per snippet, disabled on import, with a warning dialog before first execution.
+- [ ] **F40 — Syntax-highlighted body editor** — AvalonEdit when `IsMonospace`, with plain TextBox fallback.
+- [ ] **F51 — FTS5 search at scale** — body search index once libraries cross the large-snippet threshold.
+- [ ] **F30 — Encrypted snippet store** — BYO password; likely SQLCipher dependency swap. Separate from already-shipped encrypted backups.
+- [ ] **F31 — BYO cloud sync** — S3 / B2 / Dropbox via user credentials.
+
+### Platform and integration
+
+- [ ] **Windhawk companion mod** (`windhawk/taskcopy-taskbar-menu.wh.cpp`) — literal taskbar context-menu trigger using the stable IPC / CLI path.
+  - Hook `TaskbarResources::OnTaskListButtonContextRequested` (Win11) + `CTaskListWnd::_HandleContextMenu` (Win10).
+  - Inject "TaskCopy >" submenu populated from named-pipe IPC + `--copy <id>` callback.
+  - README install steps + submit to `ramensoftware/windhawk-mods` (self-host fallback).
+- [ ] **F26 — Velopack in-app auto-update** — depends on release artifacts being stable.
+- [ ] **F43 — Localisation hook + en-US baseline** — resource framework, translator docs, one proof culture.
 - [ ] **I16 (Option B)** — DynamicResource refactor for fully-live theme swap.
-- [ ] **B12 — Snippet-list bulk-update perf at >500 items** (`AddRange`/deferred refresh).
+- [ ] **I36 — SettingsViewModel split** — extract editor, diagnostics, hotkey/startup, backup/encryption responsibilities.
 
-### Distribution polish (post-F18-Phase-1)
+### Distribution polish
 
-- [ ] **F18 Phase 2 — winget manifest** (submit to `microsoft/winget-pkgs`).
-- [ ] **F18 Phase 3 — Authenticode signing cert** for SmartScreen reputation + stable tray-icon GUID.
+- [ ] **F18 Phase 2 — winget manifest** — submit to `microsoft/winget-pkgs`.
+- [ ] **F18 Phase 3 — Authenticode signing cert** — SmartScreen reputation + stable tray-icon GUID.
 - [ ] **MSIX packaging + Microsoft Store submission**.
 - [ ] **Screenshots captured at 125% DPI** to `assets/screenshots/` (light + dark).
 

@@ -102,7 +102,7 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>
     /// F25: live render of SnippetTemplating.Expand on the current body so the
     /// user sees what placeholders will resolve to at paste time. Uses a sample
-    /// clipboard value and stub Ask/Form responses so it stays pure.
+    /// clipboard value and stub Ask responses so it stays pure.
     /// </summary>
     public string EditBodyPreview
     {
@@ -784,12 +784,38 @@ public partial class SettingsViewModel : ObservableObject
         // F44: .taskpack is the same JSON format with a curated extension so
         // community snippet packs can register a file association and ship
         // with a recognizable name. See README "Snippet packs" section.
+        // F38: .yml / .yaml routes to the Espanso importer instead so users
+        // can bring an existing Espanso match library over without rewriting.
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "TaskCopy pack or snippets (*.taskpack;*.json)|*.taskpack;*.json|JSON only (*.json)|*.json|TaskCopy pack only (*.taskpack)|*.taskpack",
+            Filter = "TaskCopy pack / snippets / Espanso YAML (*.taskpack;*.json;*.yml;*.yaml)|*.taskpack;*.json;*.yml;*.yaml"
+                   + "|JSON only (*.json)|*.json"
+                   + "|TaskCopy pack only (*.taskpack)|*.taskpack"
+                   + "|Espanso YAML (*.yml;*.yaml)|*.yml;*.yaml",
             CheckFileExists = true,
         };
         if (dlg.ShowDialog() != true) return;
+
+        var ext = System.IO.Path.GetExtension(dlg.FileName).ToLowerInvariant();
+        if (ext is ".yml" or ".yaml")
+        {
+            try
+            {
+                var packName = System.IO.Path.GetFileNameWithoutExtension(dlg.FileName);
+                var r = EspansoImport.Import(_db, dlg.FileName, packName);
+                LoadFromStore();
+                StatusMessage = $"Imported {r.Added} Espanso match{(r.Added == 1 ? "" : "es")}"
+                    + (r.Skipped > 0 ? $", skipped {r.Skipped} unsupported or duplicate" : "")
+                    + (r.GroupsCreated > 0 ? $", created group \"{packName}\"" : "")
+                    + ".";
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write("EspansoImport", ex);
+                StatusMessage = $"Espanso import failed: {ex.Message}";
+            }
+            return;
+        }
         try
         {
             var r = SnippetIO.Import(_db, dlg.FileName);

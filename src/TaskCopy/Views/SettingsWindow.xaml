@@ -217,7 +217,7 @@
                         Padding="8,6"
                         Margin="0,6,0,0"
                         MaxHeight="80"
-                        ToolTip="Live preview — placeholders are resolved against today's date, a sample clipboard, and stub Ask/Form responses.">
+                        ToolTip="Live preview — placeholders are resolved against today's date, a sample clipboard, and stub Ask responses.">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <TextBlock Text="{Binding EditBodyPreview}"
                                    FontFamily="{Binding EditBodyFontFamily}"
@@ -352,7 +352,7 @@
                     <Button Style="{StaticResource Mocha.Button}"
                             Content="Install pack / import…"
                             Command="{Binding ImportSnippetsCommand}"
-                            ToolTip="Load snippets from a .taskpack or .json file. Duplicates (by title) are skipped. Community packs at github.com/SysAdminDoc/taskcopy-packs."
+                            ToolTip="Load snippets from .taskpack, .json, or Espanso .yml/.yaml. Duplicates (by title) are skipped. Espanso imports go into a group named after the YAML file."
                             Margin="8,0,0,0" />
                     <Button Style="{StaticResource Mocha.Button}"
                             Content="Trash…"

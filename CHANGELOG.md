@@ -5,6 +5,19 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] — 2026-05-25
+
+### Added
+- **Espanso YAML import (F38).** Settings → "Install pack / import…" now accepts `.yml` / `.yaml` files containing Espanso `matches:`. Static `replace` entries become TaskCopy snippets; `label` wins for the snippet title, otherwise the first `triggers[]` value or `trigger` is used. Imports are grouped under the YAML filename and duplicate titles are skipped.
+
+### Changed
+- Unsupported Espanso behaviors (`regex`, `vars`, `form`, `form_fields`, `image_path`, `html`, `markdown`) are intentionally skipped rather than imported as broken snippets.
+- The import picker now handles `.taskpack`, `.json`, `.yml`, and `.yaml` in one flow.
+
+### Architecture
+- New service: `Services/EspansoImport.cs`.
+- New NuGet: `YamlDotNet` 16.1.0.
+
 ## [0.5.3] — 2026-05-25
 
 ### Fixed
