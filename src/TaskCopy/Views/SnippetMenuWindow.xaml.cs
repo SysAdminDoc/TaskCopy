@@ -11,6 +11,9 @@ public partial class SnippetMenuWindow : Window
     private readonly SnippetMenuViewModel _vm;
     private readonly uint _ownPid = (uint)Environment.ProcessId;
 
+    /// <summary>F50: set when the caller opted into "Last position (sticky)" — on close we persist `Left`/`Top` back to settings.</summary>
+    private Data.SettingsStore? _persistSettings;
+
     public SnippetMenuWindow(SnippetMenuViewModel vm)
     {
         _vm = vm;
@@ -19,6 +22,17 @@ public partial class SnippetMenuWindow : Window
 
         Deactivated += OnDeactivated;
         PreviewKeyDown += OnPreviewKeyDown;
+        Closing += OnClosingPersistPosition;
+    }
+
+    private void OnClosingPersistPosition(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        // Persist final position so the next sticky open lands here.
+        if (_persistSettings is not null)
+        {
+            try { _persistSettings.FlyoutLastPosition = (Left, Top); }
+            catch (Exception ex) { Services.CrashLog.Write("SnippetMenuWindow.PersistPosition", ex); }
+        }
     }
 
     private void OnDeactivated(object? sender, EventArgs e)
@@ -139,7 +153,13 @@ public partial class SnippetMenuWindow : Window
         }
     }
 
-    public void ShowAtCursor(Data.FlyoutPosition position = Data.FlyoutPosition.Cursor)
+    /// <summary>
+    /// F50: when settings is supplied AND position == LastPosition, restore
+    /// the stored DIPs and write a fresh position when the window closes.
+    /// Settings is optional so existing callers that don't care still work.
+    /// </summary>
+    public void ShowAtCursor(Data.FlyoutPosition position = Data.FlyoutPosition.Cursor,
+                              Data.SettingsStore? settings = null)
     {
         _vm.Refresh();
 
@@ -154,7 +174,27 @@ public partial class SnippetMenuWindow : Window
         var heightPx = size.Height * scale;
 
         double leftPx, topPx;
-        if (position == Data.FlyoutPosition.MonitorCenter)
+
+        // F50: when sticky mode is on AND we have a recorded position, restore
+        // it. NaN means "no position recorded yet" → fall through to cursor.
+        var stickyApplied = false;
+        if (position == Data.FlyoutPosition.LastPosition && settings is not null)
+        {
+            _persistSettings = settings;
+            var (lastX, lastY) = settings.FlyoutLastPosition;
+            if (!double.IsNaN(lastX) && !double.IsNaN(lastY))
+            {
+                leftPx = lastX * scale;
+                topPx = lastY * scale;
+                stickyApplied = true;
+            }
+            else
+            {
+                leftPx = cursor.X - widthPx + 24;
+                topPx = cursor.Y - heightPx + 24;
+            }
+        }
+        else if (position == Data.FlyoutPosition.MonitorCenter)
         {
             // I19: useful on ultrawide monitors where above-and-left of cursor
             // can pin the flyout to one screen edge. Center horizontally on the
@@ -170,6 +210,8 @@ public partial class SnippetMenuWindow : Window
             leftPx = cursor.X - widthPx + 24;
             topPx = cursor.Y - heightPx + 24;
         }
+        _ = stickyApplied; // diagnostic only; keeps the local readable
+
 
         if (leftPx + widthPx > workArea.Right) leftPx = workArea.Right - widthPx - 4;
         if (leftPx < workArea.Left + 4) leftPx = workArea.Left + 4;

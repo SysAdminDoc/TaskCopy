@@ -327,6 +327,7 @@ public partial class SettingsViewModel : ObservableObject
     [
         new(FlyoutPosition.Cursor, "At cursor (default)"),
         new(FlyoutPosition.MonitorCenter, "Active monitor center"),
+        new(FlyoutPosition.LastPosition, "Last position (sticky)"),
     ];
 
     public FlyoutPositionOption SelectedFlyoutPosition

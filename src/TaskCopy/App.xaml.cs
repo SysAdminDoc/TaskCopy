@@ -297,7 +297,7 @@ public partial class App : Application
 
         _snippetMenu = new SnippetMenuWindow(vm);
         _snippetMenu.Closed += (_, _) => _snippetMenu = null;
-        _snippetMenu.ShowAtCursor(_settings?.FlyoutPosition ?? FlyoutPosition.Cursor);
+        _snippetMenu.ShowAtCursor(_settings?.FlyoutPosition ?? FlyoutPosition.Cursor, _settings);
     }
 
     private void ShowSettings()

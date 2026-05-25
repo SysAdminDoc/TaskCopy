@@ -64,6 +64,12 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.4.6 — "Sticky position + repo hygiene" ✅ SHIPPED (2026-05-25)
+
+- [x] **F50 — "Last position (sticky)" flyout position** (new `FlyoutPosition.LastPosition`, persisted via `SettingsStore.FlyoutLastPosition`, restored on next open with monitor-work-area clamping).
+- [x] **`CONTRIBUTING.md`** with build / commit / versioning conventions.
+- [x] **`.github/ISSUE_TEMPLATE/`** (bug + feature) + **`.github/PULL_REQUEST_TEMPLATE.md`**.
+
 ## v0.4.5 — "Power-user integrations" ✅ SHIPPED (2026-05-25)
 
 - [x] **F45 — `gh issue create` integration** for the "File issue" button. Falls back to clipboard when `gh` isn't on PATH.

@@ -18,6 +18,8 @@ public sealed class SettingsStore
     private const string KeyFlyoutPosition = "flyout.position";
     private const string KeyDeleteSkipConfirm = "delete.skip_confirm";
     private const string KeyExternalEditorCommand = "editor.command";
+    private const string KeyFlyoutLastX = "flyout.last_x";
+    private const string KeyFlyoutLastY = "flyout.last_y";
 
     private readonly SnippetDatabase _db;
 
@@ -153,12 +155,34 @@ public sealed class SettingsStore
         get => _db.GetSetting(KeyExternalEditorCommand) ?? string.Empty;
         set => _db.SetSetting(KeyExternalEditorCommand, value ?? string.Empty);
     }
+
+    /// <summary>
+    /// F50: last on-screen position of the flyout in WPF DIPs, used when
+    /// FlyoutPosition == LastPosition. NaN means "no position recorded yet";
+    /// the caller falls back to the Cursor placement.
+    /// </summary>
+    public (double X, double Y) FlyoutLastPosition
+    {
+        get
+        {
+            var x = double.TryParse(_db.GetSetting(KeyFlyoutLastX), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var px) ? px : double.NaN;
+            var y = double.TryParse(_db.GetSetting(KeyFlyoutLastY), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var py) ? py : double.NaN;
+            return (x, y);
+        }
+        set
+        {
+            _db.SetSetting(KeyFlyoutLastX, value.X.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            _db.SetSetting(KeyFlyoutLastY, value.Y.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        }
+    }
 }
 
 public enum FlyoutPosition
 {
     Cursor = 0,
     MonitorCenter = 1,
+    /// <summary>F50: remember where the user last had it; fall back to Cursor on first open.</summary>
+    LastPosition = 2,
 }
 
 public enum Theme

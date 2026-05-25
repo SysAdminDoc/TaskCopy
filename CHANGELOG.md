@@ -5,6 +5,17 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] — 2026-05-25
+
+### Added
+- **"Last position (sticky)" flyout position (F50).** New `Theme.LastPosition` enum value + Settings dropdown entry. On flyout close, `SnippetMenuWindow.OnClosingPersistPosition` writes the current `Left`/`Top` (WPF DIPs) to `settings.flyout.last_x` / `last_y`. Next open restores them. NaN/missing settings fall back to cursor placement on first use. Existing clamp-into-work-area logic still applies (so a moved monitor won't strand the flyout off-screen).
+- **`CONTRIBUTING.md`** with build steps, commit-style conventions (no Co-Authored-By, imperative subject, cite F-/I-/B- IDs), versioning checklist, and a pointer at the snippet-pack ecosystem.
+- **`.github/ISSUE_TEMPLATE/{bug_report,feature_request}.md`** + **`.github/PULL_REQUEST_TEMPLATE.md`** so first-time contributors see the expected shape upfront. Bug template requests the diagnostics bundle directly.
+
+### Architecture
+- `SettingsStore.FlyoutLastPosition` tuple property, persisted as invariant-culture doubles.
+- `SnippetMenuWindow.ShowAtCursor` gained an optional `SettingsStore` parameter so the window can self-persist position on close without an extra wiring step from App.
+
 ## [0.4.5] — 2026-05-25
 
 ### Added
