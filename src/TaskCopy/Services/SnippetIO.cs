@@ -14,6 +14,11 @@ namespace TaskCopy.Services;
 public static class SnippetIO
 {
     private const int FormatVersion = 1;
+    private const long MaxImportJsonBytes = 64L * 1024 * 1024;
+    private const int MaxTitleChars = 512;
+    private const int MaxGroupNameChars = 256;
+    private const int MaxBodyChars = 1_000_000;
+    private const int MaxMetadataChars = 1_024;
     private const int MaxImagePngBytes = 10 * 1024 * 1024;
     private const long MaxImagePixels = 20_000_000;
 
@@ -91,6 +96,14 @@ public static class SnippetIO
 
     public static ImportResult Import(SnippetDatabase db, string path)
     {
+        var info = new FileInfo(path);
+        if (!info.Exists) throw new FileNotFoundException("Import file not found.", path);
+        if (info.Length > MaxImportJsonBytes)
+        {
+            throw new InvalidDataException(
+                $"Import file is too large ({info.Length:N0} bytes; limit is {MaxImportJsonBytes:N0} bytes).");
+        }
+
         var json = File.ReadAllText(path);
         var payload = JsonSerializer.Deserialize<ExportPayload>(json, JsonOptions)
                       ?? throw new InvalidDataException("Empty or unreadable export file.");
@@ -106,10 +119,11 @@ public static class SnippetIO
         var groupsCreated = 0;
         foreach (var g in payload.Groups ?? Array.Empty<ExportGroup>())
         {
-            if (string.IsNullOrWhiteSpace(g.Name)) continue;
-            if (existingGroups.ContainsKey(g.Name)) continue;
-            var id = db.InsertGroup(g.Name);
-            existingGroups[g.Name] = id;
+            var groupName = NormalizeRequiredText(g.Name, MaxGroupNameChars);
+            if (groupName is null) continue;
+            if (existingGroups.ContainsKey(groupName)) continue;
+            var id = db.InsertGroup(groupName);
+            existingGroups[groupName] = id;
             groupsCreated++;
         }
 
@@ -120,19 +134,22 @@ public static class SnippetIO
         int added = 0, skipped = 0;
         foreach (var s in payload.Snippets ?? Array.Empty<ExportSnippet>())
         {
-            if (string.IsNullOrEmpty(s.Title))
+            var title = NormalizeRequiredText(s.Title, MaxTitleChars);
+            var body = s.Body ?? string.Empty;
+            if (title is null || body.Length > MaxBodyChars || s.ContentKind is not (0 or 1))
             {
                 skipped++;
                 continue;
             }
-            if (existingTitles.Contains(s.Title))
+            if (existingTitles.Contains(title))
             {
                 skipped++;
                 continue;
             }
 
-            long? groupId = !string.IsNullOrEmpty(s.GroupName)
-                            && existingGroups.TryGetValue(s.GroupName, out var gid)
+            var groupName = NormalizeOptionalText(s.GroupName, MaxGroupNameChars);
+            long? groupId = !string.IsNullOrEmpty(groupName)
+                            && existingGroups.TryGetValue(groupName, out var gid)
                 ? gid
                 : null;
 
@@ -161,22 +178,37 @@ public static class SnippetIO
                     continue;
                 }
 
-                id = db.InsertImage(s.Title, imageBytes, s.ImageWidth.Value, s.ImageHeight.Value, groupId);
-                if (!string.IsNullOrEmpty(s.Body)) db.Update(id, s.Title, s.Body);
+                id = db.InsertImage(title, imageBytes, s.ImageWidth.Value, s.ImageHeight.Value, groupId);
+                if (!string.IsNullOrEmpty(body)) db.Update(id, title, body);
             }
             else
             {
-                id = db.Insert(s.Title, s.Body, groupId);
+                id = db.Insert(title, body, groupId);
             }
             if (s.IsMonospace) db.SetMonospace(id, true);
             if (s.Pinned) db.SetPinned(id, true);
-            if (!string.IsNullOrEmpty(s.QuickHotkey)) db.SetQuickHotkey(id, s.QuickHotkey);
-            if (s.PasteMode != 0) db.SetPasteMode(id, s.PasteMode);
-            if (!string.IsNullOrEmpty(s.TargetAppGlob)) db.SetTargetAppGlob(id, s.TargetAppGlob);
-            existingTitles.Add(s.Title);
+            var quickHotkey = NormalizeOptionalText(s.QuickHotkey, MaxMetadataChars);
+            if (!string.IsNullOrEmpty(quickHotkey)) db.SetQuickHotkey(id, quickHotkey);
+            if (s.PasteMode == 1) db.SetPasteMode(id, 1);
+            var targetAppGlob = NormalizeOptionalText(s.TargetAppGlob, MaxMetadataChars);
+            if (!string.IsNullOrEmpty(targetAppGlob)) db.SetTargetAppGlob(id, targetAppGlob);
+            existingTitles.Add(title);
             added++;
         }
 
         return new ImportResult(added, skipped, groupsCreated);
+    }
+
+    private static string? NormalizeRequiredText(string? value, int maxChars)
+    {
+        var normalized = NormalizeOptionalText(value, maxChars);
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
+    private static string? NormalizeOptionalText(string? value, int maxChars)
+    {
+        if (string.IsNullOrEmpty(value)) return null;
+        var normalized = value.Trim();
+        return normalized.Length <= maxChars ? normalized : null;
     }
 }

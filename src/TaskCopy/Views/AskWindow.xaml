@@ -31,6 +31,17 @@
                  Style="{StaticResource Mocha.TextBox}"
                  KeyDown="OnKeyDown" />
 
+        <PasswordBox Grid.Row="1"
+                     x:Name="SecretBox"
+                     Visibility="Collapsed"
+                     Background="{StaticResource Mocha.Surface0.Brush}"
+                     Foreground="{StaticResource Mocha.Text.Brush}"
+                     BorderBrush="{StaticResource Mocha.Surface2.Brush}"
+                     BorderThickness="1"
+                     Padding="8,4"
+                     MinHeight="30"
+                     KeyDown="OnKeyDown" />
+
         <StackPanel Grid.Row="3"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"

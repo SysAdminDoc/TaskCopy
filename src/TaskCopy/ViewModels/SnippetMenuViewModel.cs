@@ -211,9 +211,9 @@ public partial class SnippetMenuViewModel : ObservableObject
         {
             candidates = _all;
         }
-        else if (_all.Count >= FtsThreshold && !q.Contains(':'))
+        else if (_all.Count >= FtsThreshold && !q.Contains(':') && _db.TrySearchFtsIds(q, out var ftsIds))
         {
-            var rank = _db.SearchFtsIds(q)
+            var rank = ftsIds
                 .Select((id, index) => (id, index))
                 .ToDictionary(p => p.id, p => p.index);
             candidates = _all

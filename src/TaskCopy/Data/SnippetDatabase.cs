@@ -87,15 +87,23 @@ public sealed class SnippetDatabase
 
     public List<long> SearchFtsIds(string query, int limit = 2_000)
     {
+        return TrySearchFtsIds(query, out var ids, limit) ? ids : new List<long>();
+    }
+
+    public bool TrySearchFtsIds(string query, out List<long> ids, int limit = 2_000)
+    {
         var ftsQuery = BuildFtsQuery(query);
-        if (string.IsNullOrEmpty(ftsQuery)) return new List<long>();
+        ids = new List<long>();
+        if (string.IsNullOrEmpty(ftsQuery)) return true;
 
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            SELECT rowid
+            SELECT snippets_fts.rowid
             FROM snippets_fts
+            JOIN snippets ON snippets.id = snippets_fts.rowid
             WHERE snippets_fts MATCH $q
+              AND snippets.deleted_at IS NULL
             ORDER BY bm25(snippets_fts)
             LIMIT $limit;
             """;
@@ -105,14 +113,14 @@ public sealed class SnippetDatabase
         try
         {
             using var reader = cmd.ExecuteReader();
-            var ids = new List<long>();
             while (reader.Read()) ids.Add(reader.GetInt64(0));
-            return ids;
+            return true;
         }
         catch (SqliteException ex)
         {
             CrashLog.Write("SnippetDatabase.SearchFtsIds", ex);
-            return new List<long>();
+            ids = new List<long>();
+            return false;
         }
     }
 
@@ -681,6 +689,7 @@ public sealed class SnippetDatabase
             {
                 DataSource = explicitPath,
                 Mode = SqliteOpenMode.ReadOnly,
+                Pooling = false,
             }.ToString();
             using var conn = new SqliteConnection(cs);
             conn.Open();
@@ -707,6 +716,7 @@ public sealed class SnippetDatabase
             {
                 DataSource = dbPath,
                 Mode = SqliteOpenMode.ReadOnly,
+                Pooling = false,
             }.ToString();
             using var conn = new SqliteConnection(cs);
             conn.Open();

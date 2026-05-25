@@ -89,9 +89,9 @@ public sealed class SettingsStore
         get
         {
             var v = _db.GetSetting(KeyRecentClipsMax);
-            return int.TryParse(v, out var n) && n > 0 ? n : 50;
+            return int.TryParse(v, out var n) ? Math.Clamp(n, 1, 500) : 50;
         }
-        set => _db.SetSetting(KeyRecentClipsMax, value.ToString());
+        set => _db.SetSetting(KeyRecentClipsMax, Math.Clamp(value, 1, 500).ToString());
     }
 
     public Theme Theme

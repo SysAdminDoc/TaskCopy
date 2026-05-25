@@ -22,35 +22,20 @@ public static class BackupRotator
 
         // F49: when encryption is on, the suffix changes to .enc so the file
         // type is obvious + a plain SQLite tool won't accidentally try to open
-        // a ciphertext blob as a database. The rotator handles either suffix.
-        string Suffix() => encrypt ? ".enc" : ext;
-        string Slot(int i) => Path.Combine(dir, $"{name}.bak.{i}{Suffix()}");
-
-        // Drop the oldest, then shift each one up by one slot.
-        var oldest = Slot(keep - 1);
-        if (File.Exists(oldest)) TryDelete(oldest);
-
-        for (int i = keep - 2; i >= 0; i--)
-        {
-            var src = Slot(i);
-            var dst = Slot(i + 1);
-            if (!File.Exists(src)) continue;
-            if (File.Exists(dst)) TryDelete(dst);
-            try { File.Move(src, dst); } catch { /* best-effort */ }
-        }
-
-        // Fresh snapshot in slot 0. When encryption is on, we VACUUM INTO a
-        // temp plaintext file first, run quick_check against it, then encrypt
-        // to the final slot — same verify discipline as the plaintext path.
-        var fresh = Slot(0);
-        if (File.Exists(fresh)) TryDelete(fresh);
+        // a ciphertext blob as a database. Build the fresh snapshot first; only
+        // rotate slots after that snapshot has passed verification so a failed
+        // backup attempt doesn't disturb the last known-good slot 0.
+        string Slot(int i, bool encrypted) => Path.Combine(dir, $"{name}.bak.{i}{(encrypted ? ".enc" : ext)}");
+        string ActiveSlot(int i) => Slot(i, encrypt);
 
         if (encrypt && !string.IsNullOrEmpty(password))
         {
             var plaintextTemp = Path.Combine(dir, $"{name}.bak.tmp{ext}");
+            var encryptedTemp = Path.Combine(dir, $"{name}.bak.tmp.enc");
             try
             {
                 if (File.Exists(plaintextTemp)) TryDelete(plaintextTemp);
+                if (File.Exists(encryptedTemp)) TryDelete(encryptedTemp);
                 db.BackupTo(plaintextTemp);
 
                 // Verify the plaintext snapshot before encrypting.
@@ -62,48 +47,83 @@ public static class BackupRotator
                     return;
                 }
 
-                BackupCrypto.EncryptFile(plaintextTemp, fresh, password);
+                BackupCrypto.EncryptFile(plaintextTemp, encryptedTemp, password);
+                CommitFresh(encryptedTemp, ActiveSlot, keep);
+                DeleteNumberedPlaintextSlots();
             }
             finally
             {
                 if (File.Exists(plaintextTemp)) TryDelete(plaintextTemp);
+                if (File.Exists(encryptedTemp)) TryDelete(encryptedTemp);
             }
             return;
         }
 
-        db.BackupTo(fresh);
-
-        // B13: SQLite's VACUUM INTO is transactionally safe inside SQLite but
-        // the resulting file still sits in the OS write-back cache. Force a
-        // flush so a power loss between this point and the next sync doesn't
-        // give us a torn backup file.
+        var freshTemp = Path.Combine(dir, $"{name}.bak.tmp{ext}");
         try
         {
-            using var fs = new FileStream(fresh, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            fs.Flush(flushToDisk: true);
-        }
-        catch { /* best-effort */ }
+            if (File.Exists(freshTemp)) TryDelete(freshTemp);
+            db.BackupTo(freshTemp);
 
-        // F41 / B20: verify the just-written backup is openable + uncorrupted.
-        // PRAGMA quick_check on a freshly-VACUUMed file is ~µs and catches the
-        // (rare) case where VACUUM INTO claimed success but the resulting file
-        // is unusable (bad sector, half-flushed cache, etc.). On failure we
-        // drop the broken file so the prior slot 0 (now at .bak.1) remains
-        // the most recent good snapshot.
-        try
-        {
-            var status = SnippetDatabase.IntegrityCheck(fresh);
+            // B13: SQLite's VACUUM INTO is transactionally safe inside SQLite but
+            // the resulting file still sits in the OS write-back cache. Force a
+            // flush so a power loss between this point and the next sync doesn't
+            // give us a torn backup file.
+            try
+            {
+                using var fs = new FileStream(freshTemp, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                fs.Flush(flushToDisk: true);
+            }
+            catch { /* best-effort */ }
+
+            // F41 / B20: verify the just-written backup is openable + uncorrupted.
+            // PRAGMA quick_check on a freshly-VACUUMed file is ~µs and catches the
+            // (rare) case where VACUUM INTO claimed success but the resulting file
+            // is unusable (bad sector, half-flushed cache, etc.). On failure we
+            // leave the prior slot 0 untouched.
+            var status = SnippetDatabase.IntegrityCheck(freshTemp);
             if (!string.Equals(status, "ok", StringComparison.OrdinalIgnoreCase))
             {
                 CrashLog.Write("BackupRotator.Rotate.Verify",
-                    new Exception($"PRAGMA quick_check on '{fresh}' returned: {status}. Deleting the broken backup; prior snapshots are intact."));
-                TryDelete(fresh);
+                    new Exception($"PRAGMA quick_check on '{freshTemp}' returned: {status}. Deleting the broken backup; prior snapshots are intact."));
+                return;
             }
+
+            CommitFresh(freshTemp, ActiveSlot, keep);
         }
         catch (Exception ex)
         {
-            CrashLog.Write("BackupRotator.Rotate.VerifyException", ex);
+            CrashLog.Write("BackupRotator.Rotate", ex);
         }
+        finally
+        {
+            if (File.Exists(freshTemp)) TryDelete(freshTemp);
+        }
+
+        void DeleteNumberedPlaintextSlots()
+        {
+            for (var i = 0; i < keep; i++) TryDelete(Slot(i, encrypted: false));
+        }
+    }
+
+    private static void CommitFresh(string freshTemp, Func<int, string> slot, int keep)
+    {
+        // Drop the oldest, then shift each one up by one slot.
+        var oldest = slot(keep - 1);
+        if (File.Exists(oldest)) TryDelete(oldest);
+
+        for (var i = keep - 2; i >= 0; i--)
+        {
+            var src = slot(i);
+            var dst = slot(i + 1);
+            if (!File.Exists(src)) continue;
+            if (File.Exists(dst)) TryDelete(dst);
+            try { File.Move(src, dst); } catch { /* best-effort */ }
+        }
+
+        var fresh = slot(0);
+        if (File.Exists(fresh)) TryDelete(fresh);
+        File.Move(freshTemp, fresh);
     }
 
     private static void TryDelete(string path)
@@ -130,18 +150,25 @@ public static class BackupRotator
             // F49: both .db and .enc shapes are accepted. Encrypted slots show
             // -1 for snippet count (we can't open them without the password)
             // and the BackupSlot.IsEncrypted flag flags them to the restore UI.
+            // If a pre-hardening install has both shapes for the same index,
+            // surface whichever file is newer instead of always preferring the
+            // stale plaintext path.
             var dbPath = Path.Combine(dir, $"{name}.bak.{i}{ext}");
             var encPath = Path.Combine(dir, $"{name}.bak.{i}.enc");
-            if (File.Exists(dbPath))
+            var dbExists = File.Exists(dbPath);
+            var encExists = File.Exists(encPath);
+            if (!dbExists && !encExists) continue;
+
+            if (encExists && (!dbExists || File.GetLastWriteTimeUtc(encPath) >= File.GetLastWriteTimeUtc(dbPath)))
+            {
+                var stamp = File.GetLastWriteTimeUtc(encPath);
+                list.Add(new BackupSlot(i, encPath, stamp, -1, IsEncrypted: true));
+            }
+            else
             {
                 var stamp = File.GetLastWriteTimeUtc(dbPath);
                 var count = SnippetDatabase.TryCountSnippets(dbPath);
                 list.Add(new BackupSlot(i, dbPath, stamp, count, IsEncrypted: false));
-            }
-            else if (File.Exists(encPath))
-            {
-                var stamp = File.GetLastWriteTimeUtc(encPath);
-                list.Add(new BackupSlot(i, encPath, stamp, -1, IsEncrypted: true));
             }
         }
         return list;

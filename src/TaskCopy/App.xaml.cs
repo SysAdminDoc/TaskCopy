@@ -541,13 +541,14 @@ public partial class App : Application
         var previousClipboard = TryReadClipboardText();
         var sep = _settings.MultiPasteSeparator;
         var sb = new System.Text.StringBuilder();
-        int? cursorOffsetFromEnd = null;
+        int? cursorAbsolutePosition = null;
         var ids = new List<long>(snippets.Count);
 
         for (int i = 0; i < snippets.Count; i++)
         {
             if (i > 0) sb.Append(sep);
             var snippet = snippets[i];
+            var snippetStart = sb.Length;
             var ctx = new TemplatingContext
             {
                 PreviousClipboard = previousClipboard,
@@ -567,19 +568,16 @@ public partial class App : Application
             if (expansion.Cancelled) return;
             // The first {{cursor}} encountered wins — concatenated bundles
             // don't make sense with multiple cursors.
-            if (cursorOffsetFromEnd is null && expansion.CursorOffsetFromEnd is int n)
+            if (cursorAbsolutePosition is null && expansion.CursorOffsetFromEnd is int n)
             {
-                // Recompute offset from the end of the full concatenated body.
-                var thisExpandedFromEnd = expansion.Body.Length - (expansion.Body.Length - n);
-                cursorOffsetFromEnd = thisExpandedFromEnd
-                    + sep.Length * (snippets.Count - 1 - i)
-                    + snippets.Skip(i + 1).Sum(s => s.Body.Length);
+                cursorAbsolutePosition = snippetStart + expansion.Body.Length - n;
             }
             sb.Append(expansion.Body);
             ids.Add(snippet.Id);
         }
 
         var combined = sb.ToString();
+        var cursorOffsetFromEnd = cursorAbsolutePosition is int pos ? combined.Length - pos : (int?)null;
         _clipboardWatcher?.SuppressNext(combined);
         if (!_clipboard.TryCopy(combined)) return;
 
@@ -877,13 +875,13 @@ public partial class App : Application
         if (_settings is null) return;
         if (enabled)
         {
-            var first = AskWindow.Prompt("Backup encryption — set password", _settingsWindow);
+            var first = AskWindow.PromptSecret("Backup encryption — set password", _settingsWindow);
             if (string.IsNullOrEmpty(first))
             {
                 vm.RevertBackupEncryptedBinding(_settings.BackupEncrypted);
                 return;
             }
-            var second = AskWindow.Prompt("Backup encryption — confirm password", _settingsWindow);
+            var second = AskWindow.PromptSecret("Backup encryption — confirm password", _settingsWindow);
             if (second != first)
             {
                 MessageBox.Show("Passwords didn't match. Encryption stays OFF.",
@@ -909,7 +907,7 @@ public partial class App : Application
         // disable the feature on an unlocked machine.
         if (!string.IsNullOrEmpty(_settings.BackupPasswordToken))
         {
-            var pwd = AskWindow.Prompt("Confirm current password to disable encryption", _settingsWindow);
+            var pwd = AskWindow.PromptSecret("Confirm current password to disable encryption", _settingsWindow);
             if (string.IsNullOrEmpty(pwd) || !BackupCrypto.VerifyPasswordToken(_settings.BackupPasswordToken, pwd))
             {
                 MessageBox.Show("Password didn't match. Encryption stays ON.",
@@ -988,7 +986,7 @@ public partial class App : Application
             string? pwd = null;
             if (slots[0].IsEncrypted)
             {
-                pwd = AskWindow.Prompt("Backup password", _settingsWindow);
+                pwd = AskWindow.PromptSecret("Backup password", _settingsWindow);
                 if (string.IsNullOrEmpty(pwd))
                 {
                     parentVm.StatusMessage = "Restore cancelled — no password entered.";

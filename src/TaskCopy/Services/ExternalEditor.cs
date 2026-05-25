@@ -65,26 +65,19 @@ public static class ExternalEditor
         }
     }
 
-    private static (string fileName, string args) ResolveCommand(string? configured, string filePath)
+    internal static (string fileName, string args) ResolveCommand(string? configured, string filePath)
     {
         var quoted = $"\"{filePath}\"";
 
-        if (!string.IsNullOrWhiteSpace(configured))
+        if (TrySplitCommand(configured, out var configuredExe, out var configuredArgs))
         {
-            // If the configured command looks like `code --wait`, split off the
-            // first token as the executable and treat the rest as args.
-            var trimmed = configured!.Trim();
-            var firstSpace = trimmed.IndexOf(' ');
-            if (firstSpace < 0) return (trimmed, quoted);
-            var exe = trimmed[..firstSpace];
-            var rest = trimmed[(firstSpace + 1)..].Trim();
-            return (exe, string.IsNullOrEmpty(rest) ? quoted : $"{rest} {quoted}");
+            return (configuredExe, string.IsNullOrEmpty(configuredArgs) ? quoted : $"{configuredArgs} {quoted}");
         }
 
         var envEditor = Environment.GetEnvironmentVariable("EDITOR");
-        if (!string.IsNullOrWhiteSpace(envEditor))
+        if (TrySplitCommand(envEditor, out var envExe, out var envArgs))
         {
-            return (envEditor, quoted);
+            return (envExe, string.IsNullOrEmpty(envArgs) ? quoted : $"{envArgs} {quoted}");
         }
 
         // VS Code preferred; --wait so the process blocks until the user closes the tab.
@@ -94,6 +87,38 @@ public static class ExternalEditor
         }
 
         return ("notepad.exe", quoted);
+    }
+
+    internal static bool TrySplitCommand(string? command, out string executable, out string args)
+    {
+        executable = string.Empty;
+        args = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(command)) return false;
+        var trimmed = command.Trim();
+        if (trimmed.Length == 0) return false;
+
+        if (trimmed[0] == '"')
+        {
+            var close = trimmed.IndexOf('"', startIndex: 1);
+            if (close > 1)
+            {
+                executable = trimmed[1..close];
+                args = trimmed[(close + 1)..].Trim();
+                return executable.Length > 0;
+            }
+        }
+
+        var firstSpace = trimmed.IndexOf(' ');
+        if (firstSpace < 0)
+        {
+            executable = trimmed;
+            return true;
+        }
+
+        executable = trimmed[..firstSpace];
+        args = trimmed[(firstSpace + 1)..].Trim();
+        return executable.Length > 0;
     }
 
     private static bool HasExecutable(string name)

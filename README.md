@@ -1,6 +1,6 @@
 # TaskCopy
 
-[![Version](https://img.shields.io/badge/version-0.5.10-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.11-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://www.microsoft.com/windows)
 [![Stack](https://img.shields.io/badge/stack-.NET%2010%20%2F%20WPF-512BD4)](https://dotnet.microsoft.com)
@@ -11,9 +11,9 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 
 ## Status
 
-**v0.5.10** — FTS5 search at scale. Large snippet libraries use a maintained SQLite FTS5 index for flyout search, while smaller libraries keep the existing in-memory prefix-weighted scorer. The v0.5 line also includes syntax-highlighted code editing, opt-in shell placeholders, image snippets, reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
+**v0.5.11** — hardening pass. Backup rotation is safer, encrypted backup rotation clears numbered plaintext slots, import/search/IPC/shell edges are more defensive, and the repo now has a focused regression test suite. The v0.5 line also includes FTS5 search at scale, syntax-highlighted code editing, opt-in shell placeholders, image snippets, reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
 
-## Features (v0.5.10)
+## Features (v0.5.11)
 
 ### Picker & paste
 - **Tray icon** — left-click opens snippet flyout at the cursor; right-click opens a native Mocha/Latte menu (Open snippets / Settings / About / Quit); double-click opens Settings.
@@ -35,7 +35,7 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 - **JSON / `.taskpack` / Espanso YAML import** + **JSON export**. JSON export round-trips text and image snippets; Espanso static `matches:` entries become text snippets while unsupported dynamic matches are skipped. Automatic on-startup backup uses `VACUUM INTO` (3-deep rotation, throttled to once per 24 h).
 - **Restore from backup…** — Settings → Diagnostics lists the available snapshots and swaps them in atomically (with a pre-restore rollback snapshot in case the user changes their mind).
 - **Soft-delete trash** — confirm-delete then 30-day auto-purge. Trash window in Settings shows trashed snippets with per-row Restore / Delete Permanently / Empty Trash.
-- **Single-instance handoff** via named pipe; subsequent launches focus an existing window or take a CLI directive.
+- **Single-instance handoff** via a per-user named pipe; subsequent launches focus an existing window or take a CLI directive.
 - **Crash log** at `%LOCALAPPDATA%\TaskCopy\logs\crash.log` with 1 MB rotation; one-click "Open log folder" / "Open data folder" / "Copy diagnostics" in Settings.
 
 ### Optional
@@ -79,7 +79,9 @@ winget install SysAdminDoc.TaskCopy
 ```powershell
 git clone https://github.com/SysAdminDoc/TaskCopy.git
 cd TaskCopy
-dotnet build src\TaskCopy\TaskCopy.csproj -c Release
+dotnet restore TaskCopy.sln
+dotnet build TaskCopy.sln -c Release -warnaserror
+dotnet test TaskCopy.sln -c Release --no-build
 .\src\TaskCopy\bin\Release\net10.0-windows\TaskCopy.exe
 ```
 

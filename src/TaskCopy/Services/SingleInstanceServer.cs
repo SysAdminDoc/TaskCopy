@@ -1,5 +1,7 @@
 using System.IO;
 using System.IO.Pipes;
+using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 
 namespace TaskCopy.Services;
@@ -12,7 +14,7 @@ namespace TaskCopy.Services;
 /// </summary>
 public sealed class SingleInstanceServer
 {
-    public const string PipeName = "TaskCopy";
+    public static string PipeName { get; } = BuildPipeName();
 
     public const string MsgOpenSettings = "open-settings";
     public const string MsgOpenFlyout = "open-flyout";
@@ -122,5 +124,14 @@ public sealed class SingleInstanceServer
             }
         }
         return MsgOpenSettings;
+    }
+
+    private static string BuildPipeName()
+    {
+        string? identity = null;
+        try { identity = WindowsIdentity.GetCurrent().User?.Value; } catch { }
+        identity ??= Environment.UserName ?? "unknown";
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(identity));
+        return "TaskCopy-" + Convert.ToHexString(hash.AsSpan(0, 8)).ToLowerInvariant();
     }
 }

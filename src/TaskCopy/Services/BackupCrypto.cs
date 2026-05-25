@@ -93,6 +93,7 @@ public static class BackupCrypto
         }
         catch
         {
+            try { if (File.Exists(destPath)) File.Delete(destPath); } catch { }
             // Any failure → false. Don't leak whether it was a bad password
             // vs a malformed file; both are "decryption refused."
             return false;
@@ -124,7 +125,14 @@ public static class BackupCrypto
             var stored = Convert.FromBase64String(parts[3]);
             var candidate = Rfc2898DeriveBytes.Pbkdf2(
                 Encoding.UTF8.GetBytes(password), salt, iters, HashAlgorithmName.SHA256, stored.Length);
-            return CryptographicOperations.FixedTimeEquals(stored, candidate);
+            try
+            {
+                return CryptographicOperations.FixedTimeEquals(stored, candidate);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(candidate);
+            }
         }
         catch
         {

@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 
@@ -31,6 +32,7 @@ public partial class FormWindow : Window
                 Style = (Style)Application.Current.Resources["Mocha.TextBox"],
                 MinWidth = 360,
             };
+            AutomationProperties.SetName(box, field);
             box.KeyDown += OnTextBoxKeyDown;
             FieldsPanel.Children.Add(box);
 

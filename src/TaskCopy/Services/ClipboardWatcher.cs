@@ -102,10 +102,10 @@ public sealed class ClipboardWatcher : IDisposable
         if (string.IsNullOrEmpty(body)) return;
         if (System.Text.Encoding.UTF8.GetByteCount(body) > MaxBytesPerClip) return;
 
-        if (_suppressBody is { } pending && pending == body)
+        if (_suppressBody is { } pending)
         {
             _suppressBody = null;
-            return;
+            if (pending == body) return;
         }
 
         Captured?.Invoke(this, body);

@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace TaskCopy.Services;
 
 /// <summary>
@@ -16,31 +14,63 @@ namespace TaskCopy.Services;
 /// </summary>
 public static class AppGlob
 {
+    private const int MaxPatterns = 32;
+    private const int MaxPatternChars = 256;
+
     /// <summary>True when <paramref name="targetProcess"/> matches any pattern in the comma-separated list.</summary>
     public static bool Matches(string? globList, string? targetProcess)
     {
         if (string.IsNullOrWhiteSpace(globList)) return true; // unset = universal
         if (string.IsNullOrEmpty(targetProcess)) return false;
 
-        var patterns = globList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var patterns = globList
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(MaxPatterns);
         foreach (var p in patterns)
         {
-            if (GlobToRegex(p).IsMatch(targetProcess)) return true;
+            if (p.Length is 0 or > MaxPatternChars) continue;
+            if (WildcardMatch(p, targetProcess)) return true;
         }
         return false;
     }
 
-    private static Regex GlobToRegex(string glob)
+    private static bool WildcardMatch(string pattern, string text)
     {
-        // Anchored full-match; only `*` is wildcard. Everything else is escaped
-        // so e.g. "code-insiders.exe" sees literal . and -.
-        var sb = new System.Text.StringBuilder();
-        sb.Append('^');
-        foreach (var c in glob)
+        var p = 0;
+        var t = 0;
+        var star = -1;
+        var match = 0;
+
+        while (t < text.Length)
         {
-            sb.Append(c == '*' ? ".*" : Regex.Escape(c.ToString()));
+            if (p < pattern.Length && pattern[p] == '*')
+            {
+                star = p++;
+                match = t;
+                continue;
+            }
+
+            if (p < pattern.Length && CharsEqual(pattern[p], text[t]))
+            {
+                p++;
+                t++;
+                continue;
+            }
+
+            if (star >= 0)
+            {
+                p = star + 1;
+                t = ++match;
+                continue;
+            }
+
+            return false;
         }
-        sb.Append('$');
-        return new Regex(sb.ToString(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        while (p < pattern.Length && pattern[p] == '*') p++;
+        return p == pattern.Length;
     }
+
+    private static bool CharsEqual(char left, char right) =>
+        char.ToUpperInvariant(left) == char.ToUpperInvariant(right);
 }

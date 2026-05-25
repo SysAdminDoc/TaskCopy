@@ -5,6 +5,35 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.11] — 2026-05-25
+
+### Added
+- Focused regression test suite (`tests/TaskCopy.Tests`) covering FTS search/migrations, backup rotation, import validation, app-glob matching, shell-template gating, settings bounds, named-pipe naming, and external-editor command parsing.
+- CI now restores/builds/tests `TaskCopy.sln` with `-warnaserror` instead of building only the WPF project.
+
+### Changed
+- Backup rotation now builds and verifies the fresh snapshot before rotating existing slots, so failed backup attempts leave the previous slot 0 untouched.
+- Encrypted backup rotation now removes numbered plaintext backup slots after a successful `.enc` snapshot, and the restore picker chooses the newer file when legacy plaintext and encrypted files share a slot index.
+- Backup password prompts now use a `PasswordBox` instead of the generic visible text prompt.
+- Single-instance IPC pipe names are per-user hashed names instead of a global `"TaskCopy"` pipe name.
+- Per-app glob matching no longer allocates regular expressions per row while filtering.
+- JSON import now bounds file size, title/body/group/metadata lengths, rejects unsupported content kinds, and clamps imported paste modes to known values.
+- Recent-clip retention is clamped to 1–500 items even if settings storage is edited by hand.
+
+### Fixed
+- FTS search now filters out trashed rows at the database query layer and falls back to in-memory search if the FTS query path fails.
+- Schema V9 rebuilds the FTS index with SQLite's canonical external-content rebuild command for databases that already crossed V8.
+- Read-only SQLite integrity/count checks disable pooling so verified backup files can be moved immediately on Windows.
+- Multi-snippet paste now calculates `{{cursor}}` placement from expanded snippet bodies instead of raw template lengths.
+- Clipboard watcher suppression now clears after the next clipboard event even if the event body differs, avoiding stale suppression of later user copies.
+- External-editor commands now handle quoted executable paths with arguments, such as `"C:\Program Files\Editor\editor.exe" --wait`.
+- Shell placeholders now refuse commands over 8 KB and wait briefly after killing timed-out command trees.
+
+### Verification
+- `dotnet build TaskCopy.sln -c Release --no-restore -warnaserror`
+- `dotnet test TaskCopy.sln -c Release --no-build --no-restore`
+- `dotnet list TaskCopy.sln package --vulnerable --include-transitive` reports no vulnerable packages.
+
 ## [0.5.10] — 2026-05-25
 
 ### Added

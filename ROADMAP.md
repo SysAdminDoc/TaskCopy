@@ -64,6 +64,10 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.11 — "Hardening and regression tests" ✅ SHIPPED (2026-05-25)
+
+- [x] **Audit hardening pass** — safer backup rotation, encrypted-backup plaintext-slot cleanup, password-mode backup prompts, per-user IPC pipe names, FTS V9 rebuild/fallback, bounded import validation, stale clipboard suppression fix, multi-paste cursor fix, regex-free app glob matching, shell command length guard, quoted external-editor command parsing, and solution-level regression tests.
+
 ## v0.5.10 — "FTS5 search at scale" ✅ SHIPPED (2026-05-25)
 
 - [x] **F51 — FTS5 search at scale** — schema V8 maintains a SQLite FTS5 index and the flyout uses it for unfielded searches once a live library has 500+ snippets.

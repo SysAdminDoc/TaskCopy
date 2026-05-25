@@ -11,7 +11,7 @@ namespace TaskCopy.Data;
 internal static class Migrations
 {
     /// <summary>The schema version this build expects.</summary>
-    public const int CurrentVersion = 8;
+    public const int CurrentVersion = 9;
 
     public static void Apply(SqliteConnection conn)
     {
@@ -24,6 +24,7 @@ internal static class Migrations
         if (version < 6) ApplyV6(conn);
         if (version < 7) ApplyV7(conn);
         if (version < 8) ApplyV8(conn);
+        if (version < 9) ApplyV9(conn);
     }
 
     private static int GetUserVersion(SqliteConnection conn)
@@ -211,11 +212,6 @@ internal static class Migrations
             CREATE VIRTUAL TABLE IF NOT EXISTS snippets_fts
             USING fts5(title, body, content='snippets', content_rowid='id');
 
-            INSERT INTO snippets_fts(rowid, title, body)
-            SELECT id, title, body FROM snippets
-            WHERE deleted_at IS NULL
-              AND id NOT IN (SELECT rowid FROM snippets_fts);
-
             CREATE TRIGGER IF NOT EXISTS snippets_fts_ai
             AFTER INSERT ON snippets BEGIN
                 INSERT INTO snippets_fts(rowid, title, body)
@@ -236,9 +232,32 @@ internal static class Migrations
                 SELECT new.id, new.title, new.body
                 WHERE new.deleted_at IS NULL;
             END;
+
+            INSERT INTO snippets_fts(snippets_fts) VALUES ('rebuild');
             """;
         cmd.ExecuteNonQuery();
         SetUserVersion(conn, 8);
+        tx.Commit();
+    }
+
+    /// <summary>
+    /// v0.5.11 hardening: rebuild the FTS index for databases that already
+    /// crossed V8 before the migration was switched to SQLite's canonical
+    /// external-content rebuild command.
+    /// </summary>
+    private static void ApplyV9(SqliteConnection conn)
+    {
+        using var tx = conn.BeginTransaction();
+        using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            CREATE VIRTUAL TABLE IF NOT EXISTS snippets_fts
+            USING fts5(title, body, content='snippets', content_rowid='id');
+
+            INSERT INTO snippets_fts(snippets_fts) VALUES ('rebuild');
+            """;
+        cmd.ExecuteNonQuery();
+        SetUserVersion(conn, 9);
         tx.Commit();
     }
 

@@ -8,10 +8,12 @@ public static class ShellSnippetEvaluator
 {
     private const int TimeoutMs = 2_000;
     private const int MaxOutputChars = 4_096;
+    private const int MaxCommandChars = 8_192;
 
     public static string Run(string command)
     {
         if (string.IsNullOrWhiteSpace(command)) return string.Empty;
+        if (command.Length > MaxCommandChars) return "[shell command too long]";
 
         var scriptPath = Path.Combine(Path.GetTempPath(), $"TaskCopy-shell-{Guid.NewGuid():N}.cmd");
         try
@@ -39,6 +41,7 @@ public static class ShellSnippetEvaluator
             if (!process.WaitForExit(TimeoutMs))
             {
                 try { process.Kill(entireProcessTree: true); } catch { }
+                try { process.WaitForExit(500); } catch { }
                 return "[shell timed out]";
             }
 

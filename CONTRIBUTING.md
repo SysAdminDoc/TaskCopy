@@ -7,7 +7,9 @@ Thanks for your interest. This file collects the small set of conventions the pr
 ```powershell
 git clone https://github.com/SysAdminDoc/TaskCopy.git
 cd TaskCopy
-dotnet build src\TaskCopy\TaskCopy.csproj -c Release
+dotnet restore TaskCopy.sln
+dotnet build TaskCopy.sln -c Release -warnaserror
+dotnet test TaskCopy.sln -c Release --no-build
 .\src\TaskCopy\bin\Release\net10.0-windows\TaskCopy.exe
 ```
 
@@ -15,7 +17,7 @@ Requirements:
 
 - Windows 10 / 11
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- A clean Release build is the CI gate (`-warnaserror`). Run it locally before pushing.
+- A clean Release solution build is the CI gate (`-warnaserror`), followed by the regression test suite. Run both locally before pushing.
 
 ## Commit style
 
@@ -37,7 +39,7 @@ Every change that ships under a version bump must update three files in lockstep
 
 - Prefer named local helpers over deep ternaries.
 - Comments explain *why*, not *what*. The existing files have a consistent voice — please match it.
-- No tests today (per `CLAUDE.md` global rule). If that rule lifts, the priority order is in [`RESEARCH_FEATURE_PLAN.md`](RESEARCH_FEATURE_PLAN.md#test-gaps-when-claudemd-no-tests-rule-is-lifted).
+- Keep tests focused on risky logic and regressions. The current suite covers database migrations/search, import validation, backup rotation, templating guardrails, settings bounds, and command parsing.
 - WPF XAML stays minimal — no third-party MVVM frameworks beyond `CommunityToolkit.Mvvm`.
 
 ## Snippet packs
