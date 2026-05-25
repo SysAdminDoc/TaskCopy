@@ -42,12 +42,27 @@
         <Grid Margin="0,8">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <!-- 1 search -->
                 <RowDefinition Height="Auto" />
+                <!-- 2 F20 group chips (hidden when no groups) -->
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" MaxHeight="440" />
+                <!-- 3 separator -->
                 <RowDefinition Height="Auto" />
+                <!-- 4 Recent header -->
                 <RowDefinition Height="Auto" />
+                <!-- 5 Recent list -->
+                <RowDefinition Height="Auto" MaxHeight="160" />
+                <!-- 6 separator after Recent -->
                 <RowDefinition Height="Auto" />
+                <!-- 7 Snippet list / empty states -->
+                <RowDefinition Height="Auto" MaxHeight="380" />
+                <!-- 8 separator -->
+                <RowDefinition Height="Auto" />
+                <!-- 9 Settings -->
+                <RowDefinition Height="Auto" />
+                <!-- 10 About -->
+                <RowDefinition Height="Auto" />
+                <!-- 11 Quit -->
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
@@ -68,11 +83,121 @@
                      AutomationProperties.HelpText="Type to filter the snippet list. Use the Up and Down arrows to navigate, Enter to copy, Escape to clear or close."
                      Visibility="{Binding HasAnySnippets, Converter={StaticResource BoolToVisibilityConverter}}" />
 
+            <!-- F20: group pivot chip strip. Hidden when no groups defined. -->
+            <ItemsControl Grid.Row="2"
+                          x:Name="GroupChipStrip"
+                          ItemsSource="{Binding GroupChips}"
+                          Margin="10,0,10,8"
+                          Visibility="{Binding HasGroups, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:GroupChip}">
+                        <Button Style="{StaticResource Mocha.Button}"
+                                Content="{Binding Label}"
+                                Tag="{Binding Id}"
+                                Click="OnGroupChipClicked"
+                                Margin="2,0,2,4"
+                                MinHeight="24"
+                                Padding="10,2" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
             <!-- Separator -->
-            <Border Grid.Row="2" Style="{StaticResource Mocha.Separator}" />
+            <Border Grid.Row="3" Style="{StaticResource Mocha.Separator}" />
+
+            <!-- Recent header (F19, visible only when capture is on and there's at least one clip) -->
+            <TextBlock Grid.Row="4"
+                       Text="Recent"
+                       Style="{StaticResource Mocha.Body.Header}"
+                       Margin="16,4,16,4"
+                       Visibility="{Binding HasRecentClips, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+            <!-- Recent clips list (F19) -->
+            <ListBox Grid.Row="5"
+                     x:Name="RecentClipList"
+                     ItemsSource="{Binding RecentClips}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="0"
+                     Focusable="False"
+                     KeyboardNavigation.TabNavigation="None"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     AutomationProperties.Name="Recent clipboard items"
+                     Visibility="{Binding HasRecentClips, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="4,1" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="Foreground" Value="{StaticResource Mocha.Text.Brush}" />
+                        <Setter Property="Cursor" Value="Hand" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Focusable" Value="False" />
+                        <EventSetter Event="MouseLeftButtonUp" Handler="OnRecentClipClicked" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Bg"
+                                            Background="{TemplateBinding Background}"
+                                            CornerRadius="6"
+                                            Padding="12,6">
+                                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Mocha.Surface0.Brush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
+                                <ContextMenu Style="{StaticResource Mocha.ContextMenu}">
+                                    <MenuItem Header="Copy"
+                                              Style="{StaticResource Mocha.MenuItem}"
+                                              Click="OnRecentCopyMenu" />
+                                    <MenuItem Header="Promote to snippet…"
+                                              Style="{StaticResource Mocha.MenuItem}"
+                                              Click="OnRecentPromoteMenu" />
+                                </ContextMenu>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:RecentClipRow}">
+                        <Grid AutomationProperties.HelpText="{Binding Preview}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="22" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="&#x23F1;"
+                                       Style="{StaticResource Mocha.Body.Subtle}"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,6,0" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Preview}"
+                                       Style="{StaticResource Mocha.Body}"
+                                       ToolTip="{Binding Body}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Separator between Recent and Snippets, shown only when Recent has rows -->
+            <Border Grid.Row="6" Style="{StaticResource Mocha.Separator}"
+                    Visibility="{Binding HasRecentClips, Converter={StaticResource BoolToVisibilityConverter}}" />
 
             <!-- Snippet list -->
-            <ListBox Grid.Row="3"
+            <ListBox Grid.Row="7"
                      x:Name="SnippetList"
                      ItemsSource="{Binding Snippets}"
                      SelectedIndex="{Binding SelectedIndex}"
@@ -154,7 +279,7 @@
             </ListBox>
 
             <!-- Empty state (no snippets at all) -->
-            <Border Grid.Row="3"
+            <Border Grid.Row="7"
                     Padding="20,16">
                 <Border.Style>
                     <Style TargetType="Border">
@@ -178,7 +303,7 @@
             </Border>
 
             <!-- No-match state (has snippets, but filter matches nothing) -->
-            <Border Grid.Row="3"
+            <Border Grid.Row="7"
                     Padding="20,16">
                 <Border.Style>
                     <Style TargetType="Border">
@@ -206,24 +331,24 @@
             </Border>
 
             <!-- Separator -->
-            <Border Grid.Row="4" Style="{StaticResource Mocha.Separator}" />
+            <Border Grid.Row="8" Style="{StaticResource Mocha.Separator}" />
 
             <!-- Settings -->
-            <Button Grid.Row="5"
+            <Button Grid.Row="9"
                     Style="{StaticResource Mocha.SnippetRow}"
                     Command="{Binding EditCommand}">
                 <TextBlock Text="Settings…" Style="{StaticResource Mocha.Body}" />
             </Button>
 
             <!-- About -->
-            <Button Grid.Row="6"
+            <Button Grid.Row="10"
                     Style="{StaticResource Mocha.SnippetRow}"
                     Command="{Binding AboutCommand}">
                 <TextBlock Text="About" Style="{StaticResource Mocha.Body}" />
             </Button>
 
             <!-- Quit -->
-            <Button Grid.Row="7"
+            <Button Grid.Row="11"
                     Style="{StaticResource Mocha.SnippetRow}"
                     Command="{Binding QuitCommand}">
                 <TextBlock Text="Quit TaskCopy" Style="{StaticResource Mocha.Body}" />

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -34,6 +35,9 @@ public partial class App : Application
     private SettingsWindow? _settingsWindow;
     private AboutWindow? _aboutWindow;
 
+    // One-time-per-session suppression for the "auto-paste skipped" toast.
+    private bool _autoPasteFailToastShown;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -60,6 +64,43 @@ public partial class App : Application
         _db = new SnippetDatabase(Path.Combine(dataDir, "snippets.db"));
         _settings = new SettingsStore(_db);
 
+        // F21: integrity guard. SQLite reports "ok" on a healthy DB; anything
+        // else is either corruption or a fatal-ish migration scar. Surface the
+        // restore path instead of letting later writes worsen the damage.
+        try
+        {
+            var status = _db.IntegrityCheck();
+            if (!string.Equals(status, "ok", StringComparison.OrdinalIgnoreCase))
+            {
+                CrashLog.Write("IntegrityCheck", new Exception($"PRAGMA quick_check returned: {status}"));
+                var slots = BackupRotator.ListAvailable(_db);
+                var freshest = slots.FirstOrDefault();
+                var promptMsg = freshest is null
+                    ? $"TaskCopy's snippet database may be corrupted (quick_check: {status}). No backups are available — Open data folder to inspect or replace manually."
+                    : $"TaskCopy's snippet database may be corrupted (quick_check: {status}).\n\nRestore from {freshest.DisplayLabel}? A pre-restore snapshot will be saved so this is reversible.";
+
+                var result = freshest is null
+                    ? MessageBoxResult.None
+                    : MessageBox.Show(promptMsg, "TaskCopy — Database integrity",
+                        MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel);
+
+                if (result == MessageBoxResult.OK && freshest is not null)
+                {
+                    try
+                    {
+                        BackupRotator.RestoreFrom(_db, freshest.Path);
+                        RelaunchSelf("--settings");
+                        return;
+                    }
+                    catch (Exception restoreEx)
+                    {
+                        CrashLog.Write("StartupRestoreFromBackup", restoreEx);
+                    }
+                }
+            }
+        }
+        catch (Exception ex) { CrashLog.Write("StartupIntegrityCheck", ex); }
+
         // Apply theme before any window opens — Mocha is the default and is
         // already merged via App.xaml, but if the user picked Latte (or Auto
         // resolves to Latte on a Light system) we swap the palette here.
@@ -68,9 +109,20 @@ public partial class App : Application
 
         // Daily-rotated 3-deep VACUUM INTO backups + 30-day trash purge,
         // ran off the UI thread so startup latency stays unchanged.
+        // Backup runs at most once per 24h so frequent relaunches don't burn
+        // through the 3-deep ring buffer in a single session.
         _ = Task.Run(() =>
         {
-            try { BackupRotator.Rotate(_db); }
+            try
+            {
+                var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                var elapsed = now - _settings.LastBackupAt;
+                if (elapsed >= 24 * 60 * 60 || _settings.LastBackupAt == 0)
+                {
+                    BackupRotator.Rotate(_db);
+                    _settings.LastBackupAt = now;
+                }
+            }
             catch (Exception ex) { CrashLog.Write("BackupRotator.Rotate", ex); }
 
             try
@@ -136,12 +188,16 @@ public partial class App : Application
             }
             _settings.MarkFirstRunComplete();
 
-            _trayIcon.ShowNotification(
-                title: "Welcome to TaskCopy",
-                message: $"We've added a few example snippets. Right-click the tray for options, or press {HotkeyService.FormatHotkey(_settings.HotkeyKey, _settings.HotkeyModifiers)} to open the picker.",
-                icon: NotificationIcon.Info);
-
-            Dispatcher.BeginInvoke(ShowSettings, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            // Open Settings first so the welcome toast doesn't race the window-show
+            // for foreground focus. Toast fires once Settings is actually visible.
+            Dispatcher.BeginInvoke(() =>
+            {
+                ShowSettings();
+                _trayIcon?.ShowNotification(
+                    title: "Welcome to TaskCopy",
+                    message: $"We've added a few example snippets. Right-click the tray for options, or press {HotkeyService.FormatHotkey(_settings.HotkeyKey, _settings.HotkeyModifiers)} to open the picker.",
+                    icon: NotificationIcon.Info);
+            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
     }
 
@@ -150,9 +206,12 @@ public partial class App : Application
         // Skip seeding if a returning user lost the firstrun flag but still has snippets.
         if (db.GetAll().Count > 0) return;
 
-        db.Insert("Email signature", "Best,\nMatt");
+        // Names/identity stay generic so first-launch doesn't ship anybody else's signature.
+        // {{ask:Name}} prompts the user for their name at paste time — also demonstrates
+        // the placeholder feature on day one.
+        db.Insert("Email signature", "Best,\n{{ask:Name}}");
+        db.Insert("Today's date", "{{date}}");
         db.Insert("Markdown link", "[label](https://)");
-        db.Insert("ISO date stamp", "2026-05-24");
         db.Insert("Code-fence block", "```\n\n```");
         db.Insert("TaskCopy repo URL", "https://github.com/SysAdminDoc/TaskCopy");
     }
@@ -182,6 +241,8 @@ public partial class App : Application
         };
         vm.QuitRequested += (_, _) => QuitApp();
         vm.SnippetCopyRequested += async (_, s) => await HandleSnippetCopyAsync(s);
+        vm.RecentClipCopyRequested += async (_, clip) => await HandleRecentClipCopyAsync(clip);
+        vm.PromoteRecentClipRequested += (_, clip) => PromoteRecentClipToSnippet(clip);
 
         _snippetMenu = new SnippetMenuWindow(vm);
         _snippetMenu.Closed += (_, _) => _snippetMenu = null;
@@ -204,6 +265,9 @@ public partial class App : Application
         var vm = new SettingsViewModel(_db, _settings, _startup, _hotkeys);
         vm.ManageGroupsRequested += (_, _) => ShowManageGroups(vm);
         vm.ToggleRecentClipsRequested += (_, enabled) => SetRecentClipsEnabled(enabled);
+        vm.ApplyThemeRequested += (_, label) => OfferThemeRelaunch(label);
+        vm.ShowTrashRequested += (_, _) => ShowTrash(vm);
+        vm.RestoreBackupRequested += (_, _) => ShowRestoreBackup(vm);
         _settingsWindow = new SettingsWindow(vm);
         _settingsWindow.Closed += (_, _) =>
         {
@@ -269,7 +333,71 @@ public partial class App : Application
         _snippetMenu?.Close();
 
         await Task.Delay(20);
-        Dispatcher.Invoke(() => _autoPaste?.TryAutoPaste(expansion.CursorOffsetFromEnd));
+        Dispatcher.Invoke(() =>
+        {
+            if (_autoPaste is null) return;
+            var result = _autoPaste.TryAutoPasteDetailed(
+                expansion.CursorOffsetFromEnd,
+                typedBody: expansion.Body,
+                pasteMode: snippet.PasteMode);
+            if (result == AutoPasteService.Result.ForegroundRestoreFailed && !_autoPasteFailToastShown)
+            {
+                _autoPasteFailToastShown = true;
+                _trayIcon?.ShowNotification(
+                    title: "TaskCopy",
+                    message: "Auto-paste was skipped — the target window may be running elevated. The text is on your clipboard; press Ctrl+V to paste it manually.",
+                    icon: NotificationIcon.Info);
+            }
+        });
+    }
+
+    private async Task HandleRecentClipCopyAsync(RecentClip clip)
+    {
+        if (_clipboard is null) return;
+
+        _clipboardWatcher?.SuppressNext(clip.Body);
+        if (!_clipboard.TryCopy(clip.Body)) return;
+
+        _snippetMenu?.Close();
+        await Task.Delay(20);
+        Dispatcher.Invoke(() =>
+        {
+            if (_autoPaste is null) return;
+            var result = _autoPaste.TryAutoPasteDetailed(null);
+            if (result == AutoPasteService.Result.ForegroundRestoreFailed && !_autoPasteFailToastShown)
+            {
+                _autoPasteFailToastShown = true;
+                _trayIcon?.ShowNotification(
+                    title: "TaskCopy",
+                    message: "Auto-paste was skipped — the target window may be running elevated. The text is on your clipboard; press Ctrl+V to paste it manually.",
+                    icon: NotificationIcon.Info);
+            }
+        });
+    }
+
+    private void PromoteRecentClipToSnippet(RecentClip clip)
+    {
+        if (_db is null) return;
+
+        // Use the clip's first non-empty line as the title (capped at 60 chars).
+        var line = clip.Body
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim())
+            .FirstOrDefault(l => !string.IsNullOrEmpty(l)) ?? "New snippet";
+        if (line.Length > 60) line = line[..60] + "…";
+
+        try
+        {
+            _db.Insert(line, clip.Body);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("PromoteRecentClipToSnippet", ex);
+            return;
+        }
+
+        _snippetMenu?.Close();
+        ShowSettings();
     }
 
     private static string TryReadClipboardText()
@@ -312,10 +440,27 @@ public partial class App : Application
     {
         Dispatcher.BeginInvoke(() =>
         {
+            if (string.IsNullOrEmpty(msg)) { ShowSettings(); return; }
+
+            if (msg.StartsWith(SingleInstanceServer.MsgCopyPrefix, StringComparison.Ordinal))
+            {
+                var arg = msg[SingleInstanceServer.MsgCopyPrefix.Length..];
+                HandleCliCopyOrPaste(arg, paste: false);
+                return;
+            }
+            if (msg.StartsWith(SingleInstanceServer.MsgPastePrefix, StringComparison.Ordinal))
+            {
+                var arg = msg[SingleInstanceServer.MsgPastePrefix.Length..];
+                HandleCliCopyOrPaste(arg, paste: true);
+                return;
+            }
             switch (msg)
             {
                 case SingleInstanceServer.MsgOpenFlyout:
                     ShowSnippetMenu();
+                    break;
+                case SingleInstanceServer.MsgList:
+                    DumpListToDisk();
                     break;
                 case SingleInstanceServer.MsgOpenSettings:
                 default:
@@ -323,6 +468,68 @@ public partial class App : Application
                     break;
             }
         });
+    }
+
+    private void HandleCliCopyOrPaste(string idOrTitle, bool paste)
+    {
+        if (_db is null || string.IsNullOrWhiteSpace(idOrTitle)) return;
+        var all = _db.GetAll();
+        Snippet? match = null;
+        if (long.TryParse(idOrTitle, out var id))
+        {
+            match = all.FirstOrDefault(s => s.Id == id);
+        }
+        match ??= all.FirstOrDefault(s => string.Equals(s.Title, idOrTitle, StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+        {
+            CrashLog.Write("CliCopyOrPaste", new Exception($"No snippet matched '{idOrTitle}'."));
+            return;
+        }
+
+        if (paste)
+        {
+            // Capture foreground BEFORE we run any UI work — the foreground at the
+            // moment the CLI arrived is the right paste target.
+            _foreground?.Capture();
+            _ = HandleSnippetCopyAsync(match);
+        }
+        else
+        {
+            // Copy-only: skip auto-paste regardless of setting.
+            var ctx = new TemplatingContext
+            {
+                PreviousClipboard = TryReadClipboardText(),
+                PromptFor = field => Dispatcher.Invoke(() => AskWindow.Prompt(field)),
+            };
+            try
+            {
+                var expansion = SnippetTemplating.Expand(match.Body, ctx);
+                if (expansion.Cancelled) return;
+                _clipboardWatcher?.SuppressNext(expansion.Body);
+                _clipboard?.TryCopy(expansion.Body);
+                try { _db.RecordUse(match.Id); } catch { }
+            }
+            catch (Exception ex) { CrashLog.Write("CliCopy", ex); }
+        }
+    }
+
+    private void DumpListToDisk()
+    {
+        if (_db is null) return;
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "TaskCopy");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, "snippets.list");
+            using var w = new StreamWriter(path, append: false, System.Text.Encoding.UTF8);
+            foreach (var s in _db.GetAll())
+            {
+                w.WriteLine($"{s.Id}\t{s.Title}");
+            }
+        }
+        catch (Exception ex) { CrashLog.Write("DumpList", ex); }
     }
 
     private void ShowManageGroups(SettingsViewModel parentVm)
@@ -338,6 +545,109 @@ public partial class App : Application
             parentVm.LoadFromStore();
         };
         w.ShowDialog();
+    }
+
+    private void ShowTrash(SettingsViewModel parentVm)
+    {
+        if (_db is null) return;
+        var vm = new TrashViewModel(_db);
+        var w = new TrashWindow(vm) { Owner = _settingsWindow };
+        // Restored snippets need re-registration of any quick hotkey + UI refresh.
+        vm.RestoredAny += (_, _) =>
+        {
+            if (_hotkeys is not null)
+            {
+                _hotkeys.RegisterAllSnippets(_db.GetAll().Select(s => (s.Id, s.QuickHotkey)));
+            }
+            parentVm.LoadFromStore();
+        };
+        w.ShowDialog();
+    }
+
+    /// <summary>
+    /// F21: present available .bak.{0..2} files and swap in the chosen one
+    /// after a confirm. A pre-restore snapshot is taken so the operation is
+    /// itself reversible (the snapshot lands at snippets.bak.preRestore.db).
+    /// </summary>
+    private void ShowRestoreBackup(SettingsViewModel parentVm)
+    {
+        if (_db is null) return;
+        var slots = BackupRotator.ListAvailable(_db);
+        if (slots.Count == 0)
+        {
+            MessageBox.Show("No backups available yet. Backups are written on app launch (at most once per 24 h).",
+                "TaskCopy — Restore", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        // Simple chooser: build a labelled menu via MessageBox lines. WPF doesn't
+        // ship a built-in single-select dialog; the rotated set is <=3 entries
+        // so a small modal is overkill — we present the freshest with a confirm
+        // and let the user re-run if they want an older one. Surface the list.
+        var labels = string.Join("\n", slots.Select(s => "  • " + s.DisplayLabel));
+        var prompt =
+            $"Restore from the latest backup?\n\n{slots[0].DisplayLabel}\n\nAll available backups (newest first):\n{labels}\n\n"
+            + "A pre-restore snapshot will be saved as snippets.bak.preRestore.db so this is reversible.";
+        var result = MessageBox.Show(prompt, "TaskCopy — Restore backup",
+            MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel);
+        if (result != MessageBoxResult.OK) return;
+
+        try
+        {
+            BackupRotator.RestoreFrom(_db, slots[0].Path);
+            parentVm.StatusMessage = $"Restored {slots[0].DisplayLabel}. Relaunch to apply.";
+            MessageBox.Show(
+                "Restore complete. TaskCopy will now restart so the new database is opened cleanly.",
+                "TaskCopy — Restore backup",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            RelaunchSelf("--settings");
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("RestoreBackup", ex);
+            MessageBox.Show($"Restore failed: {ex.Message}", "TaskCopy — Restore backup",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void RelaunchSelf(string args)
+    {
+        try
+        {
+            var exe = Process.GetCurrentProcess().MainModule?.FileName;
+            if (!string.IsNullOrEmpty(exe))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = exe,
+                    Arguments = args,
+                    UseShellExecute = false,
+                });
+            }
+            QuitApp();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("RelaunchSelf", ex);
+        }
+    }
+
+    /// <summary>
+    /// I16 (Option A): theme changes can't propagate into already-shown windows
+    /// because brushes are bound via StaticResource. Offer an explicit relaunch
+    /// that restores Settings on the other side via the --settings CLI handoff.
+    /// </summary>
+    private void OfferThemeRelaunch(string themeLabel)
+    {
+        var result = MessageBox.Show(
+            $"Apply {themeLabel} now? TaskCopy will restart and Settings will reopen.",
+            "TaskCopy — Theme",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Question,
+            MessageBoxResult.Cancel);
+        if (result != MessageBoxResult.OK) return;
+        RelaunchSelf("--settings");
     }
 
     private void ShowAbout()

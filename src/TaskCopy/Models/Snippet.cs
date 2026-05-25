@@ -42,6 +42,10 @@ public partial class Snippet : ObservableObject
     [ObservableProperty]
     private long? _deletedAt;
 
+    /// <summary>0 = Auto (Ctrl+V), 1 = Type characters (Unicode SendInput). See F24.</summary>
+    [ObservableProperty]
+    private int _pasteMode;
+
     public string Preview
     {
         get

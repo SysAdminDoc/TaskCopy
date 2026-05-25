@@ -62,6 +62,7 @@ internal static class NativeMethods
 
     public const uint INPUT_KEYBOARD = 1;
     public const uint KEYEVENTF_KEYUP = 0x0002;
+    public const uint KEYEVENTF_UNICODE = 0x0004;
     public const ushort VK_CONTROL = 0x11;
     public const ushort VK_V = 0x56;
     public const ushort VK_LEFT = 0x25;

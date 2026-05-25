@@ -30,7 +30,8 @@ public static class SnippetIO
         string? QuickHotkey,
         bool Pinned,
         bool IsMonospace,
-        string? GroupName);
+        string? GroupName,
+        int PasteMode = 0);
 
     public sealed record ExportGroup(string Name, int SortOrder);
 
@@ -38,7 +39,13 @@ public static class SnippetIO
         int Version,
         string ExportedAt,
         IReadOnlyList<ExportGroup> Groups,
-        IReadOnlyList<ExportSnippet> Snippets);
+        IReadOnlyList<ExportSnippet> Snippets,
+        // SchemaVersion is the DB schema version the payload was produced under
+        // (Migrations.CurrentVersion at export time). Nullable so payloads
+        // produced before this field existed still deserialize cleanly.
+        // Future imports can branch on this when older-schema content needs
+        // value mapping beyond what the column-level types already enforce.
+        int? SchemaVersion = null);
 
     public sealed record ImportResult(int Added, int Skipped, int GroupsCreated);
 
@@ -60,8 +67,10 @@ public static class SnippetIO
                 QuickHotkey: s.QuickHotkey,
                 Pinned: s.Pinned,
                 IsMonospace: s.IsMonospace,
-                GroupName: s.GroupId is long gid && nameById.TryGetValue(gid, out var gn) ? gn : null
-            )).ToList());
+                GroupName: s.GroupId is long gid && nameById.TryGetValue(gid, out var gn) ? gn : null,
+                PasteMode: s.PasteMode
+            )).ToList(),
+            SchemaVersion: Migrations.CurrentVersion);
 
         var json = JsonSerializer.Serialize(payload, JsonOptions);
         File.WriteAllText(path, json);
@@ -119,6 +128,7 @@ public static class SnippetIO
             if (s.IsMonospace) db.SetMonospace(id, true);
             if (s.Pinned) db.SetPinned(id, true);
             if (!string.IsNullOrEmpty(s.QuickHotkey)) db.SetQuickHotkey(id, s.QuickHotkey);
+            if (s.PasteMode != 0) db.SetPasteMode(id, s.PasteMode);
             existingTitles.Add(s.Title);
             added++;
         }

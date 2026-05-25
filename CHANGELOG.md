@@ -5,6 +5,62 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-05-25
+
+### Fixed
+- **`ClipboardWatcher` correctly reads `CanIncludeInClipboardHistory` (B9)** — the 4-byte DWORD payload (0=exclude, 1=include) is now honored. Older code treated *any* presence of the format as "exclude" and silently dropped clips from apps that explicitly opted IN. Updated comment cites Microsoft's clipboard-formats reference.
+- **First-run race ordering (B10)** — Settings opens *before* the welcome toast so window activation no longer competes for foreground focus.
+
+### Added — closure of v0.3 deferred work
+- **Recent-clips flyout pivot (F19, closes F15)** — when `RecentClipsEnabled` is on, the flyout now shows a "Recent" section above the snippet list with the last 10 captured clips. Click to copy + auto-paste; right-click for a context menu offering "Copy" or "Promote to snippet…" (the latter inserts a new snippet derived from the clip body and opens Settings on it).
+- **Flyout group pivot chips (F20, closes F6)** — chip strip above the search box: `[All · N] [Group A · M] [Group B · K] [Ungrouped · J]`. Selection persists across opens via `settings.flyout.last_group_id`. Chips hide entirely when no groups are defined.
+- **Restore-from-backup UI + startup integrity check (F21)** — `PRAGMA quick_check` runs on every startup; non-"ok" prompts the user to restore from the freshest `.bak.0.db` (with a pre-restore snapshot saved at `.bak.preRestore.db` so the restore is reversible). Settings → Diagnostics → "Restore backup…" exposes the same path on demand.
+- **Free-form per-snippet quick-hotkey (F22)** — replaced the fixed `Ctrl+Alt+1..9` ComboBox with a Capture… button + display label. Any combo (e.g. `Ctrl+Alt+S`) is now valid. Refuses combos that clash with the primary hotkey or with the reserved Ctrl-only set (`C V X Z Y A S N O P F W T`). Clear button removes a binding.
+- **Trash bin UI (F23)** — new `TrashWindow` modal listing soft-deleted snippets with their deletion timestamp and a "purges in N days" countdown. Per-row Restore / Delete Permanently, plus an Empty Trash footer button. Settings → "Trash…" button.
+
+### Added — power-user surfaces
+- **Send-as-keystrokes paste mode (F24)** — per-snippet "Paste" dropdown: Auto (Ctrl+V, default) or Type characters. Type-mode uses `INPUT_KEYBOARD` with `KEYEVENTF_UNICODE` so the snippet appears in terminals, RDP sessions, and other apps that swallow synthetic Ctrl+V. Capped at 5,000 characters per snippet. Schema bumped to V3 (`paste_mode INTEGER NOT NULL DEFAULT 0`). JSON export round-trips the field.
+- **Live placeholder preview pane (F25)** — the snippet editor now shows what `Hi {{ask:Name}} on {{date}}.` resolves to, live, below the body field. Uses stub values (`<Name>`, `<clipboard>`, today's date) so the preview stays pure and never touches the real clipboard.
+- **Fuzzy / prefix-weighted search (F27)** — replaced boolean substring matching with scored ranking: title prefix (100) > title contains (60) > body contains (20). Fielded operators: `title:foo` / `body:foo` match only that column. Pure-managed string ops; no FTS5 dep.
+- **Clipboard transforms (F28)** — pipe-chained placeholders: `{{clipboard|upper}}`, `{{clipboard|lower}}`, `{{clipboard|trim}}` / `trimstart` / `trimend`, `{{clipboard|reverse}}`, `{{clipboard|length}}`, `{{clipboard|jsonpretty}}`, `{{clipboard|urlencode}}`, `{{clipboard|urldecode}}`, `{{clipboard|base64}}`, `{{clipboard|base64decode}}`, `{{clipboard|sha256}}`, `{{clipboard|md5}}`. Multi-chain works: `{{clipboard|trim|upper}}`. Unknown transforms are no-ops. Works on any string-producing placeholder, not just clipboard.
+- **CLI scripting flags (F29)** — `TaskCopy.exe --copy <id|title>` puts a snippet on the clipboard, `--paste <id|title>` copies + auto-pastes into the foreground window, `--list` writes `id\ttitle` lines to `%LOCALAPPDATA%\TaskCopy\snippets.list`. All routed through the existing `\\.\pipe\TaskCopy` named pipe. Lookups resolve by id first, then case-insensitive title match.
+
+### Added — UX, accessibility, diagnostics
+- **Live theme swap via relaunch (I16 Option A)** — picking a new theme now prompts: "Apply now? TaskCopy will restart and Settings will reopen." Confirmed restarts via `--settings` so Settings comes back focused. Brushes still bind StaticResource (Option B = `DynamicResource` refactor deferred to v0.5+).
+- **Hotkey registration status indicator (I17)** — `HotkeyService.IsPrimaryRegistered` + `PrimaryRegistrationChanged` event surface a green/red dot in Settings beside the hotkey display.
+- **Auto-paste fail toast (I18)** — `AutoPasteService.TryAutoPasteDetailed` now returns a `Result` enum (`Skipped`/`Pasted`/`ForegroundRestoreFailed`/`SendInputFailed`). When the foreground refuses (typically an elevated target), a one-time-per-session tray notification explains why and tells the user to Ctrl+V manually.
+- **Per-monitor DPI v2 manifest (I20)** — new `app.manifest` declares `PerMonitorV2, PerMonitor` DPI awareness + `gdiScaling=true` for crispness on mixed-DPI setups. Also pins `asInvoker` execution level (no elevation prompt).
+- **Daily backup throttle (I21)** — `BackupRotator.Rotate` no longer fires on every launch; gated by `settings.backup.last_at` once per 24 h.
+- **Generic seeded snippets (I26)** — first-run seed no longer includes `"Best,\nMatt"`; uses `"Best,\n{{ask:Name}}"` which doubles as a placeholder demo.
+- **JSON export carries `schemaVersion` (I24)** — payload tagged with `Migrations.CurrentVersion` at export time so future importers can branch on it.
+- **Copy diagnostics button (I28)** — Settings → Diagnostics → "Copy diagnostics" bundles `{version, schema, OS, snippet/group counts, hotkey state, lastBackup, theme, autoPaste, recentClips, last 200 lines of crash.log}` into a Markdown block on the clipboard.
+- **Keyboard focus outline (I33)** — Mocha and Latte button templates now show a `Mocha.Mauve` 1 px border on `IsKeyboardFocused`. Same for `Mocha.SnippetRow`.
+- **Settings list keyboard accelerators (I32)** — Del = delete, Ctrl+N = add, F2 = focus title with text selected.
+- **Status-bar snippet count (I34)** — Settings status bar shows "N snippets · M groups", live-updated via `Snippets.CollectionChanged`/`Groups.CollectionChanged`.
+
+### Added — distribution
+- **Single-file publish (F18 Phase 1)** — `<PublishSingleFile>true</PublishSingleFile>` by default; `IncludeNativeLibrariesForSelfExtract=true` + `EnableCompressionInSingleFile=true`. `dotnet publish -c Release -r win-x64 [--self-contained false|true]` produces either a runtime-dependent ~3-8 MB exe or a fully self-contained ~80 MB exe.
+- **GitHub Actions release workflow** (`.github/workflows/release.yml`) — on `v*` tag (or manual dispatch), builds both portable and self-contained `win-x64` flavors, zips them as `TaskCopy-<version>-win-x64-<flavor>.zip`, and uploads to the GitHub Release.
+- **CI workflow** (`.github/workflows/ci.yml`) — verifies `dotnet build -c Release -warnaserror` on every push + PR.
+- **README install section + keyboard cheatsheet + CLI doc** (I30, I31) — covers the prebuilt-binary path, the SmartScreen workaround, the planned winget invocation, and the build-from-source path. Lists every keyboard shortcut + every CLI flag.
+
+### Changed
+- `Migrations.CurrentVersion` bumped from 2 to 3 (`ApplyV3` adds `snippets.paste_mode`).
+- `csproj` `<Version>` bumped to 0.4.0; `<PublishSingleFile>` flipped to `true`; `<Deterministic>` + `<ContinuousIntegrationBuild>` (CI-only) added.
+- `SnippetIO.ExportPayload` gains a nullable `schemaVersion`; `ExportSnippet` gains `pasteMode`.
+- `SnippetTemplating.Expand` now splits the captured token at the first `|` and applies pipe-chained transforms via new `Services/SnippetTransforms.cs`.
+- `SingleInstanceServer.ParseCliMessage` now recognises `--list` / `--copy <arg>` / `--paste <arg>` (plus the existing `--flyout` / `--settings`).
+- `HotkeyService.TryRegister` now updates an `IsPrimaryRegistered` property and fires `PrimaryRegistrationChanged` on transition.
+
+### Architecture
+- New services: `Services/SnippetTransforms.cs` (F28), `Services/SnippetMatch.cs` (F27).
+- New views: `Views/TrashWindow.xaml(.cs)`.
+- New viewmodels: `ViewModels/TrashViewModel.cs`.
+- `Data/Migrations.cs` adds `ApplyV3` (forward-only, idempotent via `AddColumnIfMissing`).
+- `BackupRotator.ListAvailable` + `BackupRotator.RestoreFrom` close the F21 loop with a transactional `VACUUM INTO` pre-restore snapshot.
+- New `src/TaskCopy/app.manifest` (PerMonitorV2 DPI, gdiScaling, asInvoker).
+- `.github/workflows/{release,ci}.yml` are now the canonical build entrypoints.
+
 ## [0.3.0] — 2026-05-24
 
 ### Added

@@ -2,118 +2,105 @@
 
 Single-click clipboard snippet manager for Windows. Right-click the tray icon (or hit a hotkey) to open a flyout near the cursor with your stored snippets; click one to copy + auto-paste into the previously focused window.
 
-**Stack:** C# / .NET 10 WPF · H.NotifyIcon.Wpf · NHotkey.Wpf · SQLite · CommunityToolkit.Mvvm · Catppuccin Mocha
-**Reality check:** literally extending the Windows 11 taskbar right-click menu requires Windhawk DLL injection. The tray + cursor-flyout pattern delivers the same UX with zero injection. A Windhawk companion mod can add the literal taskbar trigger as a v0.4 power-user add-on.
+**Stack:** C# / .NET 10 WPF · H.NotifyIcon.Wpf · NHotkey.Wpf · SQLite · CommunityToolkit.Mvvm · Catppuccin Mocha / Latte
+**Reality check:** literally extending the Windows 11 taskbar right-click menu requires Windhawk DLL injection. The tray + cursor-flyout pattern delivers the same UX with zero injection. A Windhawk companion mod can add the literal taskbar trigger as a v0.5 power-user add-on.
 
-This file is the single source of truth for what's done and what's next. The detailed evidence, rationale, and acceptance criteria for each F-/I- item live in [`RESEARCH_FEATURE_PLAN.md`](RESEARCH_FEATURE_PLAN.md); the architecture rationale lives in [`research/architecture-research.md`](research/architecture-research.md).
+This file is the single source of truth for what's done and what's next. The detailed evidence, rationale, and acceptance criteria for each F-/I-/B- item live in [`RESEARCH_FEATURE_PLAN.md`](RESEARCH_FEATURE_PLAN.md); the architecture rationale lives in [`research/architecture-research.md`](research/architecture-research.md). What shipped in each release lives in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
 ## v0.1.0 — Minimal viable snippet menu ✅ SHIPPED (2026-05-23)
 
-Goal: open a popup near the cursor, see a list of snippets, click to copy.
+See [`CHANGELOG.md`](CHANGELOG.md#010--2026-05-23).
 
-- [x] Project scaffold — `TaskCopy.sln`, `src/TaskCopy/TaskCopy.csproj` (`net10.0-windows`, `UseWPF=true`), NuGet refs (H.NotifyIcon.Wpf 2.4.1, NHotkey.Wpf 3.0.0, CommunityToolkit.Mvvm 8.4.0, Microsoft.Data.Sqlite 9.0.0)
-- [x] App icon — multi-resolution PNG-encoded ICO (16/32/48/64/128/256) at `src/TaskCopy/Assets/app.ico`; generator at `tools/generate-icon.ps1`
-- [x] Tray host — `TaskbarIcon` from `H.NotifyIcon.Wpf`; no default ContextMenu; tray-right-click/left-click both fire `ShowSnippetMenu`; double-click → Settings
-- [x] Snippet store — SQLite at `%LOCALAPPDATA%\TaskCopy\snippets.db`; tables `snippets(id, title, body, sort_order, created_at)` + `settings(key, value)`
-- [x] Repository layer — `SnippetDatabase` w/ `GetAll / Insert / Update / Delete / Reorder` + `GetSetting / SetSetting`
-- [x] Flyout view — `SnippetMenuWindow` (WPF Window, `WindowStyle=None`, `AllowsTransparency=true`, drop-shadow, Catppuccin Mocha, 10 px corner radius)
-- [x] Cursor-anchored positioning — opens above-and-left of cursor; monitor-clamped via `MonitorFromPoint` + `GetMonitorInfo`; DPI-aware via `GetDpiForMonitor`
-- [x] Copy action — `Clipboard.SetDataObject(text, copy: true)` w/ 5-attempt retry on COMException
-- [x] Pre-flyout HWND capture — `ForegroundWindowCapture.Capture()` stores `GetForegroundWindow()` before flyout
-- [x] Tray right-click → same flyout as hotkey
-- [x] Global hotkey — `Ctrl+Alt+V` default via `NHotkey.Wpf`; tray notification on failure
-- [x] Settings window — list of snippets, add/edit/delete/reorder, hotkey rebind (live capture w/ Esc to cancel), "Start with Windows" toggle (HKCU `\Software\Microsoft\Windows\CurrentVersion\Run`)
-- [x] Catppuccin Mocha theme — `src/TaskCopy/Themes/Mocha.xaml`; surface colors, hover/pressed states; corner radii 6–10 px (no pill backdrops)
-- [x] Single-instance enforcement — `Global\TaskCopy_SingleInstance` mutex; second launch exits silently (v0.2: raise settings)
-- [x] Crash log — `%LOCALAPPDATA%\TaskCopy\logs\crash.log` w/ AppDomain + Dispatcher + UnobservedTask handlers; MessageBox on Dispatcher exceptions
-- [x] README — badges (version 0.1.0, MIT, Win11, .NET 10), install/build/usage steps
-- [x] LICENSE (MIT), `.gitignore` (VS/C# + `CLAUDE.md` + `.claude/` + `CODEX_CHANGELOG.md`), CHANGELOG.md
-- [x] Version sync — `TaskCopy.csproj` `<Version>0.1.0</Version>` + `AssemblyVersion 0.1.0.0`, README badge `0.1.0`, CHANGELOG entry `0.1.0`
+## v0.2.0 — Power-user core ✅ SHIPPED (2026-05-24)
 
-**Verified:** `dotnet build -c Release` clean (0 warnings, 0 errors). `TaskCopy.exe` launches, registers tray icon, creates SQLite store, survives, terminates cleanly.
+See [`CHANGELOG.md`](CHANGELOG.md#020--2026-05-24).
 
-**Pending user-side validation** (cannot be done from CLI): visually confirming tray icon appearance, click-flyout interaction, hotkey trigger, Catppuccin look. Screenshots ship after first user run.
+## v0.3.0 — Snippet brain ✅ SHIPPED (2026-05-24)
+
+See [`CHANGELOG.md`](CHANGELOG.md#030--2026-05-24).
 
 ---
 
-## v0.2.0 — Power-user core (P0 batch from RESEARCH_FEATURE_PLAN.md Phase A)
+## v0.4.0 — Polish & distribution ✅ SHIPPED (2026-05-25)
 
-Goal: turn TaskCopy from "fancy clipboard" into "muscle-memory text expander."
+Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybody can install.
 
-### P0 features
+### P0 — Correctness & v0.3 closure
 
-- [x] **F1 — Finish auto-paste** (`Services/ForegroundWindowCapture` + new `Services/AutoPasteService` using `SendInput`; enable settings checkbox)
-- [x] **F2 — Search + type-ahead filter in the flyout** (`SnippetMenuViewModel.Filter`, `SnippetMenuWindow` TextBox row + keyboard nav)
-- [x] **F3 — Number-key quick-pick `1`..`9`** (flyout `OnKeyDown` + row index glyph)
-- [x] **F4 — Tray right-click → Settings / Quit / About / Open snippets context menu** (move flyout to left-click only, add native context menu; also add Settings + Quit + About rows to flyout footer)
+- [x] **B9 — Fix `CanIncludeInClipboardHistory` misread** (`Services/ClipboardWatcher.cs`) — read the 4-byte DWORD payload; skip only when value == 0. Apps that explicitly opt IN are now captured.
+- [x] **B10 — First-run race ordering** (`App.xaml.cs`) — open Settings first, *then* show the welcome toast.
+- [x] **F19 — Recent-clips flyout pivot** — opt-in `recent_clips` capture now surfaces a "Recent" section above the snippet list with click-to-copy + Promote-to-snippet via right-click.
+- [x] **F20 — Group pivot chips** — flyout shows `[All] [Group A] [Group B] [Ungrouped]` chips above search when ≥1 group is defined; selection persists via `flyout.last_group_id`.
+- [x] **F18 Phase 1 — Distribution unlock**: `<PublishSingleFile>true</PublishSingleFile>`, `app.manifest` with PerMonitorV2 DPI, GitHub Actions `release.yml` (portable + self-contained zips on `v*` tag) + `ci.yml` (Release build on every push), README install section rewrite.
 
-### P0 bug fixes
+### P1 — Closure features
 
-- [x] **I1 — Fix `SetHotkey` persist-before-register bug** (`ViewModels/SettingsViewModel.cs:162-178`)
+- [x] **F21 — Restore-from-backup UI + startup `PRAGMA quick_check`** — corrupted DB prompts restore on launch; Settings has explicit "Restore backup…" button; pre-restore snapshot makes it reversible.
+- [x] **F22 — Free-form quick-hotkey assignment** — replaced the fixed Ctrl+Alt+1..9 ComboBox with a Capture… button + display label. Any combo (e.g. Ctrl+Alt+S) is now valid. Refuses combos that clash with the primary hotkey or with the reserved Ctrl-only set (C/V/X/Z/Y/A/S/N/O/P/F/W/T).
+- [x] **F23 — Trash bin UI** — new `TrashWindow` lists soft-deleted snippets with deleted-at + purge-in countdown; per-row Restore / Delete Permanently; Empty Trash. Settings → "Trash…" button.
+- [x] **I16 (Option A) — Live theme swap via relaunch prompt** — picking a theme prompts to apply now; the relaunch reopens Settings via `--settings`.
+- [x] **I17 — Hotkey registration status indicator** — green/red dot beside the primary hotkey display, fires off `HotkeyService.PrimaryRegistrationChanged`.
+- [x] **I18 — Auto-paste fail toast** — one-time-per-session tray notification when `SetForegroundWindow` refuses (typically an elevated target).
+- [x] **I20 — `app.manifest` with PerMonitorV2 DPI + gdiScaling** — included with the distribution unlock.
+- [x] **I21 — Daily backup throttle** — `BackupRotator.Rotate` no longer runs on every launch; gated by `settings.backup.last_at` once per 24 h.
+- [x] **I24 — JSON export carries `schemaVersion`** — payload tagged with `Migrations.CurrentVersion` so future importers can branch on the source schema.
+- [x] **I26 — Generic seeded snippets** — replaced `"Best,\nMatt"` with `"Best,\n{{ask:Name}}"` so first-launch doesn't leak any identity.
 
-### Quick wins (XS — bundled with above)
+### P2 — Power-user surfaces
 
-- [x] **I5 — First-run-only launch toast** (`SettingsStore.IsFirstRun` flag)
-- [x] **I12 — Use `Local\` mutex instead of `Global\`**
-- [x] **I13 — Enable Efficiency Mode on tray icon**
-- [x] **I14 — `Snippet.Preview` split on `\r` or `\n` (not just `\n`)**
-- [x] **I15 — About surface w/ version + link to GitHub + LICENSE**
-- [x] **I9 — Tooltip on truncated titles**
-- [x] **I11 — Atomic `Insert` (transaction + `RETURNING id`)**
-
-### Foundation for later phases
-
-- [x] **F10 — Schema versioning + migration framework** (`PRAGMA user_version` + `Data/Migrations.cs`)
-- [x] **F12 — First-run welcome (seed 3-5 example snippets + open Settings)**
-
-### Reliability
-
-- [x] **I2 — Debounce snippet editor writes (300 ms idle)**
-- [x] **I3 — Tame `Deactivated → Close` race** (so F2 typing doesn't dismiss the flyout)
-- [x] **F11 — Second-instance handoff via named pipe `\\.\pipe\TaskCopy`** (signals first instance to open Settings; reuses IPC for v0.4 Windhawk mod)
-- [x] **I4 — Crash log rotation + "Open log folder" button in Settings**
-
----
-
-## v0.3.0 — Snippet brain
-
-Goal: scale snippets past 50, add power-user editing affordances.
-
-- [x] **F5 — Placeholders (`{{date}}`, `{{time}}`, `{{clipboard}}`, `{{cursor}}`, `{{ask:Field}}`)**
-- [x] **F6 — Snippet groups / folders** (`groups` table + nullable `group_id` on `snippets`; group dropdown in Settings + Manage groups modal; flyout pivot deferred — flyout still shows all snippets with search to narrow)
-- [x] **F7 — Per-snippet quick hotkey** (`quick_hotkey TEXT NULL` column + multi-register in `HotkeyService`)
-- [x] **F8 — Frecency / Pin / "Recent" ordering** (`used_count`/`last_used_at`/`pinned` columns)
-- [x] **F9 — JSON import/export + automatic on-startup backup** (rotated 3-deep via `VACUUM INTO`)
-- [x] **F14 — Snippet preview popup on hover + monospace body toggle** (per-snippet `is_monospace`) — preview tooltips already shipped in v0.2 (I9); monospace toggle shipped here, hover popup deferred (current tooltip covers it).
-- [x] **F15 — Optional clipboard auto-capture (Recent clips section)** (`AddClipboardFormatListener` + `recent_clips` table; respects `ExcludeClipboardContentFromMonitors`) — capture + Settings toggle + "Clear" shipped; flyout "Recent" section deferred (clips are stored and clearable, but not yet shown in the picker).
-- [x] **I6 — Confirm-delete (with "don't ask again") + soft-delete trash** (`deleted_at INTEGER NULL`) — confirm + soft-delete + 30-day auto-purge shipped; "don't ask again" deferred (delete is a rare action — keep prompt by default).
-- [x] **I7 — Drag-reorder in Settings list**
-- [x] **I8 — Insert-token buttons in editor toolbar (`{{date}}`, `{{clipboard}}`, `{{ask}}`)**
-- [x] **I10 — `AutomationProperties` on flyout + Settings for screen readers**
+- [x] **F24 — Send-as-keystrokes paste mode** — per-snippet `paste_mode` column (V3 migration); Settings dropdown "Auto (Ctrl+V)" / "Type characters"; uses `INPUT_KEYBOARD` + `KEYEVENTF_UNICODE` for apps that swallow Ctrl+V (terminals, RDP, password fields).
+- [x] **F25 — Live placeholder preview pane** — editor shows what `Today is {{date}}.` resolves to as you type.
+- [x] **F27 — Fuzzy / prefix-weighted search** — title-prefix > title-contains > body-contains scoring; fielded operators (`title:foo` / `body:foo`).
+- [x] **F28 — Clipboard transforms** — pipe-chained: `{{clipboard|upper}}`, `{{clipboard|trim|lower}}`, `{{clipboard|jsonpretty}}`, `{{clipboard|urlencode}}`, `{{clipboard|urldecode}}`, `{{clipboard|base64}}`, `{{clipboard|base64decode}}`, `{{clipboard|sha256}}`, `{{clipboard|md5}}`, `{{clipboard|reverse}}`, `{{clipboard|length}}`. Unknown transforms degrade to identity.
+- [x] **F29 — CLI scripting** — `--copy <id|title>` / `--paste <id|title>` / `--list` (writes `id\ttitle` to `%LOCALAPPDATA%\TaskCopy\snippets.list`) via the existing named-pipe IPC.
+- [x] **I28 — "Copy diagnostics" button** — bundles version + schema + snippet count + hotkey state + last-backup + crash.log tail to clipboard as a Markdown block.
+- [x] **I30 — README documents `--settings`/`--flyout`/`--copy`/`--paste`/`--list`**.
+- [x] **I31 — README keyboard cheatsheet**.
+- [x] **I32 — Settings list keyboard accelerators** — Del/Ctrl+N/F2.
+- [x] **I33 — Keyboard focus outline** — `IsKeyboardFocused` triggers added to Mocha + Latte button templates.
+- [x] **I34 — Status-bar snippet count** — "N snippets · M groups" in Settings status bar.
 
 ---
 
-## v0.4.0 — Power-user surfaces
+## v0.5.0 — Future (not committed)
 
-- [x] **F16 — Light / system-theme follow** (`Themes/Latte.xaml` + startup swap; restart required to apply — live `WM_SETTINGCHANGE` swap deferred because the styles bind brushes via StaticResource).
-- [ ] **Windhawk companion mod** (`windhawk/taskcopy-taskbar-menu.wh.cpp`) — depends on F11 IPC primitive
+- [ ] **Windhawk companion mod** (`windhawk/taskcopy-taskbar-menu.wh.cpp`) — depends on F18+F29 stable IPC primitive.
   - Hook `TaskbarResources::OnTaskListButtonContextRequested` (Win11) + `CTaskListWnd::_HandleContextMenu` (Win10)
-  - Inject "TaskCopy ▶" submenu populated from named-pipe IPC
+  - Inject "TaskCopy ▶" submenu populated from named-pipe IPC + `--copy <id>` callback
   - README install steps + submit to `ramensoftware/windhawk-mods` (self-host fallback)
+- [ ] **F26 — Velopack in-app auto-update** — depends on F18 release pipeline being stable.
+- [ ] **F30 — Encrypted snippet store** (BYO password; SQLCipher dep swap). Non-trivial dep change.
+- [ ] **F31 — BYO cloud sync** (S3 / B2 / Dropbox via user creds).
+- [ ] **F32 — Multi-clip paste** (assemble several entries then paste once).
+- [ ] **F33 — Image clipboard support** (CF_DIB + thumbnails).
+- [ ] **F34 — Open body in external editor** ($EDITOR / `code` / `notepad++`).
+- [ ] **F35 — Per-app rules** (`target_app_glob` column).
+- [ ] **F36 — Multi-field forms** (`{{form:Field1|Field2}}`).
+- [ ] **F37 — Usage statistics** ("you saved 4 minutes today").
+- [ ] **F38 — YAML import** (Espanso compat).
+- [ ] **F39 — `{{shell:cmd}}` evaluation** (opt-in per-snippet, warning dialog).
+- [ ] **F40 — Syntax-highlighted body editor** (AvalonEdit when `IsMonospace`).
+- [ ] **I16 (Option B)** — DynamicResource refactor for fully-live theme swap.
+- [ ] **I19 — Optional "active monitor center" flyout positioning** (ultrawide).
+- [ ] **I22 — Move `Thread.Sleep` off the dispatcher in `AutoPasteService`**.
+- [ ] **I23 — Decay-weighted frecency** (count × exp(-Δt/τ)).
+- [ ] **I25 — Flyout tooltip honors `IsMonospace`**.
+- [ ] **I27 — Tray toast for dispatcher exceptions** instead of modal MessageBox.
+- [ ] **I29 — Tighten `ApplyV2`/`ApplyV3` transaction boundary**.
+- [ ] **B11 — Hotkey collision with primary surfaces clearer message**.
+- [ ] **B12 — Snippet-list bulk-update perf at >500 items** (`AddRange`/deferred refresh).
+- [ ] **B13 — fsync backup file** after `VACUUM INTO`.
+- [ ] **B14 — `{{cursor}}` left-arrow cap warning** (currently silently capped at 5000).
+- [ ] **B15 — Reconcile `StartupService.IsEnabled` (registry) vs `SettingsStore.StartWithWindows`**.
 
----
+### Distribution polish (post-F18-Phase-1)
 
-## v0.5.0+ — Future ideas (not committed)
-
-- [ ] **F13 — Signed single-file publish + GitHub Actions release workflow + README screenshots + winget manifest** (needs SDK + GitHub remote + signing cert budget)
-- [ ] **F17 — Velopack in-app auto-update** (depends on F13 release pipeline)
-- [ ] MSIX packaging + Microsoft Store submission
-- [ ] Cloud sync (encrypted, BYO bucket — S3/B2/Dropbox via user-supplied creds)
-- [ ] Rich-text + image snippets (HTML, PNG via `CF_DIB`)
-- [ ] Snippet templates w/ form-fill prompts beyond `{{ask:…}}`
-- [ ] Code-signing cert + signed releases
+- [ ] **F18 Phase 2 — winget manifest** (submit to `microsoft/winget-pkgs`).
+- [ ] **F18 Phase 3 — Authenticode signing cert** for SmartScreen reputation + stable tray-icon GUID.
+- [ ] **MSIX packaging + Microsoft Store submission**.
+- [ ] **Screenshots captured at 125% DPI** to `assets/screenshots/` (light + dark).
 
 ---
 
@@ -124,5 +111,6 @@ Goal: scale snippets past 50, add power-user editing affordances.
 - **Overriding `Win+V`** — owned by Microsoft, low-level keyboard hook is AV-flagged
 - **Fork of ExplorerPatcher** — legal issues (taskbar reimpl is GPL-2.0 + author has restricted derivative distribution)
 - **Keyboard-trigger expansion (Espanso-style `;sig` autocomplete)** — same `SetWindowsHookEx` AV issue; stay picker-based
-- **Clipboard-history-as-default** — F15 is opt-in only; keep snippet-curated identity
+- **Clipboard-history-as-default** — F15 + F19 are opt-in only; keep snippet-curated identity
+- **Generic scripting / arbitrary keyboard-macro automation** — `SendInput` stays internal to the auto-paste + send-as-typing paths
 - **Tests** — per CLAUDE.md, no tests unless explicitly requested

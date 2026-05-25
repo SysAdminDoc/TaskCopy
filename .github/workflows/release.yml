@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Override version (e.g. 0.4.0). Leave blank to use the tag.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build win-x64 (${{ matrix.flavor }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - flavor: portable
+            selfContained: 'false'
+          - flavor: selfcontained
+            selfContained: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $override = "${{ inputs.version }}"
+          if ($override) {
+            $v = $override
+          } elseif ($tag -match '^v(.+)$') {
+            $v = $Matches[1]
+          } else {
+            $v = "0.0.0-${{ github.sha }}".Substring(0, 14)
+          }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Restore
+        run: dotnet restore src/TaskCopy/TaskCopy.csproj
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          dotnet publish src/TaskCopy/TaskCopy.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained ${{ matrix.selfContained }} `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:Version=${{ steps.ver.outputs.version }} `
+            -o publish
+
+      - name: Package zip
+        shell: pwsh
+        run: |
+          $name = "TaskCopy-${{ steps.ver.outputs.version }}-win-x64-${{ matrix.flavor }}"
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          # Drop debug symbols from the shipped zip — they belong in a separate symbols package.
+          Get-ChildItem publish -Filter *.pdb | Remove-Item -Force
+          Compress-Archive -Path publish/* -DestinationPath "artifacts/$name.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TaskCopy-${{ matrix.flavor }}
+          path: artifacts/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifact dirs
+        run: |
+          mkdir -p release
+          find artifacts -name '*.zip' -exec cp {} release/ \;
+          ls -la release
+
+      - name: Create / update release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true

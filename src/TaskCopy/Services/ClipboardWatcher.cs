@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -15,6 +16,11 @@ public sealed class ClipboardWatcher : IDisposable
 {
     private const int WM_CLIPBOARDUPDATE = 0x031D;
     private const int MaxBytesPerClip = 10 * 1024;
+
+    // Per https://learn.microsoft.com/en-us/windows/win32/dataxchg/clipboard-formats#cloud-clipboard-and-clipboard-history-formats:
+    //   ExcludeClipboardContentFromMonitors  — presence alone means "exclude" (no payload).
+    //   CanIncludeInClipboardHistory         — 4-byte DWORD payload; 0 = exclude, 1 = include.
+    //   CanUploadToCloudClipboard            — 4-byte DWORD payload; 0 = no, 1 = yes.
     private const string ExcludeFormat = "ExcludeClipboardContentFromMonitors";
     private const string CanIncludeFormat = "CanIncludeInClipboardHistory";
 
@@ -83,12 +89,10 @@ public sealed class ClipboardWatcher : IDisposable
     private void ProcessClipboardUpdate()
     {
         if (Clipboard.ContainsData(ExcludeFormat)) return;
-        if (Clipboard.ContainsData(CanIncludeFormat))
-        {
-            // Format present implies the source app set the preference;
-            // we honor the explicit "do not include" signal by skipping.
-            return;
-        }
+        // CanIncludeInClipboardHistory carries a 4-byte value: 0 = exclude, 1 = include.
+        // Older code treated *any* presence as "exclude" and silently dropped clips
+        // from apps that explicitly opt IN. Read the payload and skip only on 0.
+        if (TryReadDwordFormat(CanIncludeFormat, out var canInclude) && canInclude == 0) return;
         if (!Clipboard.ContainsText()) return;
 
         string body;
@@ -105,6 +109,35 @@ public sealed class ClipboardWatcher : IDisposable
         }
 
         Captured?.Invoke(this, body);
+    }
+
+    /// <summary>
+    /// Reads a clipboard format whose payload is a single 4-byte little-endian
+    /// DWORD (the convention used by CanIncludeInClipboardHistory and
+    /// CanUploadToCloudClipboard). Returns true and the value on success;
+    /// false if the format isn't present or the payload doesn't look like a DWORD.
+    /// </summary>
+    private static bool TryReadDwordFormat(string formatName, out int value)
+    {
+        value = 0;
+        if (!Clipboard.ContainsData(formatName)) return false;
+        try
+        {
+            var data = Clipboard.GetData(formatName);
+            byte[]? bytes = data switch
+            {
+                byte[] arr => arr,
+                MemoryStream ms => ms.ToArray(),
+                _ => null,
+            };
+            if (bytes is null || bytes.Length < 4) return false;
+            value = BitConverter.ToInt32(bytes, 0);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public void Dispose()

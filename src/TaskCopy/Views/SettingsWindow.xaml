@@ -50,8 +50,9 @@
                      PreviewMouseMove="OnSnippetListMouseMove"
                      DragOver="OnSnippetListDragOver"
                      Drop="OnSnippetListDrop"
+                     PreviewKeyDown="OnSnippetListKeyDown"
                      AutomationProperties.Name="Snippets"
-                     AutomationProperties.HelpText="List of saved snippets. Drag to reorder. Use Add / Delete / Move buttons or arrow keys.">
+                     AutomationProperties.HelpText="List of saved snippets. Drag to reorder. Del to delete, Ctrl+N to add, F2 to rename. Use Add / Delete / Move buttons or arrow keys.">
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:Snippet}">
                         <StackPanel>
@@ -117,6 +118,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
@@ -137,14 +139,31 @@
                                   ToolTip="Switch this snippet's editor and tooltip to a monospaced font (good for code)."
                                   Margin="14,0,0,0" />
                         <TextBlock Text="Hotkey:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="14,0,6,0" />
-                        <ComboBox Width="130"
-                                  ItemsSource="{Binding QuickHotkeyOptions}"
-                                  SelectedItem="{Binding EditQuickHotkey}"
-                                  IsEnabled="{Binding HasSelection}"
-                                  ToolTip="Optional: bind this snippet to a global Ctrl+Alt+&lt;N&gt; chord so it copies (+ auto-pastes) from anywhere without opening the flyout." />
+                        <TextBlock Text="{Binding EditQuickHotkeyDisplay}"
+                                   Style="{StaticResource Mocha.Body}"
+                                   VerticalAlignment="Center"
+                                   MinWidth="100"
+                                   Margin="0,0,6,0" />
+                        <Button Style="{StaticResource Mocha.Button}"
+                                Content="Capture…"
+                                Command="{Binding RebindQuickHotkeyCommand}"
+                                ToolTip="Bind any global combo (e.g. Ctrl+Alt+S) so this snippet copies (+ auto-pastes) from anywhere without opening the flyout." />
+                        <Button Style="{StaticResource Mocha.Button}"
+                                Content="Clear"
+                                Command="{Binding ClearQuickHotkeyBindingCommand}"
+                                Margin="4,0,0,0"
+                                ToolTip="Remove the per-snippet hotkey binding." />
                     </StackPanel>
                 </Grid>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="Paste:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="2,0,6,0" />
+                    <ComboBox Width="160"
+                              ItemsSource="{Binding PasteModeOptions}"
+                              SelectedItem="{Binding EditPasteMode}"
+                              DisplayMemberPath="Label"
+                              IsEnabled="{Binding HasSelection}"
+                              ToolTip="Auto (default) sends Ctrl+V. Type characters synthesises each character via Unicode SendInput — use it for terminals and other apps that swallow Ctrl+V."
+                              Margin="0,0,14,0" />
                     <TextBlock Text="Insert:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="2,0,8,0" />
                     <Button Style="{StaticResource Mocha.Button}" Content="{}{{date}}" Click="OnInsertDate"
                             ToolTip="Inserts {{date}} — replaced by today's ISO date at paste time." />
@@ -170,6 +189,22 @@
                          VerticalContentAlignment="Top"
                          AutomationProperties.Name="Snippet body"
                          AutomationProperties.HelpText="Use the Insert buttons above to add placeholders like {{date}} or {{cursor}}." />
+                <Border Grid.Row="3"
+                        Background="{StaticResource Mocha.Mantle.Brush}"
+                        BorderBrush="{StaticResource Mocha.Overlay0.Brush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="8,6"
+                        Margin="0,6,0,0"
+                        MaxHeight="80"
+                        ToolTip="Live preview — placeholders are resolved against today's date, a sample clipboard, and stub Ask/Form responses.">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <TextBlock Text="{Binding EditBodyPreview}"
+                                   FontFamily="{Binding EditBodyFontFamily}"
+                                   Foreground="{StaticResource Mocha.Subtext0.Brush}"
+                                   TextWrapping="Wrap" />
+                    </ScrollViewer>
+                </Border>
             </Grid>
 
             <Border Grid.Row="3" Style="{StaticResource Mocha.Separator}" Margin="0,12,0,8" />
@@ -193,6 +228,10 @@
                            Style="{StaticResource Mocha.Body.Header}"
                            VerticalAlignment="Center" />
                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                             Fill="{Binding HotkeyStatusBrush}"
+                             Margin="0,0,6,0"
+                             ToolTip="{Binding HotkeyStatusLabel}" />
                     <TextBlock Text="{Binding HotkeyDisplay}"
                                Style="{StaticResource Mocha.Body}"
                                VerticalAlignment="Center"
@@ -257,7 +296,7 @@
                               SelectedItem="{Binding SelectedTheme}"
                               DisplayMemberPath="Label"
                               Margin="0,8,0,0"
-                              ToolTip="Catppuccin Mocha (default), Catppuccin Latte (light), or Follow system (reads HKCU AppsUseLightTheme at launch). Restart required for changes." />
+                              ToolTip="Catppuccin Mocha (default), Catppuccin Latte (light), or Follow system (reads HKCU AppsUseLightTheme at launch). Picking a new theme prompts to relaunch — Settings reopens automatically." />
                 </Grid>
 
                 <StackPanel Grid.Row="5" Grid.ColumnSpan="2"
@@ -272,6 +311,21 @@
                             Command="{Binding ImportSnippetsCommand}"
                             ToolTip="Load snippets from a JSON file. Duplicates (by title) are skipped."
                             Margin="8,0,0,0" />
+                    <Button Style="{StaticResource Mocha.Button}"
+                            Content="Trash…"
+                            Command="{Binding ShowTrashCommand}"
+                            Margin="8,0,0,0"
+                            ToolTip="Restore recently deleted snippets. Auto-purged after 30 days." />
+                    <Border Width="1" Background="{StaticResource Mocha.Surface1.Brush}" Margin="12,4" />
+                    <Button Style="{StaticResource Mocha.Button}"
+                            Content="Restore backup…"
+                            Command="{Binding RestoreBackupCommand}"
+                            ToolTip="Pick a rotated backup (.bak.0/1/2) and swap it in for the current snippets.db. A pre-restore snapshot is taken so the operation is itself reversible." />
+                    <Button Style="{StaticResource Mocha.Button}"
+                            Content="Copy diagnostics"
+                            Command="{Binding CopyDiagnosticsCommand}"
+                            Margin="8,0,0,0"
+                            ToolTip="Bundles version, schema version, snippet count, last-backup timestamp, and the tail of crash.log into a Markdown block on the clipboard — paste it into a GitHub issue." />
                     <Border Width="1" Background="{StaticResource Mocha.Surface1.Brush}" Margin="12,4" />
                     <Button Style="{StaticResource Mocha.Button}"
                             Content="Open log folder"
@@ -288,10 +342,19 @@
 
         <!-- Status bar -->
         <Border Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource Mocha.Separator}" Margin="0,12,0,6" />
-        <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
-                   Text="{Binding StatusMessage}"
-                   Style="{StaticResource Mocha.Body.Subtle}"
-                   VerticalAlignment="Bottom"
-                   Margin="2,0,0,0" />
+        <Grid Grid.Row="1" Grid.ColumnSpan="2" VerticalAlignment="Bottom" Margin="2,0,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0"
+                       Text="{Binding StatusMessage}"
+                       Style="{StaticResource Mocha.Body.Subtle}"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding SnippetCountStatus}"
+                       Style="{StaticResource Mocha.Body.Subtle}"
+                       Margin="12,0,2,0" />
+        </Grid>
     </Grid>
 </Window>

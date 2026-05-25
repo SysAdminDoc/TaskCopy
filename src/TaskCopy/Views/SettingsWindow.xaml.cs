@@ -9,8 +9,10 @@ namespace TaskCopy.Views;
 
 public partial class SettingsWindow : Window
 {
+    private enum CaptureMode { None, PrimaryHotkey, QuickHotkey }
+
     private readonly SettingsViewModel _vm;
-    private bool _capturingHotkey;
+    private CaptureMode _capture = CaptureMode.None;
     private Point? _dragOrigin;
     private Snippet? _draggedSnippet;
 
@@ -20,25 +22,27 @@ public partial class SettingsWindow : Window
         DataContext = vm;
         InitializeComponent();
 
-        _vm.HotkeyRebindRequested += (_, _) => BeginHotkeyCapture();
+        _vm.HotkeyRebindRequested += (_, _) => BeginCapture(CaptureMode.PrimaryHotkey, "Press the new key combination (Esc to cancel)…");
+        _vm.QuickHotkeyRebindRequested += (_, snippet) =>
+            BeginCapture(CaptureMode.QuickHotkey, $"Press the per-snippet combo for \"{snippet.Title}\" (Esc to cancel)…");
         PreviewKeyDown += OnPreviewKeyDown;
     }
 
-    private void BeginHotkeyCapture()
+    private void BeginCapture(CaptureMode mode, string message)
     {
-        _capturingHotkey = true;
-        _vm.StatusMessage = "Press the new key combination (Esc to cancel)…";
+        _capture = mode;
+        _vm.StatusMessage = message;
         Focus();
         Keyboard.Focus(this);
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (!_capturingHotkey) return;
+        if (_capture == CaptureMode.None) return;
 
         if (e.Key == Key.Escape)
         {
-            _capturingHotkey = false;
+            _capture = CaptureMode.None;
             _vm.StatusMessage = "Hotkey unchanged.";
             e.Handled = true;
             return;
@@ -62,8 +66,16 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        _capturingHotkey = false;
-        _vm.SetHotkey(key, modifiers);
+        var capturedMode = _capture;
+        _capture = CaptureMode.None;
+        if (capturedMode == CaptureMode.PrimaryHotkey)
+        {
+            _vm.SetHotkey(key, modifiers);
+        }
+        else
+        {
+            _vm.SetQuickHotkey(key, modifiers);
+        }
         e.Handled = true;
     }
 
@@ -77,6 +89,68 @@ public partial class SettingsWindow : Window
         var field = AskWindow.Prompt("Prompt label", this);
         if (string.IsNullOrEmpty(field)) return;
         InsertAtCaret($"{{{{ask:{field}}}}}");
+    }
+
+    // -----------------------------------------------------------------------
+    // Keyboard accelerators on the snippet list (I32)
+    // -----------------------------------------------------------------------
+
+    private void OnSnippetListKeyDown(object sender, KeyEventArgs e)
+    {
+        // Don't steal keys when the user is interacting with the rename-in-place
+        // editor or any other focused TextBox (none today, but defensive).
+        if (Keyboard.FocusedElement is TextBox) return;
+
+        if (e.Key == Key.Delete && _vm.HasSelection)
+        {
+            _vm.DeleteSnippetCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.N && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            _vm.AddSnippetCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.F2 && _vm.HasSelection)
+        {
+            // Focus the Title editor with the existing text selected so the
+            // user can immediately overwrite — same gesture as Explorer rename.
+            var titleBox = FindTitleBox();
+            if (titleBox is not null)
+            {
+                titleBox.Focus();
+                Keyboard.Focus(titleBox);
+                titleBox.SelectAll();
+            }
+            e.Handled = true;
+        }
+    }
+
+    private TextBox? FindTitleBox()
+    {
+        // The title TextBox is the first one declared in the right-hand editor grid;
+        // walk the visual tree from this window to find it. Tag-based selection
+        // would be cleaner but this is one call per F2 keypress.
+        return FindDescendant<TextBox>(this, tb =>
+            tb.DataContext == _vm
+            && AutomationProperties.GetName(tb) == "Snippet title");
+    }
+
+    private static T? FindDescendant<T>(DependencyObject root, Func<T, bool> match) where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T t && match(t)) return t;
+            var deeper = FindDescendant<T>(child, match);
+            if (deeper is not null) return deeper;
+        }
+        return null;
     }
 
     // -----------------------------------------------------------------------

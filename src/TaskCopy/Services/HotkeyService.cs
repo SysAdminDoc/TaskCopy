@@ -13,21 +13,29 @@ public sealed class HotkeyService
     public event EventHandler? Triggered;
     public event EventHandler<long>? SnippetTriggered;
     public event EventHandler<string>? RegistrationFailed;
+    /// <summary>Fires whenever the primary hotkey changes registration state.</summary>
+    public event EventHandler<bool>? PrimaryRegistrationChanged;
+
+    /// <summary>True if the primary global hotkey is currently registered.</summary>
+    public bool IsPrimaryRegistered { get; private set; }
 
     public bool TryRegister(Key key, ModifierKeys modifiers)
     {
         try
         {
             HotkeyManager.Current.AddOrReplace(PrimaryHotkeyId, key, modifiers, OnHotkey);
+            SetPrimaryRegistered(true);
             return true;
         }
         catch (HotkeyAlreadyRegisteredException ex)
         {
+            SetPrimaryRegistered(false);
             RegistrationFailed?.Invoke(this, $"Hotkey already in use: {FormatHotkey(key, modifiers)} ({ex.Message})");
             return false;
         }
         catch (Exception ex)
         {
+            SetPrimaryRegistered(false);
             RegistrationFailed?.Invoke(this, $"Could not register hotkey: {ex.Message}");
             return false;
         }
@@ -37,6 +45,14 @@ public sealed class HotkeyService
     {
         try { HotkeyManager.Current.Remove(PrimaryHotkeyId); }
         catch { /* nothing to do */ }
+        SetPrimaryRegistered(false);
+    }
+
+    private void SetPrimaryRegistered(bool value)
+    {
+        if (IsPrimaryRegistered == value) return;
+        IsPrimaryRegistered = value;
+        PrimaryRegistrationChanged?.Invoke(this, value);
     }
 
     public bool TryRegisterSnippet(long snippetId, string hotkeyString)

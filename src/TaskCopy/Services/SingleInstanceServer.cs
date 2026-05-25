@@ -16,6 +16,13 @@ public sealed class SingleInstanceServer
 
     public const string MsgOpenSettings = "open-settings";
     public const string MsgOpenFlyout = "open-flyout";
+    // F29: scripting / external-launcher hooks.
+    // copy:<id-or-title>   → place that snippet on the clipboard, no auto-paste.
+    // paste:<id-or-title>  → copy + auto-paste into the foreground window.
+    // list                 → first instance writes id\ttitle pairs to %LOCALAPPDATA%\TaskCopy\snippets.list and that path is the response.
+    public const string MsgCopyPrefix = "copy:";
+    public const string MsgPastePrefix = "paste:";
+    public const string MsgList = "list";
 
     private readonly Action<string> _onMessage;
     private CancellationTokenSource? _cts;
@@ -96,11 +103,23 @@ public sealed class SingleInstanceServer
     /// </summary>
     public static string ParseCliMessage(string[] args)
     {
-        foreach (var a in args)
+        for (var i = 0; i < args.Length; i++)
         {
-            var v = a.Trim().ToLowerInvariant();
-            if (v is "--flyout" or "-flyout" or "/flyout") return MsgOpenFlyout;
-            if (v is "--settings" or "-settings" or "/settings") return MsgOpenSettings;
+            var v = args[i].Trim();
+            var vLower = v.ToLowerInvariant();
+            if (vLower is "--flyout" or "-flyout" or "/flyout") return MsgOpenFlyout;
+            if (vLower is "--settings" or "-settings" or "/settings") return MsgOpenSettings;
+            if (vLower is "--list" or "-list" or "/list") return MsgList;
+            if (vLower is "--copy" or "-copy" or "/copy")
+            {
+                var arg = i + 1 < args.Length ? args[i + 1] : string.Empty;
+                return MsgCopyPrefix + arg;
+            }
+            if (vLower is "--paste" or "-paste" or "/paste")
+            {
+                var arg = i + 1 < args.Length ? args[i + 1] : string.Empty;
+                return MsgPastePrefix + arg;
+            }
         }
         return MsgOpenSettings;
     }

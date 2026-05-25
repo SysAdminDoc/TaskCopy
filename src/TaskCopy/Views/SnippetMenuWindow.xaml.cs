@@ -103,6 +103,42 @@ public partial class SnippetMenuWindow : Window
         }
     }
 
+    private void OnRecentClipClicked(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is ListBoxItem { DataContext: RecentClipRow row })
+        {
+            _vm.CopyRecentCommand.Execute(row.Clip);
+            e.Handled = true;
+        }
+    }
+
+    private void OnRecentCopyMenu(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is RecentClipRow row)
+        {
+            _vm.CopyRecentCommand.Execute(row.Clip);
+        }
+    }
+
+    private void OnRecentPromoteMenu(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is RecentClipRow row)
+        {
+            _vm.PromoteRecentCommand.Execute(row.Clip);
+        }
+    }
+
+    private void OnGroupChipClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: long id })
+        {
+            _vm.SelectGroup(id);
+            // Refocus search so subsequent typing keeps filtering.
+            SearchBox.Focus();
+            Keyboard.Focus(SearchBox);
+        }
+    }
+
     public void ShowAtCursor()
     {
         _vm.Refresh();

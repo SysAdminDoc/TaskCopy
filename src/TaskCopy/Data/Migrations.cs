@@ -11,13 +11,14 @@ namespace TaskCopy.Data;
 internal static class Migrations
 {
     /// <summary>The schema version this build expects.</summary>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     public static void Apply(SqliteConnection conn)
     {
         var version = GetUserVersion(conn);
         if (version < 1) ApplyV1(conn);
         if (version < 2) ApplyV2(conn);
+        if (version < 3) ApplyV3(conn);
     }
 
     private static int GetUserVersion(SqliteConnection conn)
@@ -88,6 +89,19 @@ internal static class Migrations
         AddColumnIfMissing(conn, "snippets", "deleted_at", "INTEGER");
 
         SetUserVersion(conn, 2);
+        tx.Commit();
+    }
+
+    /// <summary>
+    /// v0.4 (F24): paste_mode column controls whether auto-paste sends Ctrl+V
+    /// or types the body character-by-character via INPUT_KEYBOARD with
+    /// KEYEVENTF_UNICODE. 0 = Auto (Ctrl+V, default), 1 = Type.
+    /// </summary>
+    private static void ApplyV3(SqliteConnection conn)
+    {
+        using var tx = conn.BeginTransaction();
+        AddColumnIfMissing(conn, "snippets", "paste_mode", "INTEGER NOT NULL DEFAULT 0");
+        SetUserVersion(conn, 3);
         tx.Commit();
     }
 

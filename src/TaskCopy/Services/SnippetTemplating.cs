@@ -23,7 +23,17 @@ public static class SnippetTemplating
         foreach (Match m in TokenRegex.Matches(body))
         {
             sb.Append(body, lastIndex, m.Index - lastIndex);
-            var token = m.Groups[1].Value.Trim();
+            var raw = m.Groups[1].Value.Trim();
+
+            // F28: pipe-chained transforms — "clipboard|trim|upper" splits into
+            // the producer token "clipboard" + transform list ["trim", "upper"].
+            var pipeIdx = raw.IndexOf('|');
+            var token = pipeIdx < 0 ? raw : raw[..pipeIdx].TrimEnd();
+            var transforms = pipeIdx < 0
+                ? Array.Empty<string>()
+                : raw[(pipeIdx + 1)..]
+                    .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
             var lower = token.ToLowerInvariant();
 
             if (lower == "cursor")
@@ -36,6 +46,7 @@ public static class SnippetTemplating
             if (TryExpandToken(token, ctx, out var replacement, out var cancelled))
             {
                 if (cancelled) return new ExpansionResult { Cancelled = true };
+                replacement = ApplyTransforms(replacement ?? string.Empty, transforms);
                 sb.Append(replacement);
             }
             else
@@ -50,6 +61,15 @@ public static class SnippetTemplating
         var expanded = sb.ToString();
         int? cursorOffsetFromEnd = cursorAbsPosInExpanded is int pos ? expanded.Length - pos : null;
         return new ExpansionResult { Body = expanded, CursorOffsetFromEnd = cursorOffsetFromEnd };
+    }
+
+    private static string ApplyTransforms(string value, string[] transforms)
+    {
+        foreach (var t in transforms)
+        {
+            value = SnippetTransforms.Apply(t, value);
+        }
+        return value;
     }
 
     private static bool TryExpandToken(string token, TemplatingContext ctx, out string? replacement, out bool cancelled)

@@ -53,7 +53,7 @@ public sealed class SnippetDatabase
     private const string SnippetSelectAll = """
         SELECT id, title, body, sort_order, created_at,
                quick_hotkey, used_count, last_used_at, pinned, is_monospace,
-               group_id, deleted_at
+               group_id, deleted_at, paste_mode
         FROM snippets
         """;
 
@@ -109,6 +109,7 @@ public sealed class SnippetDatabase
                 IsMonospace = reader.GetInt64(9) != 0,
                 GroupId = reader.IsDBNull(10) ? null : reader.GetInt64(10),
                 DeletedAt = reader.IsDBNull(11) ? null : reader.GetInt64(11),
+                PasteMode = reader.IsDBNull(12) ? 0 : (int)reader.GetInt64(12),
             });
         }
         return list;
@@ -243,6 +244,16 @@ public sealed class SnippetDatabase
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE snippets SET is_monospace = $m WHERE id = $id;";
         cmd.Parameters.AddWithValue("$m", monospace ? 1 : 0);
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void SetPasteMode(long id, int mode)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET paste_mode = $p WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$p", mode);
         cmd.Parameters.AddWithValue("$id", id);
         cmd.ExecuteNonQuery();
     }
@@ -435,7 +446,7 @@ public sealed class SnippetDatabase
     }
 
     // -----------------------------------------------------------------------
-    // Backup
+    // Backup / integrity
     // -----------------------------------------------------------------------
 
     /// <summary>
@@ -448,6 +459,51 @@ public sealed class SnippetDatabase
         using var cmd = conn.CreateCommand();
         cmd.CommandText = $"VACUUM INTO '{targetPath.Replace("'", "''")}';";
         cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Runs PRAGMA quick_check (cheaper than integrity_check) and returns
+    /// the result. SQLite returns "ok" on success or one-or-more error lines.
+    /// </summary>
+    public string IntegrityCheck()
+    {
+        try
+        {
+            using var conn = Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "PRAGMA quick_check;";
+            var result = cmd.ExecuteScalar() as string;
+            return string.IsNullOrEmpty(result) ? "ok" : result;
+        }
+        catch (Exception ex)
+        {
+            return $"check failed: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Best-effort snippet count for a backup file. Opens the file read-only
+    /// in a separate connection so the live DB is untouched.
+    /// </summary>
+    public static int TryCountSnippets(string dbPath)
+    {
+        try
+        {
+            var cs = new SqliteConnectionStringBuilder
+            {
+                DataSource = dbPath,
+                Mode = SqliteOpenMode.ReadOnly,
+            }.ToString();
+            using var conn = new SqliteConnection(cs);
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM snippets WHERE deleted_at IS NULL;";
+            return Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+        }
+        catch
+        {
+            return -1;
+        }
     }
 
     // -----------------------------------------------------------------------

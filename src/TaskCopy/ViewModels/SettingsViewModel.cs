@@ -23,6 +23,21 @@ public partial class SettingsViewModel : ObservableObject
     public ObservableCollection<Snippet> Snippets { get; } = new();
     public ObservableCollection<SnippetGroup> Groups { get; } = new();
 
+    /// <summary>Right-aligned status-bar label like "12 snippets · 3 groups".</summary>
+    public string SnippetCountStatus
+    {
+        get
+        {
+            var s = Snippets.Count;
+            var g = Groups.Count - 1; // minus the (Ungrouped) sentinel
+            if (g < 0) g = 0;
+            var snippetWord = s == 1 ? "snippet" : "snippets";
+            return g == 0
+                ? $"{s} {snippetWord}"
+                : $"{s} {snippetWord} · {g} group{(g == 1 ? "" : "s")}";
+        }
+    }
+
     /// <summary>Pseudo-group representing "no group" for the editor ComboBox.</summary>
     public static readonly SnippetGroup UngroupedSentinel = new() { Id = 0, Name = "(Ungrouped)" };
 
@@ -30,14 +45,18 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(DeleteSnippetCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveDownCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RebindQuickHotkeyCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ClearQuickHotkeyBindingCommand))]
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     [NotifyPropertyChangedFor(nameof(EditTitle))]
     [NotifyPropertyChangedFor(nameof(EditBody))]
+    [NotifyPropertyChangedFor(nameof(EditBodyPreview))]
     [NotifyPropertyChangedFor(nameof(EditIsMonospace))]
     [NotifyPropertyChangedFor(nameof(EditBodyFontFamily))]
     [NotifyPropertyChangedFor(nameof(EditGroup))]
     [NotifyPropertyChangedFor(nameof(EditPinned))]
-    [NotifyPropertyChangedFor(nameof(EditQuickHotkey))]
+    [NotifyPropertyChangedFor(nameof(EditQuickHotkeyDisplay))]
+    [NotifyPropertyChangedFor(nameof(EditPasteMode))]
     private Snippet? _selectedSnippet;
 
     partial void OnSelectedSnippetChanging(Snippet? value)
@@ -72,7 +91,37 @@ public partial class SettingsViewModel : ObservableObject
             SelectedSnippet.Body = value;
             ScheduleSave(SelectedSnippet);
             OnPropertyChanged();
+            OnPropertyChanged(nameof(EditBodyPreview));
             DirtyChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    /// F25: live render of SnippetTemplating.Expand on the current body so the
+    /// user sees what placeholders will resolve to at paste time. Uses a sample
+    /// clipboard value and stub Ask/Form responses so it stays pure.
+    /// </summary>
+    public string EditBodyPreview
+    {
+        get
+        {
+            var body = EditBody;
+            if (string.IsNullOrEmpty(body)) return string.Empty;
+            try
+            {
+                var ctx = new TemplatingContext
+                {
+                    PreviousClipboard = "<clipboard>",
+                    PromptFor = field => $"<{field}>",
+                    Now = DateTime.Now,
+                };
+                var result = SnippetTemplating.Expand(body, ctx);
+                return result.Body;
+            }
+            catch
+            {
+                return body;
+            }
         }
     }
 
@@ -126,53 +175,131 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    public const string QuickHotkeyNone = "(None)";
-
-    public IReadOnlyList<string> QuickHotkeyOptions { get; } =
+    public IReadOnlyList<PasteModeOption> PasteModeOptions { get; } =
     [
-        QuickHotkeyNone,
-        "Ctrl+Alt+1", "Ctrl+Alt+2", "Ctrl+Alt+3", "Ctrl+Alt+4", "Ctrl+Alt+5",
-        "Ctrl+Alt+6", "Ctrl+Alt+7", "Ctrl+Alt+8", "Ctrl+Alt+9",
+        new(0, "Auto (Ctrl+V)"),
+        new(1, "Type characters"),
     ];
 
-    public string EditQuickHotkey
+    public PasteModeOption EditPasteMode
+    {
+        get
+        {
+            var v = SelectedSnippet?.PasteMode ?? 0;
+            return PasteModeOptions.FirstOrDefault(o => o.Value == v) ?? PasteModeOptions[0];
+        }
+        set
+        {
+            if (SelectedSnippet is null || value is null) return;
+            if (SelectedSnippet.PasteMode == value.Value) return;
+            SelectedSnippet.PasteMode = value.Value;
+            try { _db.SetPasteMode(SelectedSnippet.Id, value.Value); }
+            catch (Exception ex) { CrashLog.Write("SetPasteMode", ex); }
+            OnPropertyChanged();
+        }
+    }
+
+    public sealed record PasteModeOption(int Value, string Label)
+    {
+        public override string ToString() => Label;
+    }
+
+    public const string QuickHotkeyNone = "(None)";
+
+    /// <summary>Display label for the selected snippet's quick-hotkey, or "(None)".</summary>
+    public string EditQuickHotkeyDisplay
     {
         get
         {
             var v = SelectedSnippet?.QuickHotkey;
             return string.IsNullOrEmpty(v) ? QuickHotkeyNone : v;
         }
-        set
-        {
-            if (SelectedSnippet is null) return;
-            var newValue = string.Equals(value, QuickHotkeyNone, StringComparison.Ordinal) ? null : value;
-            if (string.Equals(SelectedSnippet.QuickHotkey ?? string.Empty, newValue ?? string.Empty, StringComparison.Ordinal)) return;
-
-            var snippet = SelectedSnippet;
-            snippet.QuickHotkey = newValue;
-
-            try { _db.SetQuickHotkey(snippet.Id, newValue); }
-            catch (Exception ex) { CrashLog.Write("SetQuickHotkey", ex); }
-
-            _hotkeys.UnregisterSnippet(snippet.Id);
-            if (!string.IsNullOrEmpty(newValue))
-            {
-                if (_hotkeys.TryRegisterSnippet(snippet.Id, newValue))
-                {
-                    StatusMessage = $"Quick hotkey {newValue} set for \"{snippet.Title}\".";
-                }
-                else
-                {
-                    StatusMessage = $"Quick hotkey {newValue} could not be registered — already in use? Try another.";
-                }
-            }
-            else
-            {
-                StatusMessage = $"Quick hotkey cleared for \"{snippet.Title}\".";
-            }
-            OnPropertyChanged();
-        }
     }
+
+    /// <summary>
+    /// Apply a freshly-captured quick-hotkey combo to the selected snippet.
+    /// Refuses combos that clash with the primary hotkey or with the reserved
+    /// set (Ctrl+C/V/X/Z/Y, Ctrl+Alt+Del). On failure the previous binding stays.
+    /// </summary>
+    public void SetQuickHotkey(Key key, ModifierKeys modifiers)
+    {
+        if (SelectedSnippet is null) return;
+        var combo = HotkeyService.FormatHotkey(key, modifiers);
+
+        // Reject if it would clash with the primary hotkey.
+        if (key == HotkeyKey && modifiers == HotkeyModifiers)
+        {
+            StatusMessage = $"Quick hotkey {combo} clashes with your primary TaskCopy hotkey.";
+            return;
+        }
+
+        // Reject a small reserved set so users don't lock themselves out of
+        // standard copy/paste. (Pure modifier presses are filtered upstream.)
+        if (IsReservedCombo(key, modifiers))
+        {
+            StatusMessage = $"Quick hotkey {combo} is reserved by Windows or common apps. Pick another.";
+            return;
+        }
+
+        var snippet = SelectedSnippet;
+        snippet.QuickHotkey = combo;
+
+        try { _db.SetQuickHotkey(snippet.Id, combo); }
+        catch (Exception ex) { CrashLog.Write("SetQuickHotkey", ex); }
+
+        _hotkeys.UnregisterSnippet(snippet.Id);
+        if (_hotkeys.TryRegisterSnippet(snippet.Id, combo))
+        {
+            StatusMessage = $"Quick hotkey {combo} set for \"{snippet.Title}\".";
+        }
+        else
+        {
+            StatusMessage = $"Quick hotkey {combo} could not be registered — already in use? Try another.";
+        }
+        OnPropertyChanged(nameof(EditQuickHotkeyDisplay));
+    }
+
+    /// <summary>Remove the selected snippet's quick-hotkey binding.</summary>
+    public void ClearQuickHotkey()
+    {
+        if (SelectedSnippet is null) return;
+        var snippet = SelectedSnippet;
+        var prior = snippet.QuickHotkey;
+        if (string.IsNullOrEmpty(prior)) return;
+
+        snippet.QuickHotkey = null;
+        try { _db.SetQuickHotkey(snippet.Id, null); }
+        catch (Exception ex) { CrashLog.Write("ClearQuickHotkey", ex); }
+        _hotkeys.UnregisterSnippet(snippet.Id);
+        StatusMessage = $"Quick hotkey cleared for \"{snippet.Title}\".";
+        OnPropertyChanged(nameof(EditQuickHotkeyDisplay));
+    }
+
+    private static bool IsReservedCombo(Key key, ModifierKeys modifiers)
+    {
+        // Ctrl-only: classic shortcuts the user almost always means literally.
+        if (modifiers == ModifierKeys.Control)
+        {
+            if (key is Key.C or Key.V or Key.X or Key.Z or Key.Y or Key.A
+                       or Key.S or Key.N or Key.O or Key.P or Key.F or Key.W or Key.T) return true;
+        }
+        // No combo with no modifiers — caller already filters this, but defensive.
+        if (modifiers == ModifierKeys.None) return true;
+        return false;
+    }
+
+    /// <summary>Fires when the per-snippet quick-hotkey "Capture…" button is clicked.</summary>
+    public event EventHandler<Snippet>? QuickHotkeyRebindRequested;
+
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void RebindQuickHotkey()
+    {
+        if (SelectedSnippet is null) return;
+        QuickHotkeyRebindRequested?.Invoke(this, SelectedSnippet);
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void ClearQuickHotkeyBinding() => ClearQuickHotkey();
 
     public IReadOnlyList<FlyoutSortModeOption> FlyoutSortModes { get; } =
     [
@@ -197,9 +324,17 @@ public partial class SettingsViewModel : ObservableObject
             if (_settings.Theme == value.Value) return;
             _settings.Theme = value.Value;
             OnPropertyChanged();
-            StatusMessage = $"Theme set to {value.Label}. Restart TaskCopy for the change to take effect.";
+
+            // I16 Option A: offer immediate-apply via relaunch since the brushes
+            // are bound StaticResource and a live dictionary swap won't propagate
+            // into already-shown windows. Mocha/Latte refactor to DynamicResource
+            // is the Option B follow-up.
+            ApplyThemeRequested?.Invoke(this, value.Label);
         }
     }
+
+    /// <summary>App-level subscribes to offer "restart now to apply" UX.</summary>
+    public event EventHandler<string>? ApplyThemeRequested;
 
     public FlyoutSortModeOption SelectedFlyoutSort
     {
@@ -247,7 +382,23 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HotkeyStatusLabel))]
+    [NotifyPropertyChangedFor(nameof(HotkeyStatusBrush))]
     private string _hotkeyDisplay = string.Empty;
+
+    /// <summary>True when HotkeyService confirms the primary hotkey is registered.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HotkeyStatusLabel))]
+    [NotifyPropertyChangedFor(nameof(HotkeyStatusBrush))]
+    private bool _hotkeyIsRegistered;
+
+    public string HotkeyStatusLabel => HotkeyIsRegistered ? "Active" : "Couldn't register — try another";
+
+    public string HotkeyStatusBrushKey
+        => HotkeyIsRegistered ? "Mocha.Green.Brush" : "Mocha.Red.Brush";
+
+    public System.Windows.Media.Brush HotkeyStatusBrush
+        => (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[HotkeyStatusBrushKey];
 
     [ObservableProperty]
     private Key _hotkeyKey;
@@ -280,6 +431,10 @@ public partial class SettingsViewModel : ObservableObject
     public event EventHandler? DirtyChanged;
     public event EventHandler<(Key key, ModifierKeys modifiers)>? HotkeyRebindRequested;
     public event EventHandler? ManageGroupsRequested;
+    public event EventHandler? ShowTrashRequested;
+
+    [RelayCommand]
+    private void ShowTrash() => ShowTrashRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
     private void ManageGroups() => ManageGroupsRequested?.Invoke(this, EventArgs.Empty);
@@ -292,7 +447,16 @@ public partial class SettingsViewModel : ObservableObject
         _startup = startup;
         _hotkeys = hotkeys;
 
+        // Keep the status-bar counter in sync with the snippet + group lists.
+        Snippets.CollectionChanged += (_, _) => OnPropertyChanged(nameof(SnippetCountStatus));
+        Groups.CollectionChanged += (_, _) => OnPropertyChanged(nameof(SnippetCountStatus));
+
+        // Reflect hotkey registration state in the UI badge.
+        _hotkeys.PrimaryRegistrationChanged += (_, registered) =>
+            System.Windows.Application.Current?.Dispatcher.Invoke(() => HotkeyIsRegistered = registered);
+
         LoadFromStore();
+        HotkeyIsRegistered = _hotkeys.IsPrimaryRegistered;
     }
 
     public void LoadFromStore()
@@ -469,6 +633,76 @@ public partial class SettingsViewModel : ObservableObject
         {
             CrashLog.Write("OpenDataFolder", ex);
         }
+    }
+
+    /// <summary>App-level handler picks a backup slot via dialog + swaps it in.</summary>
+    public event EventHandler? RestoreBackupRequested;
+
+    [RelayCommand]
+    private void RestoreBackup() => RestoreBackupRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void CopyDiagnostics()
+    {
+        try
+        {
+            var bundle = BuildDiagnosticsMarkdown();
+            System.Windows.Clipboard.SetDataObject(bundle, copy: true);
+            StatusMessage = "Diagnostics bundle copied to clipboard — paste into a GitHub issue.";
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("CopyDiagnostics", ex);
+            StatusMessage = $"Couldn't build diagnostics: {ex.Message}";
+        }
+    }
+
+    private string BuildDiagnosticsMarkdown()
+    {
+        var sb = new System.Text.StringBuilder();
+        var version = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "unknown";
+        var os = Environment.OSVersion.VersionString;
+        var schema = Migrations.CurrentVersion;
+        var snippetCount = Snippets.Count;
+        var groupCount = Math.Max(0, Groups.Count - 1);
+        var lastBackup = _settings.LastBackupAt == 0
+            ? "(none)"
+            : DateTimeOffset.FromUnixTimeSeconds(_settings.LastBackupAt).ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+
+        sb.AppendLine("```");
+        sb.AppendLine($"TaskCopy diagnostics — {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz}");
+        sb.AppendLine($"version    : {version}");
+        sb.AppendLine($"schema     : {schema}");
+        sb.AppendLine($"os         : {os}");
+        sb.AppendLine($"snippets   : {snippetCount}");
+        sb.AppendLine($"groups     : {groupCount}");
+        sb.AppendLine($"hotkey     : {HotkeyDisplay} ({(HotkeyIsRegistered ? "active" : "not registered")})");
+        sb.AppendLine($"lastBackup : {lastBackup}");
+        sb.AppendLine($"theme      : {_settings.Theme}");
+        sb.AppendLine($"autoPaste  : {_settings.AutoPaste}");
+        sb.AppendLine($"recentClips: {_settings.RecentClipsEnabled}");
+        sb.AppendLine("```");
+
+        // Tail crash.log if present.
+        try
+        {
+            if (System.IO.File.Exists(CrashLog.LogPath))
+            {
+                var allLines = System.IO.File.ReadAllLines(CrashLog.LogPath);
+                var tail = allLines.Length > 200 ? allLines[^200..] : allLines;
+                sb.AppendLine();
+                sb.AppendLine("<details><summary>crash.log (last 200 lines)</summary>");
+                sb.AppendLine();
+                sb.AppendLine("```");
+                foreach (var line in tail) sb.AppendLine(line);
+                sb.AppendLine("```");
+                sb.AppendLine();
+                sb.AppendLine("</details>");
+            }
+        }
+        catch { /* best-effort */ }
+
+        return sb.ToString();
     }
 
     public void SetHotkey(Key key, ModifierKeys modifiers)

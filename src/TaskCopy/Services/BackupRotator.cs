@@ -44,4 +44,79 @@ public static class BackupRotator
     {
         try { File.Delete(path); } catch { /* best-effort */ }
     }
+
+    /// <summary>
+    /// Lists existing backup slots in MRU order (.bak.0 first). Each slot
+    /// carries its on-disk path, last-modified time, and a best-effort
+    /// snippet count (-1 = unreadable).
+    /// </summary>
+    public static IReadOnlyList<BackupSlot> ListAvailable(SnippetDatabase db, int keep = 3)
+    {
+        var dir = Path.GetDirectoryName(db.DbPath);
+        if (string.IsNullOrEmpty(dir)) return Array.Empty<BackupSlot>();
+
+        var name = Path.GetFileNameWithoutExtension(db.DbPath);
+        var ext = Path.GetExtension(db.DbPath);
+
+        var list = new List<BackupSlot>(keep);
+        for (int i = 0; i < keep; i++)
+        {
+            var path = Path.Combine(dir, $"{name}.bak.{i}{ext}");
+            if (!File.Exists(path)) continue;
+            var stamp = File.GetLastWriteTimeUtc(path);
+            var count = SnippetDatabase.TryCountSnippets(path);
+            list.Add(new BackupSlot(i, path, stamp, count));
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// Replace the live snippets.db with the named backup file. Takes a
+    /// pre-restore snapshot first ({name}.bak.preRestore{ext}) so the
+    /// operation is itself reversible.
+    ///
+    /// Caller is responsible for ensuring no SqliteConnection is open on the
+    /// live DB when this runs.
+    /// </summary>
+    public static void RestoreFrom(SnippetDatabase db, string sourceBackupPath)
+    {
+        if (!File.Exists(sourceBackupPath))
+            throw new FileNotFoundException("Backup file not found.", sourceBackupPath);
+
+        var dir = Path.GetDirectoryName(db.DbPath) ?? ".";
+        var name = Path.GetFileNameWithoutExtension(db.DbPath);
+        var ext = Path.GetExtension(db.DbPath);
+        var preRestore = Path.Combine(dir, $"{name}.bak.preRestore{ext}");
+
+        // Snapshot the current live DB so a user who restored the wrong file
+        // can put things back. VACUUM INTO is transactionally safe here.
+        if (File.Exists(db.DbPath))
+        {
+            try
+            {
+                if (File.Exists(preRestore)) TryDelete(preRestore);
+                db.BackupTo(preRestore);
+            }
+            catch
+            {
+                // If the live file is so corrupt we can't VACUUM, fall back
+                // to a raw copy so the user still has something.
+                try { File.Copy(db.DbPath, preRestore, overwrite: true); } catch { }
+            }
+        }
+
+        // Drop the live file (+ WAL sidecars) and swap in the backup.
+        TryDelete(db.DbPath + "-wal");
+        TryDelete(db.DbPath + "-shm");
+        TryDelete(db.DbPath);
+        File.Copy(sourceBackupPath, db.DbPath, overwrite: true);
+    }
+}
+
+/// <summary>One row in the "Restore from backup" picker.</summary>
+public sealed record BackupSlot(int Index, string Path, DateTime LastWriteUtc, int SnippetCount)
+{
+    public string DisplayLabel =>
+        $"Backup #{Index} — {LastWriteUtc.ToLocalTime():yyyy-MM-dd HH:mm}"
+        + (SnippetCount >= 0 ? $" · {SnippetCount} snippet{(SnippetCount == 1 ? "" : "s")}" : " · (unreadable)");
 }

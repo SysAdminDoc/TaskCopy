@@ -9,16 +9,23 @@
     <RootNamespace>TaskCopy</RootNamespace>
     <AssemblyName>TaskCopy</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>0.3.0</Version>
-    <AssemblyVersion>0.3.0.0</AssemblyVersion>
-    <FileVersion>0.3.0.0</FileVersion>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>0.4.0</Version>
+    <AssemblyVersion>0.4.0.0</AssemblyVersion>
+    <FileVersion>0.4.0.0</FileVersion>
     <Product>TaskCopy</Product>
     <Description>Single-click clipboard snippet menu for Windows.</Description>
     <Copyright>Copyright (c) 2026 SysAdminDoc</Copyright>
     <LangVersion>latest</LangVersion>
-    <PublishSingleFile>false</PublishSingleFile>
-    <SelfContained>false</SelfContained>
     <UseWindowsForms>false</UseWindowsForms>
+    <!-- Single-file publish defaults (overrideable on the dotnet publish line). -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' AND '$(SelfContained)' == 'true'">win-x64</RuntimeIdentifier>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>

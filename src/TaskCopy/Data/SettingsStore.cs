@@ -13,6 +13,8 @@ public sealed class SettingsStore
     private const string KeyRecentClipsEnabled = "recent_clips.enabled";
     private const string KeyRecentClipsMax = "recent_clips.max";
     private const string KeyTheme = "theme";
+    private const string KeyLastBackupAt = "backup.last_at";
+    private const string KeyFlyoutLastGroupId = "flyout.last_group_id";
 
     private readonly SnippetDatabase _db;
 
@@ -90,6 +92,26 @@ public sealed class SettingsStore
             return Enum.TryParse<Theme>(v, ignoreCase: true, out var t) ? t : Theme.Mocha;
         }
         set => _db.SetSetting(KeyTheme, value.ToString());
+    }
+
+    /// <summary>
+    /// Unix-seconds timestamp of the last successful BackupRotator.Rotate.
+    /// Zero means "no backup yet" (or pre-throttle install).
+    /// </summary>
+    public long LastBackupAt
+    {
+        get => long.TryParse(_db.GetSetting(KeyLastBackupAt), out var v) ? v : 0L;
+        set => _db.SetSetting(KeyLastBackupAt, value.ToString());
+    }
+
+    /// <summary>
+    /// Last selected group filter in the flyout. 0 = "All", -1 = "Ungrouped",
+    /// positive = group id. Persists across flyout opens so muscle memory holds.
+    /// </summary>
+    public long FlyoutLastGroupId
+    {
+        get => long.TryParse(_db.GetSetting(KeyFlyoutLastGroupId), out var v) ? v : 0L;
+        set => _db.SetSetting(KeyFlyoutLastGroupId, value.ToString());
     }
 }
 

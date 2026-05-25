@@ -15,23 +15,53 @@ public sealed class AutoPasteService
     private readonly ForegroundWindowCapture _capture;
     private readonly SettingsStore _settings;
 
+    public enum Result
+    {
+        /// <summary>AutoPaste setting is off; we intentionally did nothing.</summary>
+        Skipped,
+        /// <summary>Pasted Ctrl+V into the previous foreground window.</summary>
+        Pasted,
+        /// <summary>Couldn't restore previous foreground — most commonly because the
+        /// target window is elevated and we're not. Text is on the clipboard;
+        /// the user has to Ctrl+V manually.</summary>
+        ForegroundRestoreFailed,
+        /// <summary>Foreground restored but the synthesised keystroke didn't deliver.
+        /// Rare — typically a SendInput driver-queue issue.</summary>
+        SendInputFailed,
+    }
+
     public AutoPasteService(ForegroundWindowCapture capture, SettingsStore settings)
     {
         _capture = capture;
         _settings = settings;
     }
 
+    /// <summary>Backward-compatible boolean entry point; prefer TryAutoPasteDetailed.</summary>
     public bool TryAutoPaste(int? cursorOffsetFromEnd = null)
+        => TryAutoPasteDetailed(cursorOffsetFromEnd) == Result.Pasted;
+
+    public Result TryAutoPasteDetailed(int? cursorOffsetFromEnd = null, string? typedBody = null, int pasteMode = 0)
     {
-        if (!_settings.AutoPaste) return false;
-        if (!_capture.TryRestore()) return false;
+        if (!_settings.AutoPaste) return Result.Skipped;
+        if (!_capture.TryRestore()) return Result.ForegroundRestoreFailed;
 
         // Tiny settle so the foreground swap actually completes before the
         // input gets routed; without this, the synthetic Ctrl+V can be
         // delivered to TaskCopy's own (already-closing) window.
         Thread.Sleep(30);
 
-        if (!SendCtrlV()) return false;
+        // F24: type characters via INPUT_KEYBOARD/KEYEVENTF_UNICODE instead of
+        // Ctrl+V for snippets bound to apps that swallow paste. The body is
+        // already on the clipboard so the user can still paste manually if the
+        // unicode typing fails partway.
+        if (pasteMode == 1 && !string.IsNullOrEmpty(typedBody))
+        {
+            if (!SendAsUnicodeTyping(typedBody!)) return Result.SendInputFailed;
+        }
+        else
+        {
+            if (!SendCtrlV()) return Result.SendInputFailed;
+        }
 
         if (cursorOffsetFromEnd is int n && n > 0)
         {
@@ -39,7 +69,7 @@ public sealed class AutoPasteService
             Thread.Sleep(15);
             SendLeftArrows(n);
         }
-        return true;
+        return Result.Pasted;
     }
 
     private static bool SendCtrlV()
@@ -60,6 +90,38 @@ public sealed class AutoPasteService
         inputs[3].u.ki.wVk = NativeMethods.VK_CONTROL;
         inputs[3].u.ki.dwFlags = NativeMethods.KEYEVENTF_KEYUP;
 
+        var sent = NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<NativeMethods.INPUT>());
+        return sent == inputs.Length;
+    }
+
+    /// <summary>
+    /// F24 — type the body character-by-character via INPUT_KEYBOARD with
+    /// KEYEVENTF_UNICODE. wVk=0, wScan=codepoint. Non-BMP code points (e.g.
+    /// emoji) are sent as their UTF-16 surrogate pair, each as a separate
+    /// INPUT entry. Capped at 5,000 characters so a runaway snippet can't
+    /// pin the keyboard.
+    /// </summary>
+    private static bool SendAsUnicodeTyping(string body)
+    {
+        const int Cap = 5000;
+        if (body.Length > Cap) body = body[..Cap];
+
+        // 2 INPUT entries per UTF-16 code unit (down + up).
+        var inputs = new NativeMethods.INPUT[body.Length * 2];
+        for (int i = 0; i < body.Length; i++)
+        {
+            ushort scan = body[i];
+
+            inputs[i * 2].type = NativeMethods.INPUT_KEYBOARD;
+            inputs[i * 2].u.ki.wVk = 0;
+            inputs[i * 2].u.ki.wScan = scan;
+            inputs[i * 2].u.ki.dwFlags = NativeMethods.KEYEVENTF_UNICODE;
+
+            inputs[i * 2 + 1].type = NativeMethods.INPUT_KEYBOARD;
+            inputs[i * 2 + 1].u.ki.wVk = 0;
+            inputs[i * 2 + 1].u.ki.wScan = scan;
+            inputs[i * 2 + 1].u.ki.dwFlags = NativeMethods.KEYEVENTF_UNICODE | NativeMethods.KEYEVENTF_KEYUP;
+        }
         var sent = NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<NativeMethods.INPUT>());
         return sent == inputs.Length;
     }
