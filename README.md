@@ -1,6 +1,6 @@
 # TaskCopy
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-0078D4)](https://www.microsoft.com/windows)
 [![Stack](https://img.shields.io/badge/stack-.NET%2010%20%2F%20WPF-512BD4)](https://dotnet.microsoft.com)
@@ -11,19 +11,23 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 
 ## Status
 
-**v0.1.0** — clean Release build, app launches in tray, SQLite snippet store + settings UI shipped. See [CHANGELOG.md](CHANGELOG.md) for what landed and [ROADMAP.md](ROADMAP.md) for what's next.
+**v0.2.0** — power-user core. Auto-paste, search + type-ahead, Alt+1-9 quick-pick, native tray context menu, second-instance handoff, schema migrations, first-run welcome. See [CHANGELOG.md](CHANGELOG.md) for what landed and [ROADMAP.md](ROADMAP.md) for what's next.
 
-## Features (v0.1.0)
+## Features (v0.2.0)
 
-- Tray icon — right-click (or left-click) opens snippet flyout at the cursor; double-click opens settings
-- Global hotkey (`Ctrl+Alt+V` default) — opens the same flyout from anywhere
-- Single-click copy to clipboard (with COMException retry)
-- Pre-flyout HWND capture (ready for v0.2 auto-paste)
-- SQLite snippet store at `%LOCALAPPDATA%\TaskCopy\snippets.db`
-- Settings window — add / edit / delete / reorder snippets, rebind hotkey, "Start with Windows" toggle
-- Catppuccin Mocha dark theme throughout
-- Single-instance enforcement via named mutex
-- Crash log at `%LOCALAPPDATA%\TaskCopy\logs\crash.log`
+- **Tray icon** — left-click opens snippet flyout at the cursor; right-click opens a native Catppuccin Mocha menu (Open snippets / Settings / About / Quit); double-click opens Settings.
+- **Global hotkey** (`Ctrl+Alt+V` default) — opens the same flyout from anywhere; rebindable in Settings (safe-fail: the previous combo stays active if a new one can't be registered).
+- **Flyout search + keyboard nav** — type to filter on Title/Body; Up/Down moves the highlight; Enter copies; Esc clears the filter then closes on a second press.
+- **Alt+1..9 quick-pick** — the first nine visible rows are numbered; `Alt+<digit>` copies that row instantly.
+- **Auto-paste** — after copy, TaskCopy restores the previously focused window and synthesises `Ctrl+V`. Default ON; toggle in Settings.
+- **Single-click copy to clipboard** (with COMException retry).
+- **Curated snippets** — SQLite store at `%LOCALAPPDATA%\TaskCopy\snippets.db`, with schema migrations tracked via `PRAGMA user_version` and `journal_mode = WAL` for safer concurrent reads.
+- **Settings window** — add / edit / delete / reorder snippets (debounced writes), rebind hotkey, "Start with Windows" toggle, "Open log folder" / "Open data folder" diagnostics buttons.
+- **First-run welcome** — fresh installs get five example snippets and Settings opens automatically.
+- **Second-instance handoff** — running TaskCopy.exe a second time signals the first instance via named pipe instead of dying silently; defaults to opening Settings.
+- **Catppuccin Mocha dark theme** throughout.
+- **Single-instance enforcement** via per-user named mutex.
+- **Crash log** at `%LOCALAPPDATA%\TaskCopy\logs\crash.log`, with 1 MB rotation.
 
 ## Stack
 
