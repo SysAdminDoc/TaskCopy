@@ -92,6 +92,13 @@ public partial class SettingsWindow : Window
         InsertAtCaret($"{{{{ask:{field}}}}}");
     }
 
+    private void OnInsertForm(object sender, RoutedEventArgs e)
+    {
+        var fields = AskWindow.Prompt("Form fields (separate with |)", this);
+        if (string.IsNullOrWhiteSpace(fields)) return;
+        InsertAtCaret($"{{{{form:{fields}}}}}");
+    }
+
     // -----------------------------------------------------------------------
     // Keyboard accelerators on the snippet list (I32)
     // -----------------------------------------------------------------------

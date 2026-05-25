@@ -5,6 +5,20 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] — 2026-05-25
+
+### Added
+- **Multi-field forms (F36).** Snippets can include `{{form:Name|Ticket|Priority}}` to show one modal with several fields before expansion. Values are reusable through matching `{{ask:Name}}`, `{{ask:Ticket}}`, etc., and repeated `ask` tokens reuse the same answer instead of prompting again.
+- Settings editor insert toolbar now includes a `{{form:...}}` helper.
+
+### Changed
+- Live preview resolves form-backed fields with the same `<Field>` stubs used by `{{ask:Field}}`.
+- CLI copy/paste and multi-clip paste use the same form prompt path as normal flyout picks.
+
+### Architecture
+- New view: `Views/FormWindow.xaml(.cs)`.
+- `TemplatingContext` gained `PromptForMany` for one-shot multi-field collection.
+
 ## [0.5.4] — 2026-05-25
 
 ### Added

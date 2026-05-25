@@ -179,6 +179,8 @@
                             ToolTip="Inserts {{cursor}} — after auto-paste, places the caret here." />
                     <Button Style="{StaticResource Mocha.Button}" Content="{}{{ask:…}}" Click="OnInsertAsk" Margin="4,0,0,0"
                             ToolTip="Inserts {{ask:Field}} — prompts for a value at paste time." />
+                    <Button Style="{StaticResource Mocha.Button}" Content="{}{{form:…}}" Click="OnInsertForm" Margin="4,0,0,0"
+                            ToolTip="Inserts {{form:Field1|Field2}} — prompts for several reusable field values at paste time." />
                     <Border Width="1" Background="{StaticResource Mocha.Surface1.Brush}" Margin="10,4" />
                     <Button Style="{StaticResource Mocha.Button}"
                             Content="Open in editor…"
@@ -217,7 +219,7 @@
                         Padding="8,6"
                         Margin="0,6,0,0"
                         MaxHeight="80"
-                        ToolTip="Live preview — placeholders are resolved against today's date, a sample clipboard, and stub Ask responses.">
+                        ToolTip="Live preview — placeholders are resolved against today's date, a sample clipboard, and stub Ask/Form responses.">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <TextBlock Text="{Binding EditBodyPreview}"
                                    FontFamily="{Binding EditBodyFontFamily}"

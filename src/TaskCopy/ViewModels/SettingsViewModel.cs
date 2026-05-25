@@ -102,7 +102,7 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>
     /// F25: live render of SnippetTemplating.Expand on the current body so the
     /// user sees what placeholders will resolve to at paste time. Uses a sample
-    /// clipboard value and stub Ask responses so it stays pure.
+    /// clipboard value and stub Ask/Form responses so it stays pure.
     /// </summary>
     public string EditBodyPreview
     {
@@ -118,6 +118,10 @@ public partial class SettingsViewModel : ObservableObject
                     // Lambda param is named `f` because `field` is a contextual
                     // keyword in property accessors as of C# 14 (CS9273/CS9258).
                     PromptFor = f => $"<{f}>",
+                    PromptForMany = fields => fields.ToDictionary(
+                        f => f,
+                        f => $"<{f}>",
+                        StringComparer.OrdinalIgnoreCase),
                     Now = DateTime.Now,
                 };
                 var result = SnippetTemplating.Expand(body, ctx);

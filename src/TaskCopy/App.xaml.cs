@@ -383,6 +383,7 @@ public partial class App : Application
         {
             PreviousClipboard = previousClipboard,
             PromptFor = field => Dispatcher.Invoke(() => AskWindow.Prompt(field)),
+            PromptForMany = fields => Dispatcher.Invoke(() => FormWindow.Prompt(fields)),
         };
 
         ExpansionResult expansion;
@@ -483,6 +484,7 @@ public partial class App : Application
             {
                 PreviousClipboard = previousClipboard,
                 PromptFor = f => Dispatcher.Invoke(() => AskWindow.Prompt(f)),
+                PromptForMany = fields => Dispatcher.Invoke(() => FormWindow.Prompt(fields)),
             };
             ExpansionResult expansion;
             try { expansion = SnippetTemplating.Expand(snippet.Body, ctx); }
@@ -691,6 +693,7 @@ public partial class App : Application
             {
                 PreviousClipboard = TryReadClipboardText(),
                 PromptFor = field => Dispatcher.Invoke(() => AskWindow.Prompt(field)),
+                PromptForMany = fields => Dispatcher.Invoke(() => FormWindow.Prompt(fields)),
             };
             try
             {

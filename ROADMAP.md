@@ -64,6 +64,10 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.5 — "Multi-field forms" ✅ SHIPPED (2026-05-25)
+
+- [x] **F36 — Multi-field forms** (`{{form:Field1|Field2}}`) — one modal gathers several values before expansion; matching `{{ask:Field}}` tokens reuse those values and repeated single-field asks are cached per expansion.
+
 ## v0.5.4 — "Espanso import" ✅ SHIPPED (2026-05-25)
 
 - [x] **F38 — YAML import (Espanso compat)** — Settings import picker accepts `.yml` / `.yaml`; static Espanso `matches:` entries import as snippets grouped under the YAML filename. Dynamic Espanso behaviors (`regex`, `vars`, `form`, `image_path`, `html`, `markdown`) are skipped rather than converted incorrectly.
@@ -150,7 +154,6 @@ This is the only active to-do checklist. `RESEARCH_FEATURE_PLAN.md` is archived 
 
 ### App features
 
-- [ ] **F36 — Multi-field forms** (`{{form:Field1|Field2}}`) — one modal gathers several values and makes them reusable across a snippet expansion.
 - [ ] **F33 — Image clipboard support** — capture/paste CF_DIB with thumbnails and explicit privacy limits.
 - [ ] **F39 — `{{shell:cmd}}` evaluation** — opt-in per snippet, disabled on import, with a warning dialog before first execution.
 - [ ] **F40 — Syntax-highlighted body editor** — AvalonEdit when `IsMonospace`, with plain TextBox fallback.
