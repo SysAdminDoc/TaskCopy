@@ -622,6 +622,42 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// I40: spawn the user's external editor on the current snippet body and
+    /// write back when it closes. No-op when no snippet is selected.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private async Task OpenInExternalEditor()
+    {
+        if (SelectedSnippet is null) return;
+        // Flush any debounced edit so the editor opens the latest body.
+        FlushPendingSave();
+
+        var snippet = SelectedSnippet;
+        var original = snippet.Body;
+        StatusMessage = "Opening external editor… (waiting for it to close)";
+
+        var configured = _settings.ExternalEditorCommand;
+        var result = await System.Threading.Tasks.Task.Run(() =>
+            ExternalEditor.EditBody(original, configured));
+
+        if (result is null)
+        {
+            StatusMessage = "External editor couldn't be launched. Set Settings → Editor command if your editor isn't on PATH.";
+            return;
+        }
+        if (result == original)
+        {
+            StatusMessage = "No changes from the external editor.";
+            return;
+        }
+
+        // Push through the normal binding so debounced save + observable
+        // notifications + preview re-render all kick in.
+        EditBody = result;
+        StatusMessage = "Body updated from external editor.";
+    }
+
+    /// <summary>
     /// I38: ask the user to press the configured hotkey, swallow the next
     /// trigger via HotkeyService.TestHookOneShot, and surface the result.
     /// Times out after 5s with a clearer "didn't fire — another app may be
@@ -690,9 +726,12 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void ImportSnippets()
     {
+        // F44: .taskpack is the same JSON format with a curated extension so
+        // community snippet packs can register a file association and ship
+        // with a recognizable name. See README "Snippet packs" section.
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "JSON (*.json)|*.json",
+            Filter = "TaskCopy pack or snippets (*.taskpack;*.json)|*.taskpack;*.json|JSON only (*.json)|*.json|TaskCopy pack only (*.taskpack)|*.taskpack",
             CheckFileExists = true,
         };
         if (dlg.ShowDialog() != true) return;
@@ -760,6 +799,44 @@ public partial class SettingsViewModel : ObservableObject
         {
             CrashLog.Write("CopyDiagnostics", ex);
             StatusMessage = $"Couldn't build diagnostics: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// F45: short-circuits "Copy diagnostics → open browser → paste into
+    /// Issues" into one click when the user has `gh` CLI on PATH and is
+    /// authenticated. Falls back to clipboard + a status hint otherwise.
+    /// </summary>
+    [RelayCommand]
+    private async Task FileIssue()
+    {
+        StatusMessage = "Checking for gh CLI…";
+        // Run the availability probe + the actual issue creation on a
+        // background thread; both spawn `gh` which is sync.
+        var ok = await System.Threading.Tasks.Task.Run(() => GhCli.IsAvailable());
+        if (!ok)
+        {
+            StatusMessage = "gh CLI not found on PATH. Diagnostics copied to clipboard — paste into a new GitHub issue.";
+            CopyDiagnostics();
+            return;
+        }
+
+        var bundle = BuildDiagnosticsMarkdown();
+        StatusMessage = "Opening gh issue create…";
+        var (success, output) = await System.Threading.Tasks.Task.Run(() =>
+        {
+            var s = GhCli.TryCreateIssue("SysAdminDoc/TaskCopy", "TaskCopy bug report", bundle, out var o);
+            return (s, o);
+        });
+
+        if (success)
+        {
+            StatusMessage = $"Issue filed: {output}";
+        }
+        else
+        {
+            StatusMessage = $"gh issue create failed ({output}). Diagnostics copied to clipboard instead.";
+            CopyDiagnostics();
         }
     }
 

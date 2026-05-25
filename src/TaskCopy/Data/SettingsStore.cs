@@ -17,6 +17,7 @@ public sealed class SettingsStore
     private const string KeyFlyoutLastGroupId = "flyout.last_group_id";
     private const string KeyFlyoutPosition = "flyout.position";
     private const string KeyDeleteSkipConfirm = "delete.skip_confirm";
+    private const string KeyExternalEditorCommand = "editor.command";
 
     private readonly SnippetDatabase _db;
 
@@ -139,6 +140,18 @@ public sealed class SettingsStore
     {
         get => string.Equals(_db.GetSetting(KeyDeleteSkipConfirm), "1", StringComparison.Ordinal);
         set => _db.SetSetting(KeyDeleteSkipConfirm, value ? "1" : "0");
+    }
+
+    /// <summary>
+    /// I40: command to spawn when the editor's "Open in external editor…"
+    /// button is clicked. Empty defaults to environment variable $EDITOR,
+    /// then `code`, then `notepad`. Example: "C:\Program Files\Microsoft VS Code\Code.exe"
+    /// or simply "code" if VS Code is on PATH.
+    /// </summary>
+    public string ExternalEditorCommand
+    {
+        get => _db.GetSetting(KeyExternalEditorCommand) ?? string.Empty;
+        set => _db.SetSetting(KeyExternalEditorCommand, value ?? string.Empty);
     }
 }
 

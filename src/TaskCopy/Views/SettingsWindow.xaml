@@ -175,6 +175,12 @@
                             ToolTip="Inserts {{cursor}} — after auto-paste, places the caret here." />
                     <Button Style="{StaticResource Mocha.Button}" Content="{}{{ask:…}}" Click="OnInsertAsk" Margin="4,0,0,0"
                             ToolTip="Inserts {{ask:Field}} — prompts for a value at paste time." />
+                    <Border Width="1" Background="{StaticResource Mocha.Surface1.Brush}" Margin="10,4" />
+                    <Button Style="{StaticResource Mocha.Button}"
+                            Content="Open in editor…"
+                            Command="{Binding OpenInExternalEditorCommand}"
+                            Margin="0,0,0,0"
+                            ToolTip="Open the body in your preferred external editor (resolves Settings → Editor command, then $EDITOR, then `code --wait`, then notepad). Saves back on close." />
                 </StackPanel>
                 <TextBox Grid.Row="2"
                          x:Name="BodyEditor"
@@ -325,9 +331,9 @@
                             Command="{Binding ExportSnippetsCommand}"
                             ToolTip="Save all snippets and groups as a JSON file." />
                     <Button Style="{StaticResource Mocha.Button}"
-                            Content="Import snippets…"
+                            Content="Install pack / import…"
                             Command="{Binding ImportSnippetsCommand}"
-                            ToolTip="Load snippets from a JSON file. Duplicates (by title) are skipped."
+                            ToolTip="Load snippets from a .taskpack or .json file. Duplicates (by title) are skipped. Community packs at github.com/SysAdminDoc/taskcopy-packs."
                             Margin="8,0,0,0" />
                     <Button Style="{StaticResource Mocha.Button}"
                             Content="Trash…"
@@ -344,6 +350,11 @@
                             Command="{Binding CopyDiagnosticsCommand}"
                             Margin="8,0,0,0"
                             ToolTip="Bundles version, schema version, snippet count, last-backup timestamp, and the tail of crash.log into a Markdown block on the clipboard — paste it into a GitHub issue." />
+                    <Button Style="{StaticResource Mocha.Button}"
+                            Content="File issue"
+                            Command="{Binding FileIssueCommand}"
+                            Margin="8,0,0,0"
+                            ToolTip="If you have the `gh` CLI on PATH and are authenticated, files a GitHub issue with the diagnostics bundle in one click. Falls back to clipboard otherwise." />
                     <Button Style="{StaticResource Mocha.Button.Danger}"
                             Content="Reset to defaults…"
                             Command="{Binding ResetToDefaultsCommand}"

@@ -64,6 +64,12 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.4.5 — "Power-user integrations" ✅ SHIPPED (2026-05-25)
+
+- [x] **F45 — `gh issue create` integration** for the "File issue" button. Falls back to clipboard when `gh` isn't on PATH.
+- [x] **F44 (code-only) — `.taskpack` extension support** in the import dialog filter + button rename. Curation/index repo is separately-tracked work.
+- [x] **I40 — Open in external editor** for the snippet body. Resolves `Settings.ExternalEditorCommand` → `$EDITOR` → `code --wait` → `notepad`.
+
 ## v0.4.4 — "Quality of life + Accessibility" ✅ SHIPPED (2026-05-25)
 
 Phase B + selected Phase C items from `RESEARCH_FEATURE_PLAN.md`.

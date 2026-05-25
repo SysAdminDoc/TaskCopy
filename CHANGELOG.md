@@ -5,6 +5,17 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] — 2026-05-25
+
+### Added
+- **`File issue` button — `gh` CLI integration (F45).** Settings → Diagnostics → "File issue" detects the GitHub CLI on PATH and, when available + authenticated, opens a new issue against `SysAdminDoc/TaskCopy` with the existing diagnostics bundle as the body. Falls back to clipboard + a status hint when `gh` is missing or auth fails. New `Services/GhCli.cs` keeps the integration small + best-effort (2 s availability probe, 30 s issue-create timeout).
+- **`.taskpack` file extension support (F44 code-only).** Import dialog filter now offers "TaskCopy pack or snippets (\*.taskpack;\*.json)" as the default. Format is the existing F9 JSON — `.taskpack` is the convention community packs use so a file association can resolve to TaskCopy. Settings button renamed "Install pack / import…". Index repo (curation work) is out-of-scope for this code change; tracked separately at `SysAdminDoc/taskcopy-packs`.
+- **"Open in editor…" in the snippet editor (I40).** Spawns the user's preferred external editor on the current body. Resolution order: `Settings.ExternalEditorCommand` → `$EDITOR` → `code --wait` (VS Code on PATH) → `notepad.exe`. The body is round-tripped through a temp file; the editor process exit signals "done" so `code --wait` / `notepad++ -nosession` / `notepad` all work. New `Services/ExternalEditor.cs`. New `SettingsStore.ExternalEditorCommand` KV.
+
+### Architecture
+- New services: `Services/GhCli.cs`, `Services/ExternalEditor.cs`.
+- New repository surface: `SettingsStore.ExternalEditorCommand`.
+
 ## [0.4.4] — 2026-05-25
 
 ### Added
