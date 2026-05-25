@@ -5,6 +5,11 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] — 2026-05-25
+
+### Fixed
+- **MVVMTK0034 in `SettingsViewModel.RevertBackupEncryptedBinding`.** v0.5.2's revert path called `SetProperty(ref _backupEncrypted, …)` which directly references an `[ObservableProperty]`-decorated field — forbidden by the source generator. Refactored to set the generated `BackupEncrypted` property under the existing `_suppressEncryptionToggleEvent` flag so the change-handler doesn't loop. Behavior identical; CI green again.
+
 ## [0.5.2] — 2026-05-25
 
 ### Added

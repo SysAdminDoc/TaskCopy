@@ -1015,10 +1015,12 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>App calls this when the password capture failed or the user cancelled.</summary>
     public void RevertBackupEncryptedBinding(bool actualValue)
     {
-        // Don't re-fire the event during the revert. Set the field directly
-        // and notify so the checkbox snaps back to truth.
+        // Set via the generated property under the suppress flag so the
+        // ToggleBackupEncryptionRequested event doesn't re-fire and loop.
         if (BackupEncrypted == actualValue) return;
-        SetProperty(ref _backupEncrypted, actualValue, nameof(BackupEncrypted));
+        _suppressEncryptionToggleEvent = true;
+        try { BackupEncrypted = actualValue; }
+        finally { _suppressEncryptionToggleEvent = false; }
     }
 
     [RelayCommand]

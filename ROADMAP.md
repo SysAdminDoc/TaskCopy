@@ -64,6 +64,10 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.3 — Build hotfix ✅ SHIPPED (2026-05-25)
+
+- [x] **MVVMTK0034 in `RevertBackupEncryptedBinding`** (v0.5.2 broke CI) — refactored to set the generated property under the suppress flag instead of `SetProperty(ref _field, ...)`.
+
 ## v0.5.2 — "Encrypted backups + per-app rules" ✅ SHIPPED (2026-05-25)
 
 Schema bumped V4 → V5.
