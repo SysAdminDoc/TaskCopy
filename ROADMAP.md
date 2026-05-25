@@ -51,17 +51,17 @@ Goal: turn TaskCopy from "fancy clipboard" into "muscle-memory text expander."
 
 ### P0 bug fixes
 
-- [ ] **I1 — Fix `SetHotkey` persist-before-register bug** (`ViewModels/SettingsViewModel.cs:162-178`)
+- [x] **I1 — Fix `SetHotkey` persist-before-register bug** (`ViewModels/SettingsViewModel.cs:162-178`)
 
 ### Quick wins (XS — bundled with above)
 
 - [ ] **I5 — First-run-only launch toast** (`SettingsStore.IsFirstRun` flag)
-- [ ] **I12 — Use `Local\` mutex instead of `Global\`**
-- [ ] **I13 — Enable Efficiency Mode on tray icon**
-- [ ] **I14 — `Snippet.Preview` split on `\r` or `\n` (not just `\n`)**
+- [x] **I12 — Use `Local\` mutex instead of `Global\`**
+- [x] **I13 — Enable Efficiency Mode on tray icon**
+- [x] **I14 — `Snippet.Preview` split on `\r` or `\n` (not just `\n`)**
 - [ ] **I15 — About surface w/ version + link to GitHub + LICENSE**
 - [ ] **I9 — Tooltip on truncated titles**
-- [ ] **I11 — Atomic `Insert` (transaction + `RETURNING id`)**
+- [x] **I11 — Atomic `Insert` (transaction + `RETURNING id`)**
 
 ### Foundation for later phases
 

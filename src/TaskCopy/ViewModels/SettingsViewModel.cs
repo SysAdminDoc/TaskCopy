@@ -161,20 +161,24 @@ public partial class SettingsViewModel : ObservableObject
 
     public void SetHotkey(Key key, ModifierKeys modifiers)
     {
-        HotkeyKey = key;
-        HotkeyModifiers = modifiers;
-        _settings.HotkeyKey = key;
-        _settings.HotkeyModifiers = modifiers;
-        HotkeyDisplay = HotkeyService.FormatHotkey(key, modifiers);
+        var previousKey = HotkeyKey;
+        var previousModifiers = HotkeyModifiers;
 
         if (_hotkeys.TryRegister(key, modifiers))
         {
+            HotkeyKey = key;
+            HotkeyModifiers = modifiers;
+            _settings.HotkeyKey = key;
+            _settings.HotkeyModifiers = modifiers;
+            HotkeyDisplay = HotkeyService.FormatHotkey(key, modifiers);
             StatusMessage = $"Hotkey set to {HotkeyDisplay}.";
+            return;
         }
-        else
-        {
-            StatusMessage = $"Hotkey {HotkeyDisplay} could not be registered — try another combo.";
-        }
+
+        // Registration failed — keep the previous combo working and persisted.
+        _hotkeys.TryRegister(previousKey, previousModifiers);
+        var attempted = HotkeyService.FormatHotkey(key, modifiers);
+        StatusMessage = $"Hotkey {attempted} could not be registered — kept {HotkeyDisplay}. Try another combo.";
     }
 
     partial void OnStartWithWindowsChanged(bool value)

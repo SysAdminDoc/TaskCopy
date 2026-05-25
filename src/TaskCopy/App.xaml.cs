@@ -12,7 +12,7 @@ namespace TaskCopy;
 
 public partial class App : Application
 {
-    private const string SingleInstanceMutexName = "Global\\TaskCopy_SingleInstance";
+    private const string SingleInstanceMutexName = "Local\\TaskCopy_SingleInstance";
 
     private Mutex? _singleInstanceMutex;
     private TaskbarIcon? _trayIcon;
@@ -75,7 +75,7 @@ public partial class App : Application
         _trayIcon.TrayLeftMouseUp += (_, _) => ShowSnippetMenu();
         _trayIcon.TrayRightMouseUp += (_, _) => ShowSnippetMenu();
         _trayIcon.TrayMouseDoubleClick += (_, _) => ShowSettings();
-        _trayIcon.ForceCreate(enablesEfficiencyMode: false);
+        _trayIcon.ForceCreate(enablesEfficiencyMode: true);
 
         _trayIcon.ShowNotification(
             title: "TaskCopy is running",

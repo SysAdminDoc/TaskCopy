@@ -71,18 +71,21 @@ public sealed class SnippetDatabase
     public long Insert(string title, string body)
     {
         using var conn = Open();
+        using var tx = conn.BeginTransaction();
         var nextOrder = GetMaxSortOrder(conn) + 1;
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
             INSERT INTO snippets (title, body, sort_order, created_at)
-            VALUES ($t, $b, $o, $c);
-            SELECT last_insert_rowid();
+            VALUES ($t, $b, $o, $c)
+            RETURNING id;
             """;
         cmd.Parameters.AddWithValue("$t", title);
         cmd.Parameters.AddWithValue("$b", body);
         cmd.Parameters.AddWithValue("$o", nextOrder);
         cmd.Parameters.AddWithValue("$c", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-        return (long)(cmd.ExecuteScalar() ?? 0L);
+        var id = (long)(cmd.ExecuteScalar() ?? 0L);
+        tx.Commit();
+        return id;
     }
 
     public void Update(long id, string title, string body)
