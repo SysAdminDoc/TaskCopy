@@ -10,9 +10,9 @@
     <AssemblyName>TaskCopy</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.4.3</Version>
-    <AssemblyVersion>0.4.3.0</AssemblyVersion>
-    <FileVersion>0.4.3.0</FileVersion>
+    <Version>0.4.4</Version>
+    <AssemblyVersion>0.4.4.0</AssemblyVersion>
+    <FileVersion>0.4.4.0</FileVersion>
     <Product>TaskCopy</Product>
     <Description>Single-click clipboard snippet menu for Windows.</Description>
     <Copyright>Copyright (c) 2026 SysAdminDoc</Copyright>
@@ -33,6 +33,10 @@
     <PackageReference Include="NHotkey.Wpf" Version="3.0.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+    <!-- I35: DI container available for v0.5 services (Velopack update check,
+         Windhawk IPC bridge). Existing manual wiring keeps working; this just
+         makes ServiceProvider available for new code that prefers it. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>

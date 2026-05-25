@@ -239,6 +239,11 @@
                     <Button Style="{StaticResource Mocha.Button}"
                             Content="Rebind…"
                             Command="{Binding RebindHotkeyCommand}" />
+                    <Button Style="{StaticResource Mocha.Button}"
+                            Content="Test"
+                            Command="{Binding TestHotkeyCommand}"
+                            Margin="6,0,0,0"
+                            ToolTip="Verify that the configured hotkey actually reaches TaskCopy (catches the case where another app grabs the combo before us)." />
                 </StackPanel>
 
                 <CheckBox Grid.Row="1" Grid.ColumnSpan="2"
@@ -339,6 +344,11 @@
                             Command="{Binding CopyDiagnosticsCommand}"
                             Margin="8,0,0,0"
                             ToolTip="Bundles version, schema version, snippet count, last-backup timestamp, and the tail of crash.log into a Markdown block on the clipboard — paste it into a GitHub issue." />
+                    <Button Style="{StaticResource Mocha.Button.Danger}"
+                            Content="Reset to defaults…"
+                            Command="{Binding ResetToDefaultsCommand}"
+                            Margin="8,0,0,0"
+                            ToolTip="Clear all preferences (hotkey, theme, auto-paste, etc.) and restart. Snippets, groups, and trash are NOT touched." />
                     <Border Width="1" Background="{StaticResource Mocha.Surface1.Brush}" Margin="12,4" />
                     <Button Style="{StaticResource Mocha.Button}"
                             Content="Open log folder"

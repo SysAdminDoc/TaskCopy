@@ -5,6 +5,29 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] — 2026-05-25
+
+### Added
+- **High-contrast theme variant (F42).** New `Themes/HighContrast.xaml` palette delegates every brush to `SystemColors.*` so Windows HC themes drive the look. `ThemeService.Resolve` auto-selects HighContrast when `SystemParameters.HighContrast` is on regardless of the user's preference (accessibility users get the right palette even if they didn't explicitly pick it). New `Theme.HighContrast` enum value + Settings dropdown entry "High contrast (system colors)". `ThemeService.OnUserPreferenceChanged` now also reacts to `UserPreferenceCategory.Accessibility` so HC-on/off transitions trigger the same B17 relaunch prompt.
+- **"Don't ask again" for delete confirm (F47).** New `Views/ConfirmDeleteWindow.xaml` (a custom WPF dialog — `MessageBox` doesn't ship with a checkbox). Suppression persists via `settings.delete.skip_confirm`. Trash + 30-day purge still guards against the accidental Del; reset the suppression via the new F52 "Reset to defaults" button.
+- **"Test hotkey" verification button (I38).** New `HotkeyService.TestHookOneShot` swallows the next primary-hotkey trigger and reports it to the Settings UI. Surfaces a clear "didn't fire in 5 s — another app may be grabbing it" message when the registered hotkey doesn't actually reach TaskCopy (catches the case where I17's green dot says "Active" but a third-party hotkey manager is intercepting).
+- **"Reset to defaults" button (F52).** Settings → Diagnostics → "Reset to defaults…" wipes the `settings` KV table only (snippets, groups, trash stay intact) and relaunches into Settings via the existing `--settings` CLI path. Confirm dialog explicitly enumerates what gets cleared.
+- **`Microsoft.Extensions.DependencyInjection` 9.0.0 (I35).** Container built in `App.OnStartup` from the manually-constructed singletons. Existing wiring is unchanged; new v0.5 services (Velopack update check, Windhawk IPC bridge) can resolve from `App._services` instead of adding hand-hooks.
+
+### Changed
+- `ThemeService.OnUserPreferenceChanged` now compares `Resolve(_currentPreference)` against the last resolved theme — fires for both Theme.Auto light/dark flips AND HC-on/HC-off transitions regardless of which preference the user picked.
+- `SettingsViewModel.DeleteSnippet` consults `_settings.DeleteSkipConfirm` first and only shows the modal when needed.
+- `SettingsViewModel.IsReservedCombo` extended to flag any combo containing `ModifierKeys.Windows` (rolled in from v0.4.3).
+- `SettingsViewModel.ThemeOptions` now includes "High contrast (system colors)" as a fourth entry.
+- `SnippetDatabase.ClearAllSettings()` added — wipes settings KV without touching snippets/groups/trash. Used by F52.
+
+### Architecture
+- New views: `Views/ConfirmDeleteWindow.xaml(.cs)`.
+- New theme: `Themes/HighContrast.xaml` (~280 lines, all `{x:Static SystemColors.…}` references).
+- New service surfaces: `HotkeyService.TestHookOneShot` Action, `SettingsViewModel.DeleteConfirmer` callback (avoids ViewModels → Views compile-time dependency).
+- New NuGet: `Microsoft.Extensions.DependencyInjection` 9.0.0.
+- `ThemeService` gains explicit-preference + Accessibility-category handling in the runtime watcher.
+
 ## [0.4.3] — 2026-05-25
 
 ### Fixed

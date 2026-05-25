@@ -16,6 +16,7 @@ public sealed class SettingsStore
     private const string KeyLastBackupAt = "backup.last_at";
     private const string KeyFlyoutLastGroupId = "flyout.last_group_id";
     private const string KeyFlyoutPosition = "flyout.position";
+    private const string KeyDeleteSkipConfirm = "delete.skip_confirm";
 
     private readonly SnippetDatabase _db;
 
@@ -128,6 +129,17 @@ public sealed class SettingsStore
         }
         set => _db.SetSetting(KeyFlyoutPosition, value.ToString());
     }
+
+    /// <summary>
+    /// F47: when true, skip the delete-confirm modal. Set via the
+    /// "Don't ask again" checkbox in the confirm dialog itself. Resettable
+    /// by F52 "Reset to defaults" or by deleting this row directly.
+    /// </summary>
+    public bool DeleteSkipConfirm
+    {
+        get => string.Equals(_db.GetSetting(KeyDeleteSkipConfirm), "1", StringComparison.Ordinal);
+        set => _db.SetSetting(KeyDeleteSkipConfirm, value ? "1" : "0");
+    }
 }
 
 public enum FlyoutPosition
@@ -141,6 +153,8 @@ public enum Theme
     Mocha = 0,
     Latte = 1,
     Auto = 2,
+    /// <summary>F42: delegates every brush to SystemColors so Windows HC themes drive the look.</summary>
+    HighContrast = 3,
 }
 
 public enum FlyoutSortMode

@@ -1,0 +1,56 @@
+<Window x:Class="TaskCopy.Views.ConfirmDeleteWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TaskCopy"
+        Width="420"
+        Height="220"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Mocha.Base.Brush}"
+        Foreground="{StaticResource Mocha.Text.Brush}"
+        FontFamily="{StaticResource Mocha.Font}"
+        FontSize="13"
+        UseLayoutRounding="True"
+        ShowInTaskbar="False">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   x:Name="PromptText"
+                   Style="{StaticResource Mocha.Body}"
+                   TextWrapping="Wrap" />
+        <TextBlock Grid.Row="1"
+                   Text="It will be moved to the trash and permanently removed after 30 days."
+                   Style="{StaticResource Mocha.Body.Subtle}"
+                   TextWrapping="Wrap"
+                   Margin="0,8,0,0" />
+
+        <CheckBox Grid.Row="3"
+                  x:Name="DontAskAgainBox"
+                  Style="{StaticResource Mocha.CheckBox}"
+                  Content="Don't ask again (you can still undo from the Trash window)"
+                  Margin="0,12,0,12" />
+
+        <StackPanel Grid.Row="4"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Style="{StaticResource Mocha.Button}"
+                    Content="Cancel"
+                    Width="92"
+                    IsCancel="True"
+                    Click="OnCancel" />
+            <Button Style="{StaticResource Mocha.Button.Danger}"
+                    Content="Delete"
+                    Width="92"
+                    Margin="8,0,0,0"
+                    IsDefault="True"
+                    Click="OnDelete" />
+        </StackPanel>
+    </Grid>
+</Window>

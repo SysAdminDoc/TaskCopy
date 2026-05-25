@@ -94,8 +94,23 @@ public sealed class HotkeyService
         }
     }
 
+    /// <summary>
+    /// I38: when set, the next primary-hotkey trigger is swallowed and
+    /// reported to the listener instead of opening the flyout. Used by
+    /// the Settings "Test hotkey" button. Cleared automatically after one shot.
+    /// </summary>
+    public Action? TestHookOneShot { get; set; }
+
     private void OnHotkey(object? sender, HotkeyEventArgs e)
     {
+        var hook = TestHookOneShot;
+        if (hook is not null)
+        {
+            TestHookOneShot = null;
+            try { hook(); } catch { /* swallow — diagnostic-only */ }
+            e.Handled = true;
+            return;
+        }
         Triggered?.Invoke(this, EventArgs.Empty);
         e.Handled = true;
     }

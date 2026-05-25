@@ -558,4 +558,19 @@ public sealed class SnippetDatabase
         cmd.Parameters.AddWithValue("$v", value);
         cmd.ExecuteNonQuery();
     }
+
+    /// <summary>
+    /// F52: wipe every row in the settings KV table. Snippets, groups,
+    /// recent_clips, and trashed snippets are NOT touched — user content
+    /// stays. Caller is responsible for surfacing the "you'll need to
+    /// relaunch" UX since the in-memory hotkey/theme/etc. caches are now
+    /// disconnected from the (empty) persisted store.
+    /// </summary>
+    public void ClearAllSettings()
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM settings;";
+        cmd.ExecuteNonQuery();
+    }
 }

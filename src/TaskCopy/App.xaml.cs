@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
+using Microsoft.Extensions.DependencyInjection;
 using TaskCopy.Data;
 using TaskCopy.Models;
 using TaskCopy.Services;
@@ -34,6 +35,12 @@ public partial class App : Application
     private SnippetMenuWindow? _snippetMenu;
     private SettingsWindow? _settingsWindow;
     private AboutWindow? _aboutWindow;
+
+    // I35: DI container, populated in OnStartup after the services are constructed.
+    // Existing manual wiring (still here) feeds the container; v0.5 features
+    // (Velopack update service, Windhawk IPC bridge) prefer constructor injection
+    // from the provider over App.xaml.cs hand-hooks.
+    private ServiceProvider? _services;
 
     // One-time-per-session suppression for the "auto-paste skipped" toast.
     private bool _autoPasteFailToastShown;
@@ -179,6 +186,21 @@ public partial class App : Application
         _clipboardWatcher.Captured += OnClipboardCaptured;
         if (_settings.RecentClipsEnabled) _clipboardWatcher.Start();
 
+        // I35: build the DI container from the now-constructed singletons. New
+        // services (F26, Windhawk IPC) can resolve from `_services` without
+        // adding hand-wired constructor calls here.
+        var svc = new ServiceCollection();
+        svc.AddSingleton(_db);
+        svc.AddSingleton(_settings);
+        svc.AddSingleton(_clipboard);
+        svc.AddSingleton(_startup);
+        svc.AddSingleton(_foreground);
+        svc.AddSingleton(_autoPaste);
+        svc.AddSingleton(_hotkeys);
+        svc.AddSingleton(_pipeServer);
+        svc.AddSingleton(_clipboardWatcher);
+        _services = svc.BuildServiceProvider();
+
         _trayIcon = new TaskbarIcon
         {
             IconSource = new BitmapImage(new Uri("pack://application:,,,/Assets/app.ico")),
@@ -297,6 +319,10 @@ public partial class App : Application
         vm.ApplyThemeRequested += (_, label) => OfferThemeRelaunch(label);
         vm.ShowTrashRequested += (_, _) => ShowTrash(vm);
         vm.RestoreBackupRequested += (_, _) => ShowRestoreBackup(vm);
+        vm.ResetToDefaultsRequested += (_, _) => ShowResetToDefaults(vm);
+        // F47: hand the modal helper down so SettingsViewModel doesn't need a
+        // Views-namespace using directive.
+        vm.DeleteConfirmer = title => ConfirmDeleteWindow.Prompt(title, _settingsWindow);
         _settingsWindow = new SettingsWindow(vm);
         _settingsWindow.Closed += (_, _) =>
         {
@@ -634,6 +660,40 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// F52: confirm + wipe the settings KV table + relaunch. Snippets/groups/
+    /// trash are preserved; the in-memory hotkey/theme/etc. caches are stale
+    /// after the wipe so we relaunch back into Settings.
+    /// </summary>
+    private void ShowResetToDefaults(SettingsViewModel parentVm)
+    {
+        if (_db is null) return;
+        var result = MessageBox.Show(
+            "Reset all settings to defaults?\n\n"
+            + "Your snippets, groups, and trash are NOT affected — only preferences "
+            + "(hotkey, theme, auto-paste, recent-clips opt-in, flyout position, "
+            + "delete-confirm-skip, last backup timestamp).\n\n"
+            + "TaskCopy will restart and reopen Settings.",
+            "TaskCopy — Reset to defaults",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Question,
+            MessageBoxResult.Cancel);
+        if (result != MessageBoxResult.OK) return;
+
+        try
+        {
+            _db.ClearAllSettings();
+            parentVm.StatusMessage = "Settings reset to defaults. Relaunching…";
+            RelaunchSelf("--settings");
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("ResetToDefaults", ex);
+            MessageBox.Show($"Reset failed: {ex.Message}", "TaskCopy",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void RelaunchSelf(string args)
     {
         try
@@ -747,6 +807,7 @@ public partial class App : Application
             _hotkeys?.Unregister();
             _trayIcon?.Dispose();
             _hotkeyHost?.Close();
+            _services?.Dispose();
             if (_singleInstanceMutex is { } m)
             {
                 try { m.ReleaseMutex(); } catch (ApplicationException) { }

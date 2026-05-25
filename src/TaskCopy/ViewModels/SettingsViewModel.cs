@@ -317,9 +317,10 @@ public partial class SettingsViewModel : ObservableObject
 
     public IReadOnlyList<ThemeOption> ThemeOptions { get; } =
     [
-        new(Theme.Mocha, "Catppuccin Mocha (dark)"),
-        new(Theme.Latte, "Catppuccin Latte (light)"),
-        new(Theme.Auto,  "Follow system"),
+        new(Theme.Mocha,        "Catppuccin Mocha (dark)"),
+        new(Theme.Latte,        "Catppuccin Latte (light)"),
+        new(Theme.Auto,         "Follow system"),
+        new(Theme.HighContrast, "High contrast (system colors)"),
     ];
 
     public IReadOnlyList<FlyoutPositionOption> FlyoutPositionOptions { get; } =
@@ -467,6 +468,13 @@ public partial class SettingsViewModel : ObservableObject
     public event EventHandler? ManageGroupsRequested;
     public event EventHandler? ShowTrashRequested;
 
+    /// <summary>
+    /// F47: App wires this to <c>ConfirmDeleteWindow.Prompt</c>. Returns
+    /// (confirmed, dontAskAgain). Avoids a ViewModels → Views compile-time
+    /// dependency on the WPF window type itself.
+    /// </summary>
+    public Func<string, (bool Confirmed, bool DontAskAgain)>? DeleteConfirmer { get; set; }
+
     [RelayCommand]
     private void ShowTrash() => ShowTrashRequested?.Invoke(this, EventArgs.Empty);
 
@@ -538,13 +546,25 @@ public partial class SettingsViewModel : ObservableObject
         if (SelectedSnippet is null) return;
 
         var title = SelectedSnippet.Title;
-        var result = System.Windows.MessageBox.Show(
-            $"Delete snippet \"{title}\"?\n\nIt will be moved to the trash and permanently removed after 30 days.",
-            "TaskCopy",
-            System.Windows.MessageBoxButton.OKCancel,
-            System.Windows.MessageBoxImage.Question,
-            System.Windows.MessageBoxResult.Cancel);
-        if (result != System.Windows.MessageBoxResult.OK) return;
+
+        // F47: skip the dialog when the user previously checked "Don't ask again".
+        // Trash + 30-day purge still protects against the accidental Del; users
+        // can reset the suppression via F52 "Reset to defaults" or by clearing
+        // the settings row manually. The actual modal is owned by App which
+        // wires DeleteConfirmer (avoids a ViewModels → Views cycle).
+        if (!_settings.DeleteSkipConfirm)
+        {
+            var prompt = DeleteConfirmer;
+            if (prompt is null)
+            {
+                // Defensive fallback for tests / scenarios without a Views host:
+                // treat absent confirmer as "user said cancel" to be safe.
+                return;
+            }
+            var (confirmed, dontAskAgain) = prompt(title);
+            if (!confirmed) return;
+            if (dontAskAgain) _settings.DeleteSkipConfirm = true;
+        }
 
         var snippet = SelectedSnippet;
         var idx = Snippets.IndexOf(snippet);
@@ -599,6 +619,42 @@ public partial class SettingsViewModel : ObservableObject
     private void RebindHotkey()
     {
         HotkeyRebindRequested?.Invoke(this, (HotkeyKey, HotkeyModifiers));
+    }
+
+    /// <summary>
+    /// I38: ask the user to press the configured hotkey, swallow the next
+    /// trigger via HotkeyService.TestHookOneShot, and surface the result.
+    /// Times out after 5s with a clearer "didn't fire — another app may be
+    /// grabbing this combo" message.
+    /// </summary>
+    [RelayCommand]
+    private async Task TestHotkey()
+    {
+        if (!HotkeyIsRegistered)
+        {
+            StatusMessage = "Hotkey isn't registered right now — try Rebind first.";
+            return;
+        }
+
+        StatusMessage = $"Press {HotkeyDisplay} now (waiting up to 5 s)…";
+
+        var tcs = new System.Threading.Tasks.TaskCompletionSource<bool>();
+        _hotkeys.TestHookOneShot = () => tcs.TrySetResult(true);
+
+        var timeout = System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(5));
+        var completed = await System.Threading.Tasks.Task.WhenAny(tcs.Task, timeout);
+
+        // Clear the hook in case the user never pressed it.
+        _hotkeys.TestHookOneShot = null;
+
+        if (completed == tcs.Task)
+        {
+            StatusMessage = $"{HotkeyDisplay} triggered TaskCopy correctly.";
+        }
+        else
+        {
+            StatusMessage = $"{HotkeyDisplay} didn't reach TaskCopy in 5 s — another app may be grabbing it.";
+        }
     }
 
     [RelayCommand]
@@ -680,6 +736,16 @@ public partial class SettingsViewModel : ObservableObject
 
     [RelayCommand]
     private void RestoreBackup() => RestoreBackupRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    /// F52: clear the settings KV table back to defaults. Snippets/groups/trash
+    /// are preserved. The relaunch returns the user to a clean Settings state
+    /// — same UX the theme dropdown uses.
+    /// </summary>
+    public event EventHandler? ResetToDefaultsRequested;
+
+    [RelayCommand]
+    private void ResetToDefaults() => ResetToDefaultsRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
     private void CopyDiagnostics()

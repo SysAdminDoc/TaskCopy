@@ -64,6 +64,17 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.4.4 — "Quality of life + Accessibility" ✅ SHIPPED (2026-05-25)
+
+Phase B + selected Phase C items from `RESEARCH_FEATURE_PLAN.md`.
+
+- [x] **F42 — High-contrast theme variant** (new `Themes/HighContrast.xaml`, auto-selects when `SystemParameters.HighContrast` is on).
+- [x] **F47 — Don't-ask-again for delete confirm** (new `ConfirmDeleteWindow`, `settings.delete.skip_confirm`).
+- [x] **F52 — Reset to defaults button** (clears settings KV only; preserves snippets/groups/trash).
+- [x] **I35 — `Microsoft.Extensions.DependencyInjection` 9.0.0** (container built; existing wiring unchanged; v0.5 services prefer constructor injection).
+- [x] **I38 — Test hotkey verification button** (catches the case where I17's status dot says "Active" but a third-party hotkey manager intercepts).
+- [x] **B17 follow-up** — `OnUserPreferenceChanged` also reacts to HC-on/off transitions regardless of preference.
+
 ## v0.4.3 — "Make it build" ✅ SHIPPED (2026-05-25)
 
 Phase A from `RESEARCH_FEATURE_PLAN.md` — restores green CI and closes the v0.4.x backup-safety + theme-runtime gaps.

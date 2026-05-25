@@ -53,10 +53,15 @@ public static class ThemeService
     private static void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
     {
         // PreferenceCategory.General fires on app/system theme + accent flips;
-        // narrower than VisualStyle (which doesn't fire on AppsUseLightTheme).
-        if (e.Category != UserPreferenceCategory.General) return;
-        if (_currentPreference != Theme.Auto) return;
-        var nowResolved = Resolve(Theme.Auto);
+        // PreferenceCategory.Accessibility fires on HighContrast toggles.
+        if (e.Category != UserPreferenceCategory.General
+            && e.Category != UserPreferenceCategory.Accessibility) return;
+
+        // Compare against `_currentPreference` (the user's choice) — Resolve()
+        // already factors in OS HighContrast which always wins. So this fires
+        // both for Theme.Auto light/dark flips AND for HC-on / HC-off events
+        // regardless of which preference the user picked.
+        var nowResolved = Resolve(_currentPreference);
         if (nowResolved == _lastResolved) return;
         _lastResolved = nowResolved;
         SystemThemeChanged?.Invoke(null, EventArgs.Empty);
@@ -64,13 +69,18 @@ public static class ThemeService
 
     private const string MochaUri = "pack://application:,,,/Themes/Mocha.xaml";
     private const string LatteUri = "pack://application:,,,/Themes/Latte.xaml";
+    private const string HighContrastUri = "pack://application:,,,/Themes/HighContrast.xaml";
 
     /// <summary>
-    /// Resolve a Theme preference (Mocha / Latte / Auto) to the concrete
-    /// palette to apply. Auto returns Latte if the OS apps theme is Light.
+    /// Resolve a Theme preference (Mocha / Latte / Auto / HighContrast) to the
+    /// concrete palette to apply. Auto returns Latte if the OS apps theme is
+    /// Light, OR HighContrast if the OS reports HighContrast is on
+    /// (which always wins — accessibility users get the right palette even
+    /// if they didn't explicitly pick it).
     /// </summary>
     public static Theme Resolve(Theme preference)
     {
+        if (System.Windows.SystemParameters.HighContrast) return Theme.HighContrast;
         if (preference == Theme.Auto) return IsSystemLight() ? Theme.Latte : Theme.Mocha;
         return preference;
     }
@@ -86,7 +96,12 @@ public static class ThemeService
         var app = Application.Current;
         if (app is null) return;
 
-        var uri = concrete == Theme.Latte ? LatteUri : MochaUri;
+        var uri = concrete switch
+        {
+            Theme.Latte => LatteUri,
+            Theme.HighContrast => HighContrastUri,
+            _ => MochaUri,
+        };
         var dict = new ResourceDictionary { Source = new Uri(uri, UriKind.Absolute) };
 
         if (app.Resources.MergedDictionaries.Count == 0)
