@@ -8,6 +8,7 @@ public sealed class SettingsStore
     private const string KeyHotkeyModifiers = "hotkey.modifiers";
     private const string KeyStartWithWindows = "startup.enabled";
     private const string KeyAutoPaste = "behavior.autopaste";
+    private const string KeyFirstRunComplete = "firstrun.complete";
 
     private readonly SnippetDatabase _db;
 
@@ -44,4 +45,9 @@ public sealed class SettingsStore
         }
         set => _db.SetSetting(KeyAutoPaste, value ? "1" : "0");
     }
+
+    public bool IsFirstRunComplete
+        => string.Equals(_db.GetSetting(KeyFirstRunComplete), "1", StringComparison.Ordinal);
+
+    public void MarkFirstRunComplete() => _db.SetSetting(KeyFirstRunComplete, "1");
 }

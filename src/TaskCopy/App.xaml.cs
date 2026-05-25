@@ -81,10 +81,38 @@ public partial class App : Application
         _trayIcon.TrayMouseDoubleClick += (_, _) => ShowSettings();
         _trayIcon.ForceCreate(enablesEfficiencyMode: true);
 
-        _trayIcon.ShowNotification(
-            title: "TaskCopy is running",
-            message: $"Right-click the tray icon or press {HotkeyService.FormatHotkey(_settings.HotkeyKey, _settings.HotkeyModifiers)} to open your snippets.",
-            icon: NotificationIcon.Info);
+        var isFirstRun = !_settings.IsFirstRunComplete;
+        if (isFirstRun)
+        {
+            try
+            {
+                SeedExampleSnippets(_db);
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write("FirstRunSeed", ex);
+            }
+            _settings.MarkFirstRunComplete();
+
+            _trayIcon.ShowNotification(
+                title: "Welcome to TaskCopy",
+                message: $"We've added a few example snippets. Right-click the tray for options, or press {HotkeyService.FormatHotkey(_settings.HotkeyKey, _settings.HotkeyModifiers)} to open the picker.",
+                icon: NotificationIcon.Info);
+
+            Dispatcher.BeginInvoke(ShowSettings, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
+    }
+
+    private static void SeedExampleSnippets(SnippetDatabase db)
+    {
+        // Skip seeding if a returning user lost the firstrun flag but still has snippets.
+        if (db.GetAll().Count > 0) return;
+
+        db.Insert("Email signature", "Best,\nMatt");
+        db.Insert("Markdown link", "[label](https://)");
+        db.Insert("ISO date stamp", "2026-05-24");
+        db.Insert("Code-fence block", "```\n\n```");
+        db.Insert("TaskCopy repo URL", "https://github.com/SysAdminDoc/TaskCopy");
     }
 
     private void ShowSnippetMenu()

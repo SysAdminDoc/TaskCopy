@@ -55,7 +55,7 @@ Goal: turn TaskCopy from "fancy clipboard" into "muscle-memory text expander."
 
 ### Quick wins (XS — bundled with above)
 
-- [ ] **I5 — First-run-only launch toast** (`SettingsStore.IsFirstRun` flag)
+- [x] **I5 — First-run-only launch toast** (`SettingsStore.IsFirstRun` flag)
 - [x] **I12 — Use `Local\` mutex instead of `Global\`**
 - [x] **I13 — Enable Efficiency Mode on tray icon**
 - [x] **I14 — `Snippet.Preview` split on `\r` or `\n` (not just `\n`)**
@@ -65,8 +65,8 @@ Goal: turn TaskCopy from "fancy clipboard" into "muscle-memory text expander."
 
 ### Foundation for later phases
 
-- [ ] **F10 — Schema versioning + migration framework** (`PRAGMA user_version` + `Data/Migrations/*.cs`)
-- [ ] **F12 — First-run welcome (seed 3-5 example snippets + open Settings)**
+- [x] **F10 — Schema versioning + migration framework** (`PRAGMA user_version` + `Data/Migrations.cs`)
+- [x] **F12 — First-run welcome (seed 3-5 example snippets + open Settings)**
 
 ### Reliability
 

@@ -17,34 +17,30 @@ public sealed class SnippetDatabase
             DataSource = dbPath,
             Mode = SqliteOpenMode.ReadWriteCreate
         }.ToString();
-        EnsureSchema();
+        InitializeDatabase();
     }
 
     private SqliteConnection Open()
     {
         var conn = new SqliteConnection(_connectionString);
         conn.Open();
+        using var pragma = conn.CreateCommand();
+        pragma.CommandText = "PRAGMA foreign_keys = ON;";
+        pragma.ExecuteNonQuery();
         return conn;
     }
 
-    private void EnsureSchema()
+    private void InitializeDatabase()
     {
         using var conn = Open();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = """
-            CREATE TABLE IF NOT EXISTS snippets (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                title       TEXT NOT NULL,
-                body        TEXT NOT NULL,
-                sort_order  INTEGER NOT NULL DEFAULT 0,
-                created_at  INTEGER NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS settings (
-                key   TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-            );
-            """;
-        cmd.ExecuteNonQuery();
+        using (var wal = conn.CreateCommand())
+        {
+            // WAL persists once set, so this is effectively a one-time write.
+            // Better durability + concurrent reads as future async paths land.
+            wal.CommandText = "PRAGMA journal_mode = WAL;";
+            wal.ExecuteNonQuery();
+        }
+        Migrations.Apply(conn);
     }
 
     public List<Snippet> GetAll()
