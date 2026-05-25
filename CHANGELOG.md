@@ -5,6 +5,33 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-05-24
+
+### Added
+- **Snippet placeholders (F5)** — `{{date}}`, `{{date:format}}`, `{{time}}`, `{{time:format}}`, `{{clipboard}}` (captures the clipboard text from before TaskCopy opened), `{{cursor}}` (caret lands here after auto-paste — sends N synthesised Left arrows), `{{ask:Field}}` (modal prompts at paste time; Cancel aborts the whole copy). Unknown tokens are preserved verbatim; single-pass expansion. Insert-token buttons in the Settings editor toolbar (I8).
+- **Snippet groups (F6)** — `groups` table + nullable `snippets.group_id` (FK `ON DELETE SET NULL`). New "Manage groups…" modal: add / rename / delete / reorder. Per-snippet Group ComboBox in the editor.
+- **Per-snippet quick hotkey (F7)** — bind any snippet to `Ctrl+Alt+1..9` for direct copy + auto-paste from anywhere. HotkeyService refactored to support multiple ID-keyed registrations. Static `TryParseHotkey` accepts "Ctrl+Alt+1" style strings.
+- **Frecency / Pin / sort modes (F8)** — `used_count`, `last_used_at`, `pinned` columns track usage. New flyout sort modes: Manual / Most used / Recently used. Pinned snippets always promote to top in non-Manual modes; 📌 glyph in the flyout row.
+- **JSON import/export + auto-backup (F9)** — version-tagged JSON payload; SkipDuplicates merge. New `BackupRotator` does `VACUUM INTO` snapshots on each startup (3-deep rotation). New "Export snippets…" / "Import snippets…" buttons in Settings.
+- **Soft-delete + 30-day auto-purge (I6)** — Delete now confirms via dialog then sets `deleted_at` instead of dropping the row. Background task on startup purges trash older than 30 days.
+- **Drag-reorder in Settings (I7)** — drag snippets within the ListBox; the existing ↑/↓ buttons still work.
+- **Optional clipboard auto-capture (F15)** — opt-in via Settings checkbox. `AddClipboardFormatListener` watches the clipboard and stores plain-text items < 10 KB into `recent_clips` (dedup + trim-to-50). Honors `ExcludeClipboardContentFromMonitors` and `CanIncludeInClipboardHistory` flags so password-manager content is never captured. "Clear" button purges the table.
+- **Monospace body toggle (F14, partial)** — per-snippet `is_monospace` column. When set, the body editor switches to Cascadia Mono / Consolas / Courier New.
+- **AutomationProperties (I10)** — Name/HelpText sprinkled on flyout search, flyout list rows, Settings snippet list, and the title + body editors so screen readers describe them properly.
+- **Light theme (F16)** — Catppuccin Latte palette ships alongside Mocha. New Settings dropdown "Theme: Mocha / Latte / Follow system" (the latter reads HKCU `AppsUseLightTheme`). Applied at startup; restart required to change.
+
+### Changed
+- `SnippetDatabase.Insert` accepts an optional `groupId` parameter. `GetAll` now filters out soft-deleted rows by default; `GetTrashed` exposes them. New repository methods: `SoftDelete`, `Restore`, `PurgeDeletedOlderThan`, `SetQuickHotkey` (enforces single-owner per slot), `SetPinned`, `SetMonospace`, `SetGroup`, `RecordUse`, `GetGroups`, `InsertGroup`, `RenameGroup`, `DeleteGroup`, `ReorderGroups`, `InsertRecentClip` (dedup + trim), `GetRecentClips`, `ClearRecentClips`, `BackupTo` (`VACUUM INTO`).
+- Snippet copy flow refactored: `SnippetMenuViewModel` now raises a `SnippetCopyRequested` event; `App.HandleSnippetCopyAsync` owns expand → clipboard → `RecordUse` → close-flyout → auto-paste. Same path serves per-snippet quick hotkeys.
+- `Snippet` model gains observable properties for the seven new schema columns.
+- `Models/SnippetGroup` + `Models/RecentClip` added.
+
+### Architecture
+- New services: `SnippetTemplating`, `BackupRotator`, `SnippetIO`, `ClipboardWatcher`, `ThemeService`.
+- `Data/Migrations.cs` `ApplyV2` bundles all v0.3 schema changes — idempotent via `AddColumnIfMissing` + `PRAGMA table_info` introspection.
+- New WPF windows: `ManageGroupsWindow`, `AskWindow`.
+- `Themes/Latte.xaml` is a drop-in palette replacement keeping Mocha.* keys so every existing XAML reference resolves without churn.
+
 ## [0.2.0] — 2026-05-24
 
 ### Added
