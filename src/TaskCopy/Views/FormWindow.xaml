@@ -15,8 +15,9 @@
         UseLayoutRounding="True"
         ShowInTaskbar="False"
         Topmost="True">
-    <Grid Margin="20">
+    <Grid Margin="22">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -24,17 +25,22 @@
 
         <TextBlock Grid.Row="0"
                    Text="Snippet fields"
-                   Style="{StaticResource Mocha.Body.Header}"
-                   Margin="0,0,0,10" />
+                   Style="{StaticResource Mocha.Body.Title}"
+                   Margin="0,0,0,4" />
+        <TextBlock Grid.Row="1"
+                   Text="Fill the values this snippet needs before paste."
+                   Style="{StaticResource Mocha.Body.Caption}"
+                   Margin="0,0,0,12" />
 
-        <ScrollViewer Grid.Row="1"
+        <ScrollViewer Grid.Row="2"
+                      Margin="0,14,0,0"
                       MaxHeight="360"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <StackPanel x:Name="FieldsPanel" />
         </ScrollViewer>
 
-        <StackPanel Grid.Row="2"
+        <StackPanel Grid.Row="3"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,16,0,0">

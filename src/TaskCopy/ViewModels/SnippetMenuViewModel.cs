@@ -105,9 +105,6 @@ public partial class SnippetMenuViewModel : ObservableObject
         {
             _allRecent = new List<RecentClip>();
         }
-        // F20: group pivot chips. Always offer "All" + per-group rows + an
-        // "Ungrouped" chip when at least one snippet is ungrouped.
-        RebuildGroupChips();
         // Restore last selected group if it still exists (else fall back to All).
         var saved = _settings.FlyoutLastGroupId;
         if (saved != 0 && saved != -1 && _db.GetGroups().All(g => g.Id != saved))
@@ -115,6 +112,9 @@ public partial class SnippetMenuViewModel : ObservableObject
             saved = 0;
         }
         SelectedGroupId = saved;
+        // F20: group pivot chips. Always offer "All" + per-group rows + an
+        // "Ungrouped" chip when at least one snippet is ungrouped.
+        RebuildGroupChips();
         ApplyFilter();
     }
 
@@ -130,16 +130,16 @@ public partial class SnippetMenuViewModel : ObservableObject
 
         HasGroups = true;
         var allCount = _all.Count;
-        GroupChips.Add(new GroupChip(0, "All", allCount));
+        GroupChips.Add(new GroupChip(0, "All", allCount, SelectedGroupId == 0));
         foreach (var g in groups)
         {
             var count = _all.Count(s => s.GroupId == g.Id);
-            GroupChips.Add(new GroupChip(g.Id, g.Name, count));
+            GroupChips.Add(new GroupChip(g.Id, g.Name, count, SelectedGroupId == g.Id));
         }
         var ungroupedCount = _all.Count(s => s.GroupId is null);
         if (ungroupedCount > 0)
         {
-            GroupChips.Add(new GroupChip(-1L, "Ungrouped", ungroupedCount));
+            GroupChips.Add(new GroupChip(-1L, "Ungrouped", ungroupedCount, SelectedGroupId == -1L));
         }
     }
 
@@ -148,6 +148,7 @@ public partial class SnippetMenuViewModel : ObservableObject
         if (SelectedGroupId == groupId) return;
         SelectedGroupId = groupId;
         try { _settings.FlyoutLastGroupId = groupId; } catch { }
+        RebuildGroupChips();
         ApplyFilter();
     }
 
@@ -424,12 +425,14 @@ public sealed class GroupChip
     public long Id { get; }
     public string Name { get; }
     public int Count { get; }
+    public bool IsSelected { get; }
     public string Label => Count > 0 ? $"{Name} · {Count}" : Name;
 
-    public GroupChip(long id, string name, int count)
+    public GroupChip(long id, string name, int count, bool isSelected = false)
     {
         Id = id;
         Name = name;
         Count = count;
+        IsSelected = isSelected;
     }
 }

@@ -32,6 +32,7 @@
     <SolidColorBrush x:Key="Mocha.Red.Brush"      Color="{x:Static SystemColors.HighlightColor}" />
     <SolidColorBrush x:Key="Mocha.Green.Brush"    Color="{x:Static SystemColors.HighlightColor}" />
     <SolidColorBrush x:Key="Mocha.Yellow.Brush"   Color="{x:Static SystemColors.HighlightColor}" />
+    <SolidColorBrush x:Key="Mocha.OnAccent.Brush" Color="{x:Static SystemColors.HighlightTextColor}" />
 
     <FontFamily x:Key="Mocha.Font">Segoe UI Variable Text, Segoe UI</FontFamily>
 
@@ -42,6 +43,7 @@
         <Setter Property="FontSize" Value="13" />
         <Setter Property="TextWrapping" Value="NoWrap" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="LineHeight" Value="18" />
     </Style>
 
     <Style x:Key="Mocha.Body.Subtle" TargetType="TextBlock" BasedOn="{StaticResource Mocha.Body}">
@@ -53,6 +55,43 @@
         <Setter Property="Foreground" Value="{StaticResource Mocha.Mauve.Brush}" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="Mocha.Body.Title" TargetType="TextBlock" BasedOn="{StaticResource Mocha.Body}">
+        <Setter Property="Foreground" Value="{StaticResource Mocha.Text.Brush}" />
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LineHeight" Value="24" />
+    </Style>
+
+    <Style x:Key="Mocha.Body.Section" TargetType="TextBlock" BasedOn="{StaticResource Mocha.Body}">
+        <Setter Property="Foreground" Value="{StaticResource Mocha.Text.Brush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="Mocha.Body.Caption" TargetType="TextBlock" BasedOn="{StaticResource Mocha.Body.Subtle}">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="TextTrimming" Value="None" />
+        <Setter Property="LineHeight" Value="17" />
+    </Style>
+
+    <Style x:Key="Mocha.Panel" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Mocha.Mantle.Brush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Mocha.Surface1.Brush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14,12" />
+    </Style>
+
+    <Style x:Key="Mocha.Badge" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Mocha.Surface0.Brush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Mocha.Surface1.Brush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Padding" Value="6,2" />
+        <Setter Property="MinHeight" Value="22" />
     </Style>
 
     <!-- Snippet row button -->
@@ -102,7 +141,7 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Padding" Value="14,6" />
-        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="MinHeight" Value="32" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
@@ -129,6 +168,7 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5" />
+                            <Setter TargetName="Bg" Property="BorderBrush" Value="{StaticResource Mocha.Surface1.Brush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -138,7 +178,7 @@
 
     <Style x:Key="Mocha.Button.Accent" TargetType="Button" BasedOn="{StaticResource Mocha.Button}">
         <Setter Property="Background" Value="{StaticResource Mocha.Mauve.Brush}" />
-        <Setter Property="Foreground" Value="{x:Static SystemColors.HighlightTextColor}" />
+        <Setter Property="Foreground" Value="{StaticResource Mocha.OnAccent.Brush}" />
         <Setter Property="BorderBrush" Value="{StaticResource Mocha.Mauve.Brush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
@@ -160,6 +200,7 @@
         <Setter Property="SelectionBrush" Value="{StaticResource Mocha.Surface2.Brush}" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Padding" Value="8,6" />
+        <Setter Property="MinHeight" Value="32" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
@@ -175,6 +216,45 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">
                             <Setter TargetName="Bg" Property="BorderBrush" Value="{StaticResource Mocha.Mauve.Brush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.58" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Mocha.PasswordBox" TargetType="PasswordBox">
+        <Setter Property="FontFamily" Value="{StaticResource Mocha.Font}" />
+        <Setter Property="Foreground" Value="{StaticResource Mocha.Text.Brush}" />
+        <Setter Property="Background" Value="{StaticResource Mocha.Mantle.Brush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Mocha.Overlay0.Brush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CaretBrush" Value="{StaticResource Mocha.Mauve.Brush}" />
+        <Setter Property="SelectionBrush" Value="{StaticResource Mocha.Surface2.Brush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Border x:Name="Bg"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="Bg" Property="BorderBrush" Value="{StaticResource Mocha.Mauve.Brush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.58" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -212,11 +292,14 @@
         <Setter Property="Foreground" Value="{StaticResource Mocha.Text.Brush}" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
                     <Border x:Name="Bg"
                             Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent"
+                            BorderThickness="1"
                             CornerRadius="6"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
@@ -227,6 +310,10 @@
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Bg" Property="Background" Value="{StaticResource Mocha.Surface1.Brush}" />
+                            <Setter TargetName="Bg" Property="BorderBrush" Value="{StaticResource Mocha.Overlay0.Brush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bg" Property="BorderBrush" Value="{StaticResource Mocha.Mauve.Brush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -241,6 +328,7 @@
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="MinHeight" Value="30" />
     </Style>
 
     <!-- Separator -->

@@ -19,6 +19,8 @@ public partial class TrashViewModel : ObservableObject
 
     public ObservableCollection<TrashedRow> Items { get; } = new();
 
+    public bool HasItems => Items.Count > 0;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
     [NotifyCanExecuteChangedFor(nameof(DeletePermanentlyCommand))]
@@ -33,6 +35,7 @@ public partial class TrashViewModel : ObservableObject
     public TrashViewModel(SnippetDatabase db)
     {
         _db = db;
+        Items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasItems));
         Reload();
     }
 

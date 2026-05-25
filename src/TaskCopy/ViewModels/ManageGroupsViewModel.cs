@@ -12,6 +12,8 @@ public partial class ManageGroupsViewModel : ObservableObject
 
     public ObservableCollection<SnippetGroup> Groups { get; } = new();
 
+    public bool HasGroups => Groups.Count > 0;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteGroupCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveGroupUpCommand))]
@@ -27,6 +29,7 @@ public partial class ManageGroupsViewModel : ObservableObject
     public ManageGroupsViewModel(SnippetDatabase db)
     {
         _db = db;
+        Groups.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasGroups));
         Reload();
     }
 

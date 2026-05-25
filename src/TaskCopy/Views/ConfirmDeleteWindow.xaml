@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="TaskCopy"
         Width="420"
-        Height="220"
+        Height="244"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource Mocha.Base.Brush}"
@@ -12,7 +12,7 @@
         FontSize="13"
         UseLayoutRounding="True"
         ShowInTaskbar="False">
-    <Grid Margin="20">
+    <Grid Margin="22">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -23,18 +23,20 @@
 
         <TextBlock Grid.Row="0"
                    x:Name="PromptText"
-                   Style="{StaticResource Mocha.Body}"
+                   Style="{StaticResource Mocha.Body.Section}"
                    TextWrapping="Wrap" />
-        <TextBlock Grid.Row="1"
-                   Text="It will be moved to the trash and permanently removed after 30 days."
-                   Style="{StaticResource Mocha.Body.Subtle}"
-                   TextWrapping="Wrap"
-                   Margin="0,8,0,0" />
+        <Border Grid.Row="1"
+                Style="{StaticResource Mocha.Panel}"
+                Padding="12,10"
+                Margin="0,10,0,0">
+            <TextBlock Text="The snippet moves to Trash first. You can restore it for 30 days before TaskCopy purges it automatically."
+                       Style="{StaticResource Mocha.Body.Caption}" />
+        </Border>
 
         <CheckBox Grid.Row="3"
                   x:Name="DontAskAgainBox"
                   Style="{StaticResource Mocha.CheckBox}"
-                  Content="Don't ask again (you can still undo from the Trash window)"
+                  Content="Don't ask again for recoverable deletes"
                   Margin="0,12,0,12" />
 
         <StackPanel Grid.Row="4"

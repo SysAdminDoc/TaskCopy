@@ -64,6 +64,14 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.12 — "Premium UX polish" ✅ SHIPPED (2026-05-25)
+
+- [x] **Premium UI system pass** — added shared title, section, caption, panel, badge, password-box, and accent-foreground primitives across Mocha, Latte, and high-contrast themes.
+- [x] **Settings polish pass** — widened and clarified the two-pane layout, added Library/Snippet hierarchy, responsive wrapped toolbars, refined preview styling, reachable global preferences, and useful no-selection/no-snippet states.
+- [x] **Flyout polish pass** — selected group chips, calmer quick-pick badges, explicit Recent/Pinned markers, and stronger no-snippet/no-match states.
+- [x] **Dialog polish pass** — unified title/caption/panel treatment and clearer microcopy across prompts, forms, delete confirmation, body history, trash, group management, and About.
+- [x] **Accessibility/state pass** — stronger keyboard focus, selected, disabled, hover, and high-contrast accent foreground handling.
+
 ## v0.5.11 — "Hardening and regression tests" ✅ SHIPPED (2026-05-25)
 
 - [x] **Audit hardening pass** — safer backup rotation, encrypted-backup plaintext-slot cleanup, password-mode backup prompts, per-user IPC pipe names, FTS V9 rebuild/fallback, bounded import validation, stale clipboard suppression fix, multi-paste cursor fix, regex-free app glob matching, shell command length guard, quoted external-editor command parsing, and solution-level regression tests.

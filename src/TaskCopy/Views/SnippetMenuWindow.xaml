@@ -96,13 +96,25 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:GroupChip}">
-                        <Button Style="{StaticResource Mocha.Button}"
-                                Content="{Binding Label}"
+                        <Button Content="{Binding Label}"
                                 Tag="{Binding Id}"
                                 Click="OnGroupChipClicked"
                                 Margin="2,0,2,4"
                                 MinHeight="24"
-                                Padding="10,2" />
+                                Padding="10,2">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource Mocha.Button}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource Mocha.Mauve.Brush}" />
+                                            <Setter Property="Foreground" Value="{StaticResource Mocha.OnAccent.Brush}" />
+                                            <Setter Property="BorderBrush" Value="{StaticResource Mocha.Mauve.Brush}" />
+                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -178,11 +190,16 @@
                                 <ColumnDefinition Width="22" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="&#x23F1;"
-                                       Style="{StaticResource Mocha.Body.Subtle}"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,6,0" />
+                            <Border Grid.Column="0"
+                                    Style="{StaticResource Mocha.Badge}"
+                                    Padding="4,1"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="R"
+                                           Style="{StaticResource Mocha.Body.Subtle}"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" />
+                            </Border>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding Preview}"
                                        Style="{StaticResource Mocha.Body}"
@@ -251,11 +268,17 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="{Binding IndexLabel}"
-                                       Style="{StaticResource Mocha.Body.Subtle}"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,6,0" />
+                            <Border Grid.Column="0"
+                                    Style="{StaticResource Mocha.Badge}"
+                                    Padding="4,1"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Top"
+                                    Visibility="{Binding HasIndexLabel, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="{Binding IndexLabel}"
+                                           Style="{StaticResource Mocha.Body.Subtle}"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" />
+                            </Border>
                             <StackPanel Grid.Column="1">
                                 <Border Width="84"
                                         Height="50"
@@ -284,14 +307,17 @@
                                     </TextBlock.ToolTip>
                                 </TextBlock>
                             </StackPanel>
-                            <TextBlock Grid.Column="2"
-                                       Text="📌"
-                                       FontSize="11"
-                                       VerticalAlignment="Top"
-                                       Margin="6,0,2,0"
-                                       Foreground="{StaticResource Mocha.Yellow.Brush}"
-                                       Visibility="{Binding Pinned, Converter={StaticResource BoolToVisibilityConverter}}"
-                                       ToolTip="Pinned" />
+                            <Border Grid.Column="2"
+                                    Style="{StaticResource Mocha.Badge}"
+                                    Margin="8,0,2,0"
+                                    VerticalAlignment="Top"
+                                    Visibility="{Binding Pinned, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    ToolTip="Pinned">
+                                <TextBlock Text="Pinned"
+                                           Style="{StaticResource Mocha.Body.Subtle}"
+                                           Foreground="{StaticResource Mocha.Yellow.Brush}"
+                                           FontWeight="SemiBold" />
+                            </Border>
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -312,11 +338,12 @@
                 </Border.Style>
                 <StackPanel>
                     <TextBlock Text="No snippets yet"
-                               Style="{StaticResource Mocha.Body}"
+                               Style="{StaticResource Mocha.Body.Section}"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="Open Settings to add your first one."
-                               Style="{StaticResource Mocha.Body.Subtle}"
+                               Style="{StaticResource Mocha.Body.Caption}"
                                HorizontalAlignment="Center"
+                               TextAlignment="Center"
                                Margin="0,4,0,0" />
                 </StackPanel>
             </Border>
@@ -340,11 +367,12 @@
                 </Border.Style>
                 <StackPanel>
                     <TextBlock Text="No matches"
-                               Style="{StaticResource Mocha.Body}"
+                               Style="{StaticResource Mocha.Body.Section}"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="Press Esc to clear the filter."
-                               Style="{StaticResource Mocha.Body.Subtle}"
+                               Style="{StaticResource Mocha.Body.Caption}"
                                HorizontalAlignment="Center"
+                               TextAlignment="Center"
                                Margin="0,4,0,0" />
                 </StackPanel>
             </Border>

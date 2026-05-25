@@ -5,6 +5,26 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.12] — 2026-05-25
+
+### Added
+- Shared premium UI primitives for title text, section labels, captions, panels, badges, and password fields across Mocha, Latte, and high-contrast themes.
+- Empty states for the Settings library, snippet editor, body history, trash, and group manager instead of silent blank panes.
+
+### Changed
+- Settings now has a wider, more deliberate two-pane layout, clearer Library/Snippet hierarchy, wrapped toolbars, a refined preview panel, and a grouped preferences area that stays reachable even with no snippet selected.
+- The flyout now uses selected group chips, quieter quick-pick badges, refined Recent/Pinned markers, and clearer no-snippet/no-match messaging.
+- Dialogs for prompts, forms, delete confirmation, history, trash, groups, and About now share the same title/caption/panel treatment and more precise microcopy.
+- Core controls have stronger keyboard focus, disabled, hover, selected, and high-contrast accent foreground states.
+
+### Fixed
+- Settings opens on the first available snippet when the library already has snippets but no persisted valid selection.
+- Quick-pick badges disappear after row 9 instead of showing empty badge chrome on lower rows.
+
+### Verification
+- `dotnet build TaskCopy.sln -c Release --no-restore -warnaserror`
+- `dotnet test TaskCopy.sln -c Release --no-build --no-restore`
+
 ## [0.5.11] — 2026-05-25
 
 ### Added

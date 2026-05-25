@@ -24,6 +24,8 @@ public partial class SettingsViewModel : ObservableObject
     public ObservableCollection<Snippet> Snippets { get; } = new();
     public ObservableCollection<SnippetGroup> Groups { get; } = new();
 
+    public bool HasSnippets => Snippets.Count > 0;
+
     /// <summary>Right-aligned status-bar label like "12 snippets · 3 groups".</summary>
     public string SnippetCountStatus
     {
@@ -574,7 +576,11 @@ public partial class SettingsViewModel : ObservableObject
         _clipboard = clipboard;
 
         // Keep the status-bar counter in sync with the snippet + group lists.
-        Snippets.CollectionChanged += (_, _) => OnPropertyChanged(nameof(SnippetCountStatus));
+        Snippets.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(SnippetCountStatus));
+            OnPropertyChanged(nameof(HasSnippets));
+        };
         Groups.CollectionChanged += (_, _) => OnPropertyChanged(nameof(SnippetCountStatus));
 
         // Reflect hotkey registration state in the UI badge.
@@ -589,6 +595,10 @@ public partial class SettingsViewModel : ObservableObject
     {
         Snippets.Clear();
         foreach (var s in _db.GetAll()) Snippets.Add(s);
+        if (SelectedSnippet is null || !Snippets.Any(s => s.Id == SelectedSnippet.Id))
+        {
+            SelectedSnippet = Snippets.FirstOrDefault();
+        }
         ReloadGroups();
 
         HotkeyKey = _settings.HotkeyKey;

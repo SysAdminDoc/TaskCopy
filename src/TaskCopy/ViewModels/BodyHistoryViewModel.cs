@@ -20,6 +20,8 @@ public partial class BodyHistoryViewModel : ObservableObject
 
     public ObservableCollection<BodyHistoryEntry> Entries { get; } = new();
 
+    public bool HasEntries => Entries.Count > 0;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
     [NotifyCanExecuteChangedFor(nameof(DeleteEntryCommand))]
@@ -42,6 +44,7 @@ public partial class BodyHistoryViewModel : ObservableObject
         _snippetId = snippetId;
         _snippetTitle = snippetTitle;
         HeaderText = $"Edit history — {snippetTitle}";
+        Entries.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasEntries));
         Reload();
     }
 

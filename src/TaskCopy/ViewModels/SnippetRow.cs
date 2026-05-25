@@ -13,6 +13,7 @@ public sealed class SnippetRow
     public Snippet Snippet { get; }
     public int DisplayIndex { get; }
     public string IndexLabel => DisplayIndex >= 1 && DisplayIndex <= 9 ? DisplayIndex.ToString() : string.Empty;
+    public bool HasIndexLabel => DisplayIndex >= 1 && DisplayIndex <= 9;
 
     public string Title => Snippet.Title;
     public string Preview => Snippet.Preview;

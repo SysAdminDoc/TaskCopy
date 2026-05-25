@@ -9,8 +9,8 @@
         xmlns:local="clr-namespace:TaskCopy.Views"
         mc:Ignorable="d"
         Title="TaskCopy — Settings"
-        Width="820" Height="540"
-        MinWidth="640" MinHeight="420"
+        Width="980" Height="680"
+        MinWidth="760" MinHeight="520"
         Background="{StaticResource Mocha.Base.Brush}"
         Foreground="{StaticResource Mocha.Text.Brush}"
         FontFamily="{StaticResource Mocha.Font}"
@@ -19,9 +19,9 @@
         UseLayoutRounding="True"
         d:DataContext="{d:DesignInstance vm:SettingsViewModel}">
 
-    <Grid Margin="14">
+    <Grid Margin="18">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280" />
+            <ColumnDefinition Width="300" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
@@ -30,16 +30,25 @@
         </Grid.RowDefinitions>
 
         <!-- Left: snippet list -->
-        <Grid Grid.Column="0" Grid.Row="0" Margin="0,0,10,0">
+        <Grid Grid.Column="0" Grid.Row="0" Margin="0,0,14,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <TextBlock Text="Snippets"
-                       Style="{StaticResource Mocha.Body.Header}"
-                       Margin="2,0,0,6" />
+            <Grid Margin="2,0,0,10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="Library"
+                           Style="{StaticResource Mocha.Body.Title}" />
+                <TextBlock Grid.Row="1"
+                           Text="{Binding SnippetCountStatus}"
+                           Style="{StaticResource Mocha.Body.Caption}"
+                           Margin="0,2,0,0" />
+            </Grid>
 
             <ListBox Grid.Row="1"
                      x:Name="SnippetList"
@@ -91,9 +100,26 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
+            <Border Grid.Row="1"
+                    Style="{StaticResource Mocha.Panel}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    Margin="18"
+                    Visibility="{Binding HasSnippets, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="No snippets yet"
+                               Style="{StaticResource Mocha.Body.Section}"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="Add a text snippet or capture the current clipboard image to start building your library."
+                               Style="{StaticResource Mocha.Body.Caption}"
+                               TextAlignment="Center"
+                               Margin="0,6,0,0" />
+                </StackPanel>
+            </Border>
+
             <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
-                <Button Style="{StaticResource Mocha.Button.Accent}" Content="Add" Command="{Binding AddSnippetCommand}" />
-                <Button Style="{StaticResource Mocha.Button}" Content="Add image" Command="{Binding AddImageFromClipboardCommand}" Margin="8,0,0,0"
+                <Button Style="{StaticResource Mocha.Button.Accent}" Content="Add text" Command="{Binding AddSnippetCommand}" />
+                <Button Style="{StaticResource Mocha.Button}" Content="Image" Command="{Binding AddImageFromClipboardCommand}" Margin="8,0,0,0"
                         ToolTip="Create an image snippet from the current clipboard image. Images are never captured in the background." />
                 <Button Style="{StaticResource Mocha.Button.Danger}" Content="Delete" Command="{Binding DeleteSnippetCommand}" Margin="8,0,0,0" />
                 <Button Style="{StaticResource Mocha.Button}" Content="↑" Command="{Binding MoveUpCommand}" Margin="8,0,0,0" Width="34" />
@@ -116,9 +142,9 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Title" Style="{StaticResource Mocha.Body.Header}" Margin="2,0,0,4" />
+                <TextBlock Text="Snippet" Style="{StaticResource Mocha.Body.Title}" Margin="2,0,0,8" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,2,4">
-                    <TextBlock Text="Group:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Text="Group" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="0,0,6,0" />
                     <ComboBox Width="180"
                               ItemsSource="{Binding Groups}"
                               SelectedItem="{Binding EditGroup}"
@@ -150,10 +176,10 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Body" Style="{StaticResource Mocha.Body.Header}" Margin="2,0,0,4" />
+                    <TextBlock Text="Body" Style="{StaticResource Mocha.Body.Section}" Margin="2,0,0,4" />
                     <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,2,4">
                         <CheckBox Style="{StaticResource Mocha.CheckBox}"
-                                  Content="📌 Pin"
+                                  Content="Pin"
                                   IsChecked="{Binding EditPinned}"
                                   IsEnabled="{Binding HasSelection}"
                                   ToolTip="Promote this snippet to the top of the flyout (in 'Most used' or 'Recently used' modes)." />
@@ -186,7 +212,7 @@
                                 ToolTip="Remove the per-snippet hotkey binding." />
                     </WrapPanel>
                 </Grid>
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
+                <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
                     <TextBlock Text="Paste:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="2,0,6,0" />
                     <ComboBox Width="160"
                               ItemsSource="{Binding PasteModeOptions}"
@@ -226,7 +252,7 @@
                              Text="{Binding EditTargetAppGlob, UpdateSourceTrigger=PropertyChanged}"
                              IsEnabled="{Binding HasSelection}"
                              ToolTip="F35: comma-separated *-wildcard process names (e.g. outlook.exe, *code*.exe). When set, this snippet only appears in the flyout when the captured foreground app matches. Empty = universal." />
-                </StackPanel>
+                </WrapPanel>
                 <Grid Grid.Row="2">
                     <TextBox x:Name="BodyEditor"
                              Style="{StaticResource Mocha.TextBox}"
@@ -262,26 +288,33 @@
                                        Visibility="{Binding EditIsMonospace, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </Grid>
                 <Border Grid.Row="3"
-                        Background="{StaticResource Mocha.Mantle.Brush}"
-                        BorderBrush="{StaticResource Mocha.Overlay0.Brush}"
-                        BorderThickness="1"
-                        CornerRadius="6"
-                        Padding="8,6"
+                        Style="{StaticResource Mocha.Panel}"
+                        Padding="10,8"
                         Margin="0,6,0,0"
                         MaxHeight="80"
                         ToolTip="Live preview — placeholders are resolved against today's date, a sample clipboard, and stub Ask/Form responses.">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <TextBlock Text="{Binding EditBodyPreview}"
-                                   FontFamily="{Binding EditBodyFontFamily}"
-                                   Foreground="{StaticResource Mocha.Subtext0.Brush}"
-                                   TextWrapping="Wrap" />
-                    </ScrollViewer>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="Preview"
+                                   Style="{StaticResource Mocha.Body.Header}"
+                                   Margin="0,0,0,4" />
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <TextBlock Text="{Binding EditBodyPreview}"
+                                       FontFamily="{Binding EditBodyFontFamily}"
+                                       Foreground="{StaticResource Mocha.Subtext0.Brush}"
+                                       TextWrapping="Wrap" />
+                        </ScrollViewer>
+                    </Grid>
                 </Border>
             </Grid>
 
             <Border Grid.Row="3" Style="{StaticResource Mocha.Separator}" Margin="0,12,0,8" />
 
-            <Grid Grid.Row="4">
+            <Border Grid.Row="4" Style="{StaticResource Mocha.Panel}" Padding="14,12">
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -296,8 +329,8 @@
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0" Grid.Column="0"
-                           Text="Global hotkey"
-                           Style="{StaticResource Mocha.Body.Header}"
+                           Text="Preferences"
+                           Style="{StaticResource Mocha.Body.Section}"
                            VerticalAlignment="Center" />
                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse Width="8" Height="8" VerticalAlignment="Center"
@@ -331,7 +364,7 @@
                           ToolTip="When ON, TaskCopy refocuses the window that was active before you opened the flyout and sends Ctrl+V automatically."
                           Margin="0,6,0,0" />
 
-                <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,0">
+                <WrapPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,0">
                     <CheckBox Style="{StaticResource Mocha.CheckBox}"
                               Content="Capture recent clipboard items"
                               IsChecked="{Binding RecentClipsEnabled}"
@@ -346,7 +379,7 @@
                               IsChecked="{Binding BackupEncrypted}"
                               Margin="20,0,0,0"
                               ToolTip="When ON, rotated backups are encrypted with AES-256-GCM. You will be prompted for a password. Lose the password = lose the encrypted backups (no recovery)." />
-                </StackPanel>
+                </WrapPanel>
 
                 <Grid Grid.Row="4" Grid.ColumnSpan="2" Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
@@ -394,9 +427,9 @@
                               ToolTip="Catppuccin Mocha (default), Catppuccin Latte (light), or Follow system (reads HKCU AppsUseLightTheme at launch). Picking a new theme prompts to relaunch — Settings reopens automatically." />
                 </Grid>
 
-                <StackPanel Grid.Row="5" Grid.ColumnSpan="2"
-                            Orientation="Horizontal"
-                            Margin="0,12,0,0">
+                <WrapPanel Grid.Row="5" Grid.ColumnSpan="2"
+                           Orientation="Horizontal"
+                           Margin="0,12,0,0">
                     <Button Style="{StaticResource Mocha.Button}"
                             Content="Export snippets…"
                             Command="{Binding ExportSnippetsCommand}"
@@ -441,8 +474,28 @@
                             Command="{Binding OpenDataFolderCommand}"
                             ToolTip="Opens %LOCALAPPDATA%\TaskCopy — contains snippets.db and backups."
                             Margin="8,0,0,0" />
-                </StackPanel>
+                </WrapPanel>
             </Grid>
+            </Border>
+
+            <Border Grid.Row="0"
+                    Grid.RowSpan="3"
+                    Style="{StaticResource Mocha.Panel}"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    MaxWidth="360"
+                    Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Select a snippet"
+                               Style="{StaticResource Mocha.Body.Title}"
+                               TextAlignment="Center"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="Choose an item from the library, or add a new snippet to edit its title, body, rules, and paste behavior."
+                               Style="{StaticResource Mocha.Body.Caption}"
+                               TextAlignment="Center"
+                               Margin="0,8,0,0" />
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!-- Status bar -->

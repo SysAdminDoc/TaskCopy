@@ -15,7 +15,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d">
-    <Grid Margin="16">
+    <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -24,21 +24,43 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Groups" Style="{StaticResource Mocha.Body.Header}" Margin="2,0,0,6" />
+        <StackPanel Grid.Row="0" Margin="2,0,0,12">
+            <TextBlock Text="Groups" Style="{StaticResource Mocha.Body.Title}" />
+            <TextBlock Text="Organize snippets into flyout chips. Deleting a group keeps its snippets and moves them to Ungrouped."
+                       Style="{StaticResource Mocha.Body.Caption}"
+                       Margin="0,2,0,0" />
+        </StackPanel>
 
-        <ListBox Grid.Row="1"
-                 x:Name="GroupList"
-                 Style="{StaticResource Mocha.ListBox}"
-                 ItemContainerStyle="{StaticResource Mocha.ListBoxItem}"
-                 ItemsSource="{Binding Groups}"
-                 SelectedItem="{Binding SelectedGroup}"
-                 MouseDoubleClick="OnGroupDoubleClick">
-            <ListBox.ItemTemplate>
-                <DataTemplate DataType="{x:Type models:SnippetGroup}">
-                    <TextBlock Text="{Binding Name}" Style="{StaticResource Mocha.Body}" />
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        <Grid Grid.Row="1">
+            <ListBox x:Name="GroupList"
+                     Style="{StaticResource Mocha.ListBox}"
+                     ItemContainerStyle="{StaticResource Mocha.ListBoxItem}"
+                     ItemsSource="{Binding Groups}"
+                     SelectedItem="{Binding SelectedGroup}"
+                     MouseDoubleClick="OnGroupDoubleClick"
+                     Visibility="{Binding HasGroups, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type models:SnippetGroup}">
+                        <TextBlock Text="{Binding Name}" Style="{StaticResource Mocha.Body}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <Border Style="{StaticResource Mocha.Panel}"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    MaxWidth="320"
+                    Visibility="{Binding HasGroups, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="No groups yet"
+                               Style="{StaticResource Mocha.Body.Section}"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="Create a group below, then assign snippets from Settings."
+                               Style="{StaticResource Mocha.Body.Caption}"
+                               TextAlignment="Center"
+                               Margin="0,6,0,0" />
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
             <Button Style="{StaticResource Mocha.Button}" Content="Rename…" Click="OnRenameClicked" IsEnabled="{Binding HasSelection}" />
@@ -50,7 +72,8 @@
         <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,16,0,0">
             <TextBox Style="{StaticResource Mocha.TextBox}"
                      Width="240"
-                     Text="{Binding NewGroupName, UpdateSourceTrigger=PropertyChanged}" />
+                     Text="{Binding NewGroupName, UpdateSourceTrigger=PropertyChanged}"
+                     AutomationProperties.Name="New group name" />
             <Button Style="{StaticResource Mocha.Button.Accent}"
                     Content="Add"
                     Command="{Binding AddGroupCommand}"
