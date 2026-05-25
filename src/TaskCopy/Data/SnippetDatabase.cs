@@ -8,8 +8,11 @@ public sealed class SnippetDatabase
 {
     private readonly string _connectionString;
 
+    public string DbPath { get; }
+
     public SnippetDatabase(string dbPath)
     {
+        DbPath = dbPath;
         var dir = Path.GetDirectoryName(dbPath);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
         _connectionString = new SqliteConnectionStringBuilder
@@ -43,11 +46,51 @@ public sealed class SnippetDatabase
         Migrations.Apply(conn);
     }
 
+    // -----------------------------------------------------------------------
+    // Snippets (live — excludes soft-deleted)
+    // -----------------------------------------------------------------------
+
+    private const string SnippetSelectAll = """
+        SELECT id, title, body, sort_order, created_at,
+               quick_hotkey, used_count, last_used_at, pinned, is_monospace,
+               group_id, deleted_at
+        FROM snippets
+        """;
+
     public List<Snippet> GetAll()
     {
         using var conn = Open();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT id, title, body, sort_order, created_at FROM snippets ORDER BY sort_order, id;";
+        cmd.CommandText = SnippetSelectAll + " WHERE deleted_at IS NULL ORDER BY sort_order, id;";
+        return Read(cmd);
+    }
+
+    public List<Snippet> GetByGroup(long? groupId)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        if (groupId is null)
+        {
+            cmd.CommandText = SnippetSelectAll + " WHERE deleted_at IS NULL AND group_id IS NULL ORDER BY sort_order, id;";
+        }
+        else
+        {
+            cmd.CommandText = SnippetSelectAll + " WHERE deleted_at IS NULL AND group_id = $g ORDER BY sort_order, id;";
+            cmd.Parameters.AddWithValue("$g", groupId.Value);
+        }
+        return Read(cmd);
+    }
+
+    public List<Snippet> GetTrashed()
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = SnippetSelectAll + " WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC;";
+        return Read(cmd);
+    }
+
+    private static List<Snippet> Read(SqliteCommand cmd)
+    {
         using var reader = cmd.ExecuteReader();
         var list = new List<Snippet>();
         while (reader.Read())
@@ -58,27 +101,35 @@ public sealed class SnippetDatabase
                 Title = reader.GetString(1),
                 Body = reader.GetString(2),
                 SortOrder = reader.GetInt32(3),
-                CreatedAt = reader.GetInt64(4)
+                CreatedAt = reader.GetInt64(4),
+                QuickHotkey = reader.IsDBNull(5) ? null : reader.GetString(5),
+                UsedCount = reader.GetInt64(6),
+                LastUsedAt = reader.IsDBNull(7) ? null : reader.GetInt64(7),
+                Pinned = reader.GetInt64(8) != 0,
+                IsMonospace = reader.GetInt64(9) != 0,
+                GroupId = reader.IsDBNull(10) ? null : reader.GetInt64(10),
+                DeletedAt = reader.IsDBNull(11) ? null : reader.GetInt64(11),
             });
         }
         return list;
     }
 
-    public long Insert(string title, string body)
+    public long Insert(string title, string body, long? groupId = null)
     {
         using var conn = Open();
         using var tx = conn.BeginTransaction();
         var nextOrder = GetMaxSortOrder(conn) + 1;
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO snippets (title, body, sort_order, created_at)
-            VALUES ($t, $b, $o, $c)
+            INSERT INTO snippets (title, body, sort_order, created_at, group_id)
+            VALUES ($t, $b, $o, $c, $g)
             RETURNING id;
             """;
         cmd.Parameters.AddWithValue("$t", title);
         cmd.Parameters.AddWithValue("$b", body);
         cmd.Parameters.AddWithValue("$o", nextOrder);
         cmd.Parameters.AddWithValue("$c", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("$g", (object?)groupId ?? DBNull.Value);
         var id = (long)(cmd.ExecuteScalar() ?? 0L);
         tx.Commit();
         return id;
@@ -104,6 +155,35 @@ public sealed class SnippetDatabase
         cmd.ExecuteNonQuery();
     }
 
+    public void SoftDelete(long id)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET deleted_at = $now WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void Restore(long id)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET deleted_at = NULL WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>Purges snippets whose deleted_at is older than the cutoff (Unix seconds).</summary>
+    public int PurgeDeletedOlderThan(long cutoffEpochSeconds)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM snippets WHERE deleted_at IS NOT NULL AND deleted_at < $c;";
+        cmd.Parameters.AddWithValue("$c", cutoffEpochSeconds);
+        return cmd.ExecuteNonQuery();
+    }
+
     public void Reorder(IReadOnlyList<long> orderedIds)
     {
         using var conn = Open();
@@ -127,6 +207,252 @@ public sealed class SnippetDatabase
         cmd.CommandText = "SELECT COALESCE(MAX(sort_order), -1) FROM snippets;";
         return Convert.ToInt32(cmd.ExecuteScalar() ?? -1);
     }
+
+    public void SetQuickHotkey(long id, string? hotkey)
+    {
+        using var conn = Open();
+        // Clear any other snippet that currently holds the same slot.
+        if (!string.IsNullOrEmpty(hotkey))
+        {
+            using var clear = conn.CreateCommand();
+            clear.CommandText = "UPDATE snippets SET quick_hotkey = NULL WHERE quick_hotkey = $h AND id <> $id;";
+            clear.Parameters.AddWithValue("$h", hotkey);
+            clear.Parameters.AddWithValue("$id", id);
+            clear.ExecuteNonQuery();
+        }
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET quick_hotkey = $h WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$h", (object?)hotkey ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void SetPinned(long id, bool pinned)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET pinned = $p WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$p", pinned ? 1 : 0);
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void SetMonospace(long id, bool monospace)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET is_monospace = $m WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$m", monospace ? 1 : 0);
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void SetGroup(long id, long? groupId)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET group_id = $g WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$g", (object?)groupId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void RecordUse(long id)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET used_count = used_count + 1, last_used_at = $now WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    // -----------------------------------------------------------------------
+    // Groups
+    // -----------------------------------------------------------------------
+
+    public List<SnippetGroup> GetGroups()
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT id, name, sort_order FROM groups ORDER BY sort_order, id;";
+        using var reader = cmd.ExecuteReader();
+        var list = new List<SnippetGroup>();
+        while (reader.Read())
+        {
+            list.Add(new SnippetGroup
+            {
+                Id = reader.GetInt64(0),
+                Name = reader.GetString(1),
+                SortOrder = reader.GetInt32(2),
+            });
+        }
+        return list;
+    }
+
+    public long InsertGroup(string name)
+    {
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+        int nextOrder;
+        using (var maxCmd = conn.CreateCommand())
+        {
+            maxCmd.CommandText = "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM groups;";
+            nextOrder = Convert.ToInt32(maxCmd.ExecuteScalar() ?? 0);
+        }
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "INSERT INTO groups (name, sort_order) VALUES ($n, $o) RETURNING id;";
+        cmd.Parameters.AddWithValue("$n", name);
+        cmd.Parameters.AddWithValue("$o", nextOrder);
+        var id = (long)(cmd.ExecuteScalar() ?? 0L);
+        tx.Commit();
+        return id;
+    }
+
+    public void RenameGroup(long id, string name)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE groups SET name = $n WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$n", name);
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void DeleteGroup(long id)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        // FK is ON DELETE SET NULL — snippets get ungrouped automatically.
+        cmd.CommandText = "DELETE FROM groups WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void ReorderGroups(IReadOnlyList<long> orderedIds)
+    {
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE groups SET sort_order = $o WHERE id = $id;";
+        var pOrder = cmd.Parameters.Add("$o", SqliteType.Integer);
+        var pId = cmd.Parameters.Add("$id", SqliteType.Integer);
+        for (var i = 0; i < orderedIds.Count; i++)
+        {
+            pOrder.Value = i;
+            pId.Value = orderedIds[i];
+            cmd.ExecuteNonQuery();
+        }
+        tx.Commit();
+    }
+
+    // -----------------------------------------------------------------------
+    // Recent clipboard captures
+    // -----------------------------------------------------------------------
+
+    public void InsertRecentClip(string body, int maxKeep)
+    {
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+
+        // Deduplicate: if the most recent clip is identical, just bump its timestamp.
+        long? dupId = null;
+        using (var dup = conn.CreateCommand())
+        {
+            dup.CommandText = "SELECT id FROM recent_clips ORDER BY copied_at DESC LIMIT 1;";
+            var v = dup.ExecuteScalar();
+            if (v is long last)
+            {
+                using var bodyCheck = conn.CreateCommand();
+                bodyCheck.CommandText = "SELECT body FROM recent_clips WHERE id = $id;";
+                bodyCheck.Parameters.AddWithValue("$id", last);
+                if (bodyCheck.ExecuteScalar() is string prev && prev == body)
+                {
+                    dupId = last;
+                }
+            }
+        }
+
+        if (dupId is long id)
+        {
+            using var bump = conn.CreateCommand();
+            bump.CommandText = "UPDATE recent_clips SET copied_at = $now WHERE id = $id;";
+            bump.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            bump.Parameters.AddWithValue("$id", id);
+            bump.ExecuteNonQuery();
+        }
+        else
+        {
+            using var ins = conn.CreateCommand();
+            ins.CommandText = "INSERT INTO recent_clips (body, copied_at) VALUES ($b, $now);";
+            ins.Parameters.AddWithValue("$b", body);
+            ins.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            ins.ExecuteNonQuery();
+        }
+
+        // Trim to maxKeep most recent.
+        using (var trim = conn.CreateCommand())
+        {
+            trim.CommandText = """
+                DELETE FROM recent_clips
+                WHERE id NOT IN (
+                    SELECT id FROM recent_clips ORDER BY copied_at DESC LIMIT $n
+                );
+                """;
+            trim.Parameters.AddWithValue("$n", maxKeep);
+            trim.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+    }
+
+    public List<RecentClip> GetRecentClips(int max)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT id, body, copied_at FROM recent_clips ORDER BY copied_at DESC LIMIT $n;";
+        cmd.Parameters.AddWithValue("$n", max);
+        using var reader = cmd.ExecuteReader();
+        var list = new List<RecentClip>();
+        while (reader.Read())
+        {
+            list.Add(new RecentClip
+            {
+                Id = reader.GetInt64(0),
+                Body = reader.GetString(1),
+                CopiedAt = reader.GetInt64(2),
+            });
+        }
+        return list;
+    }
+
+    public void ClearRecentClips()
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM recent_clips;";
+        cmd.ExecuteNonQuery();
+    }
+
+    // -----------------------------------------------------------------------
+    // Backup
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// SQLite-correct snapshot under live writes — equivalent of
+    /// .backup or VACUUM INTO. Caller picks the target path.
+    /// </summary>
+    public void BackupTo(string targetPath)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = $"VACUUM INTO '{targetPath.Replace("'", "''")}';";
+        cmd.ExecuteNonQuery();
+    }
+
+    // -----------------------------------------------------------------------
+    // Settings KV
+    // -----------------------------------------------------------------------
 
     public string? GetSetting(string key)
     {
