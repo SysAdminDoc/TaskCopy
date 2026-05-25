@@ -5,6 +5,11 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7] — 2026-05-25
+
+### Fixed
+- **Build hotfix for F33.** Added explicit `System.IO` imports for the image converter and clipboard image service so the WPF generated project resolves `MemoryStream` under the .NET 10 SDK.
+
 ## [0.5.6] — 2026-05-25
 
 ### Added

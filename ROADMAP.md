@@ -64,6 +64,10 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.7 — Build hotfix ✅ SHIPPED (2026-05-25)
+
+- [x] **F33 build hotfix** — explicit `System.IO` imports for image clipboard/converter code; Release build is clean under .NET SDK 10.0.300.
+
 ## v0.5.6 — "Image snippets" ✅ SHIPPED (2026-05-25)
 
 - [x] **F33 — Image clipboard support** — explicit Settings "Add image" captures the current clipboard image as a PNG-backed snippet with thumbnails; picking it copies/pastes an image. Background clipboard capture remains text-only with a 10 MB / 20 MP explicit image limit.

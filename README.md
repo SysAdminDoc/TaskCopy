@@ -1,6 +1,6 @@
 # TaskCopy
 
-[![Version](https://img.shields.io/badge/version-0.5.6-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.7-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://www.microsoft.com/windows)
 [![Stack](https://img.shields.io/badge/stack-.NET%2010%20%2F%20WPF-512BD4)](https://dotnet.microsoft.com)
@@ -11,9 +11,9 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 
 ## Status
 
-**v0.5.6** — "Image snippets." TaskCopy can create explicit image snippets from the current clipboard image, store them with thumbnails, and copy/paste them back as clipboard images. The v0.5 line also includes reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
+**v0.5.7** — build hotfix for image snippets. TaskCopy can create explicit image snippets from the current clipboard image, store them with thumbnails, and copy/paste them back as clipboard images. The v0.5 line also includes reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
 
-## Features (v0.5.6)
+## Features (v0.5.7)
 
 ### Picker & paste
 - **Tray icon** — left-click opens snippet flyout at the cursor; right-click opens a native Mocha/Latte menu (Open snippets / Settings / About / Quit); double-click opens Settings.
