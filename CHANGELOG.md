@@ -5,6 +5,11 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] — 2026-05-25
+
+### Changed
+- **`AutoPasteService` is async (I22)** — the dispatcher no longer blocks on the 30 ms + 15 ms paste-settle `Thread.Sleep`s. New `TryAutoPasteDetailedAsync` is the canonical entry point; both `App.HandleSnippetCopyAsync` and `App.HandleRecentClipCopyAsync` now `await` it directly. The legacy sync `TryAutoPasteDetailed` / `TryAutoPaste` overloads still exist (Task.Run + GetAwaiter().GetResult()) for any external caller that isn't async-aware.
+
 ## [0.4.1] — 2026-05-25
 
 ### Added

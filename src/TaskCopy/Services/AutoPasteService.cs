@@ -36,11 +36,24 @@ public sealed class AutoPasteService
         _settings = settings;
     }
 
-    /// <summary>Backward-compatible boolean entry point; prefer TryAutoPasteDetailed.</summary>
+    /// <summary>Backward-compatible boolean entry point; prefer TryAutoPasteDetailedAsync.</summary>
     public bool TryAutoPaste(int? cursorOffsetFromEnd = null)
         => TryAutoPasteDetailed(cursorOffsetFromEnd) == Result.Pasted;
 
+    /// <summary>Legacy synchronous overload — keeps small Thread.Sleep delays for callers that aren't async-aware yet.</summary>
     public Result TryAutoPasteDetailed(int? cursorOffsetFromEnd = null, string? typedBody = null, int pasteMode = 0)
+    {
+        // Block on the async path on a background thread so any caller still
+        // running on the dispatcher avoids the inline Thread.Sleep. Wait is
+        // bounded by the inner Task.Delay's (≤ 50ms total).
+        return Task.Run(() => TryAutoPasteDetailedAsync(cursorOffsetFromEnd, typedBody, pasteMode)).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// I22: async paste path so the dispatcher doesn't block on the 30+15ms
+    /// settle delays. Callers on the dispatcher should await this directly.
+    /// </summary>
+    public async Task<Result> TryAutoPasteDetailedAsync(int? cursorOffsetFromEnd = null, string? typedBody = null, int pasteMode = 0)
     {
         if (!_settings.AutoPaste) return Result.Skipped;
         if (!_capture.TryRestore()) return Result.ForegroundRestoreFailed;
@@ -48,7 +61,7 @@ public sealed class AutoPasteService
         // Tiny settle so the foreground swap actually completes before the
         // input gets routed; without this, the synthetic Ctrl+V can be
         // delivered to TaskCopy's own (already-closing) window.
-        Thread.Sleep(30);
+        await Task.Delay(30).ConfigureAwait(false);
 
         // F24: type characters via INPUT_KEYBOARD/KEYEVENTF_UNICODE instead of
         // Ctrl+V for snippets bound to apps that swallow paste. The body is
@@ -66,7 +79,7 @@ public sealed class AutoPasteService
         if (cursorOffsetFromEnd is int n && n > 0)
         {
             // Brief settle so the paste actually lands before we move the caret.
-            Thread.Sleep(15);
+            await Task.Delay(15).ConfigureAwait(false);
             SendLeftArrows(n);
         }
         return Result.Pasted;

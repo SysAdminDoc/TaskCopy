@@ -353,22 +353,19 @@ public partial class App : Application
         _snippetMenu?.Close();
 
         await Task.Delay(20);
-        Dispatcher.Invoke(() =>
+        if (_autoPaste is null) return;
+        var result = await _autoPaste.TryAutoPasteDetailedAsync(
+            expansion.CursorOffsetFromEnd,
+            typedBody: expansion.Body,
+            pasteMode: snippet.PasteMode).ConfigureAwait(true);
+        if (result == AutoPasteService.Result.ForegroundRestoreFailed && !_autoPasteFailToastShown)
         {
-            if (_autoPaste is null) return;
-            var result = _autoPaste.TryAutoPasteDetailed(
-                expansion.CursorOffsetFromEnd,
-                typedBody: expansion.Body,
-                pasteMode: snippet.PasteMode);
-            if (result == AutoPasteService.Result.ForegroundRestoreFailed && !_autoPasteFailToastShown)
-            {
-                _autoPasteFailToastShown = true;
-                _trayIcon?.ShowNotification(
-                    title: "TaskCopy",
-                    message: "Auto-paste was skipped — the target window may be running elevated. The text is on your clipboard; press Ctrl+V to paste it manually.",
-                    icon: NotificationIcon.Info);
-            }
-        });
+            _autoPasteFailToastShown = true;
+            _trayIcon?.ShowNotification(
+                title: "TaskCopy",
+                message: "Auto-paste was skipped — the target window may be running elevated. The text is on your clipboard; press Ctrl+V to paste it manually.",
+                icon: NotificationIcon.Info);
+        }
     }
 
     private async Task HandleRecentClipCopyAsync(RecentClip clip)
@@ -380,19 +377,16 @@ public partial class App : Application
 
         _snippetMenu?.Close();
         await Task.Delay(20);
-        Dispatcher.Invoke(() =>
+        if (_autoPaste is null) return;
+        var result = await _autoPaste.TryAutoPasteDetailedAsync(null).ConfigureAwait(true);
+        if (result == AutoPasteService.Result.ForegroundRestoreFailed && !_autoPasteFailToastShown)
         {
-            if (_autoPaste is null) return;
-            var result = _autoPaste.TryAutoPasteDetailed(null);
-            if (result == AutoPasteService.Result.ForegroundRestoreFailed && !_autoPasteFailToastShown)
-            {
-                _autoPasteFailToastShown = true;
-                _trayIcon?.ShowNotification(
-                    title: "TaskCopy",
-                    message: "Auto-paste was skipped — the target window may be running elevated. The text is on your clipboard; press Ctrl+V to paste it manually.",
-                    icon: NotificationIcon.Info);
-            }
-        });
+            _autoPasteFailToastShown = true;
+            _trayIcon?.ShowNotification(
+                title: "TaskCopy",
+                message: "Auto-paste was skipped — the target window may be running elevated. The text is on your clipboard; press Ctrl+V to paste it manually.",
+                icon: NotificationIcon.Info);
+        }
     }
 
     private void PromoteRecentClipToSnippet(RecentClip clip)

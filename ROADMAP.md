@@ -64,6 +64,10 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.4.2 — Async paste path ✅ SHIPPED (2026-05-25)
+
+- [x] **I22** — `AutoPasteService.TryAutoPasteDetailedAsync` replaces the `Thread.Sleep`-on-dispatcher path with `await Task.Delay`. Sync overloads kept for callers not yet async-aware.
+
 ## v0.4.1 — Polish & reliability ✅ SHIPPED (2026-05-25)
 
 - [x] **I19** — Active monitor center flyout position (Settings dropdown; persisted).
@@ -95,7 +99,6 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 - [ ] **F39 — `{{shell:cmd}}` evaluation** (opt-in per-snippet, warning dialog).
 - [ ] **F40 — Syntax-highlighted body editor** (AvalonEdit when `IsMonospace`).
 - [ ] **I16 (Option B)** — DynamicResource refactor for fully-live theme swap.
-- [ ] **I22 — Move `Thread.Sleep` off the dispatcher in `AutoPasteService`**.
 - [ ] **B12 — Snippet-list bulk-update perf at >500 items** (`AddRange`/deferred refresh).
 
 ### Distribution polish (post-F18-Phase-1)
