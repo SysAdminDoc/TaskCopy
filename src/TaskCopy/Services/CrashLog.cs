@@ -15,6 +15,13 @@ public static class CrashLog
     public static string LogPath { get; } = Path.Combine(LogDirectory, "crash.log");
     public static string RotatedLogPath { get; } = LogPath + ".1";
 
+    /// <summary>
+    /// Optional sink for "non-fatal exception" notifications. App.OnStartup wires
+    /// this to the tray icon so users get a small bubble instead of a modal that
+    /// steals foreground. Null = fall back to the foreground-stealing MessageBox.
+    /// </summary>
+    public static Action<string, string>? NonFatalNotifier { get; set; }
+
     public static void Install()
     {
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
@@ -31,11 +38,21 @@ public static class CrashLog
             app.DispatcherUnhandledException += (_, e) =>
             {
                 Write("DispatcherUnhandledException", e.Exception);
-                MessageBox.Show(
-                    $"TaskCopy hit an unexpected error and will keep running.\n\n{e.Exception.Message}\n\nDetails written to:\n{LogPath}",
-                    "TaskCopy",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                // I27: prefer a non-blocking tray toast when one is wired.
+                // Fall back to a modal only when we have no tray sink yet
+                // (very early startup catastrophe).
+                if (NonFatalNotifier is { } notify)
+                {
+                    notify("TaskCopy hit an unexpected error and kept running.", e.Exception.Message);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        $"TaskCopy hit an unexpected error and will keep running.\n\n{e.Exception.Message}\n\nDetails written to:\n{LogPath}",
+                        "TaskCopy",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
                 e.Handled = true;
             };
         }

@@ -137,6 +137,12 @@ public partial class App : Application
         _startup = new StartupService();
         _foreground = new ForegroundWindowCapture();
         _autoPaste = new AutoPasteService(_foreground, _settings);
+        _autoPaste.CursorOffsetClamped += (_, requested) =>
+            Dispatcher.BeginInvoke(() =>
+                _trayIcon?.ShowNotification(
+                    title: "TaskCopy",
+                    message: $"Caret offset ({requested}) was clamped to 5000 — the {{cursor}} placeholder landed at the cap.",
+                    icon: NotificationIcon.Info));
 
         _pipeServer = new SingleInstanceServer(OnPipeMessage);
         _pipeServer.Start();
@@ -174,6 +180,20 @@ public partial class App : Application
         _trayIcon.TrayLeftMouseUp += (_, _) => ShowSnippetMenu();
         _trayIcon.TrayMouseDoubleClick += (_, _) => ShowSettings();
         _trayIcon.ForceCreate(enablesEfficiencyMode: true);
+
+        // I27: wire CrashLog to surface non-fatal exceptions as a tray toast
+        // instead of stealing foreground with a MessageBox.
+        CrashLog.NonFatalNotifier = (title, message) =>
+        {
+            try
+            {
+                _trayIcon?.ShowNotification(
+                    title: title,
+                    message: message,
+                    icon: NotificationIcon.Warning);
+            }
+            catch { /* notification failures are themselves non-fatal */ }
+        };
 
         var isFirstRun = !_settings.IsFirstRunComplete;
         if (isFirstRun)
@@ -246,7 +266,7 @@ public partial class App : Application
 
         _snippetMenu = new SnippetMenuWindow(vm);
         _snippetMenu.Closed += (_, _) => _snippetMenu = null;
-        _snippetMenu.ShowAtCursor();
+        _snippetMenu.ShowAtCursor(_settings?.FlyoutPosition ?? FlyoutPosition.Cursor);
     }
 
     private void ShowSettings()

@@ -38,6 +38,17 @@ public static class BackupRotator
         var fresh = Slot(0);
         if (File.Exists(fresh)) TryDelete(fresh);
         db.BackupTo(fresh);
+
+        // B13: SQLite's VACUUM INTO is transactionally safe inside SQLite but
+        // the resulting file still sits in the OS write-back cache. Force a
+        // flush so a power loss between this point and the next sync doesn't
+        // give us a torn backup file.
+        try
+        {
+            using var fs = new FileStream(fresh, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            fs.Flush(flushToDisk: true);
+        }
+        catch { /* best-effort */ }
     }
 
     private static void TryDelete(string path)

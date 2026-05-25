@@ -59,10 +59,14 @@ internal static class Migrations
 
     private static void ApplyV2(SqliteConnection conn)
     {
+        // I29: every DDL — table create, index create, ALTER TABLE ADD COLUMN —
+        // runs inside the same transaction so a partial failure rolls back
+        // cleanly and leaves user_version at 1 so the next launch retries.
         using var tx = conn.BeginTransaction();
 
         using (var cmd = conn.CreateCommand())
         {
+            cmd.Transaction = tx;
             cmd.CommandText = """
                 CREATE TABLE IF NOT EXISTS groups (
                     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,13 +84,13 @@ internal static class Migrations
             cmd.ExecuteNonQuery();
         }
 
-        AddColumnIfMissing(conn, "snippets", "quick_hotkey", "TEXT");
-        AddColumnIfMissing(conn, "snippets", "used_count", "INTEGER NOT NULL DEFAULT 0");
-        AddColumnIfMissing(conn, "snippets", "last_used_at", "INTEGER");
-        AddColumnIfMissing(conn, "snippets", "pinned", "INTEGER NOT NULL DEFAULT 0");
-        AddColumnIfMissing(conn, "snippets", "is_monospace", "INTEGER NOT NULL DEFAULT 0");
-        AddColumnIfMissing(conn, "snippets", "group_id", "INTEGER REFERENCES groups(id) ON DELETE SET NULL");
-        AddColumnIfMissing(conn, "snippets", "deleted_at", "INTEGER");
+        AddColumnIfMissing(conn, tx, "snippets", "quick_hotkey", "TEXT");
+        AddColumnIfMissing(conn, tx, "snippets", "used_count", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(conn, tx, "snippets", "last_used_at", "INTEGER");
+        AddColumnIfMissing(conn, tx, "snippets", "pinned", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(conn, tx, "snippets", "is_monospace", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(conn, tx, "snippets", "group_id", "INTEGER REFERENCES groups(id) ON DELETE SET NULL");
+        AddColumnIfMissing(conn, tx, "snippets", "deleted_at", "INTEGER");
 
         SetUserVersion(conn, 2);
         tx.Commit();
@@ -100,22 +104,24 @@ internal static class Migrations
     private static void ApplyV3(SqliteConnection conn)
     {
         using var tx = conn.BeginTransaction();
-        AddColumnIfMissing(conn, "snippets", "paste_mode", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(conn, tx, "snippets", "paste_mode", "INTEGER NOT NULL DEFAULT 0");
         SetUserVersion(conn, 3);
         tx.Commit();
     }
 
-    private static void AddColumnIfMissing(SqliteConnection conn, string table, string column, string definition)
+    private static void AddColumnIfMissing(SqliteConnection conn, SqliteTransaction tx, string table, string column, string definition)
     {
-        if (ColumnExists(conn, table, column)) return;
+        if (ColumnExists(conn, tx, table, column)) return;
         using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
         cmd.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition};";
         cmd.ExecuteNonQuery();
     }
 
-    private static bool ColumnExists(SqliteConnection conn, string table, string column)
+    private static bool ColumnExists(SqliteConnection conn, SqliteTransaction tx, string table, string column)
     {
         using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
         cmd.CommandText = $"PRAGMA table_info({table});";
         using var reader = cmd.ExecuteReader();
         while (reader.Read())

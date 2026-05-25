@@ -64,6 +64,18 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.4.1 — Polish & reliability ✅ SHIPPED (2026-05-25)
+
+- [x] **I19** — Active monitor center flyout position (Settings dropdown; persisted).
+- [x] **I23** — Decay-weighted frecency in MostUsed sort.
+- [x] **I25** — Flyout tooltip honors `IsMonospace`.
+- [x] **I27** — Tray toast for dispatcher exceptions instead of modal MessageBox.
+- [x] **I29** — Migration transaction boundary tightened (`ApplyV2`/`ApplyV3` pass tx to every DDL).
+- [x] **B11** — Quick-hotkey clashes with primary surface a clear message (closed by F22 capture path).
+- [x] **B13** — fsync backup file after VACUUM INTO via `FileStream.Flush(true)`.
+- [x] **B14** — `{{cursor}}` cap warning toast when offset > 5000.
+- [x] **B15** — Registry-canonical Start-with-Windows reconcile on load.
+
 ## v0.5.0 — Future (not committed)
 
 - [ ] **Windhawk companion mod** (`windhawk/taskcopy-taskbar-menu.wh.cpp`) — depends on F18+F29 stable IPC primitive.
@@ -83,17 +95,8 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 - [ ] **F39 — `{{shell:cmd}}` evaluation** (opt-in per-snippet, warning dialog).
 - [ ] **F40 — Syntax-highlighted body editor** (AvalonEdit when `IsMonospace`).
 - [ ] **I16 (Option B)** — DynamicResource refactor for fully-live theme swap.
-- [ ] **I19 — Optional "active monitor center" flyout positioning** (ultrawide).
 - [ ] **I22 — Move `Thread.Sleep` off the dispatcher in `AutoPasteService`**.
-- [ ] **I23 — Decay-weighted frecency** (count × exp(-Δt/τ)).
-- [ ] **I25 — Flyout tooltip honors `IsMonospace`**.
-- [ ] **I27 — Tray toast for dispatcher exceptions** instead of modal MessageBox.
-- [ ] **I29 — Tighten `ApplyV2`/`ApplyV3` transaction boundary**.
-- [ ] **B11 — Hotkey collision with primary surfaces clearer message**.
 - [ ] **B12 — Snippet-list bulk-update perf at >500 items** (`AddRange`/deferred refresh).
-- [ ] **B13 — fsync backup file** after `VACUUM INTO`.
-- [ ] **B14 — `{{cursor}}` left-arrow cap warning** (currently silently capped at 5000).
-- [ ] **B15 — Reconcile `StartupService.IsEnabled` (registry) vs `SettingsStore.StartWithWindows`**.
 
 ### Distribution polish (post-F18-Phase-1)
 

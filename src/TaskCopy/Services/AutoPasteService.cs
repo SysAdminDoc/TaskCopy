@@ -126,12 +126,19 @@ public sealed class AutoPasteService
         return sent == inputs.Length;
     }
 
-    private static void SendLeftArrows(int count)
+    /// <summary>Fires when SendLeftArrows had to clamp the requested count (B14).</summary>
+    public event EventHandler<int>? CursorOffsetClamped;
+
+    private void SendLeftArrows(int count)
     {
         // Cap to a sane upper bound so a malformed snippet can't pin the
         // keyboard with thousands of arrow presses.
         const int Max = 5000;
-        if (count > Max) count = Max;
+        if (count > Max)
+        {
+            CursorOffsetClamped?.Invoke(this, count);
+            count = Max;
+        }
         var inputs = new NativeMethods.INPUT[count * 2];
         for (int i = 0; i < count; i++)
         {

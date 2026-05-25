@@ -315,6 +315,30 @@ public partial class SettingsViewModel : ObservableObject
         new(Theme.Auto,  "Follow system"),
     ];
 
+    public IReadOnlyList<FlyoutPositionOption> FlyoutPositionOptions { get; } =
+    [
+        new(FlyoutPosition.Cursor, "At cursor (default)"),
+        new(FlyoutPosition.MonitorCenter, "Active monitor center"),
+    ];
+
+    public FlyoutPositionOption SelectedFlyoutPosition
+    {
+        get => FlyoutPositionOptions.FirstOrDefault(o => o.Value == _settings.FlyoutPosition) ?? FlyoutPositionOptions[0];
+        set
+        {
+            if (value is null) return;
+            if (_settings.FlyoutPosition == value.Value) return;
+            _settings.FlyoutPosition = value.Value;
+            OnPropertyChanged();
+            StatusMessage = $"Flyout opens at: {value.Label}.";
+        }
+    }
+
+    public sealed record FlyoutPositionOption(FlyoutPosition Value, string Label)
+    {
+        public override string ToString() => Label;
+    }
+
     public ThemeOption SelectedTheme
     {
         get => ThemeOptions.FirstOrDefault(t => t.Value == _settings.Theme) ?? ThemeOptions[0];
@@ -468,7 +492,13 @@ public partial class SettingsViewModel : ObservableObject
         HotkeyKey = _settings.HotkeyKey;
         HotkeyModifiers = _settings.HotkeyModifiers;
         HotkeyDisplay = HotkeyService.FormatHotkey(HotkeyKey, HotkeyModifiers);
+        // B15: registry is canonical — reconcile the DB mirror if a user removed
+        // the Run key externally between sessions.
         StartWithWindows = _startup.IsEnabled;
+        if (_settings.StartWithWindows != StartWithWindows)
+        {
+            _settings.StartWithWindows = StartWithWindows;
+        }
         AutoPaste = _settings.AutoPaste;
         RecentClipsEnabled = _settings.RecentClipsEnabled;
     }
@@ -729,8 +759,11 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnStartWithWindowsChanged(bool value)
     {
+        // B15: registry is the authority for next-launch behavior. Keep the
+        // SettingsStore mirror in sync so importers/exporters see the same
+        // value, but never trust the mirror over the live registry read.
         _startup.SetEnabled(value);
-        _settings.StartWithWindows = value;
+        _settings.StartWithWindows = _startup.IsEnabled;
         StatusMessage = value ? "TaskCopy will start with Windows." : "TaskCopy will not start with Windows.";
     }
 

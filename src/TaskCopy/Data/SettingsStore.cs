@@ -15,6 +15,7 @@ public sealed class SettingsStore
     private const string KeyTheme = "theme";
     private const string KeyLastBackupAt = "backup.last_at";
     private const string KeyFlyoutLastGroupId = "flyout.last_group_id";
+    private const string KeyFlyoutPosition = "flyout.position";
 
     private readonly SnippetDatabase _db;
 
@@ -113,6 +114,26 @@ public sealed class SettingsStore
         get => long.TryParse(_db.GetSetting(KeyFlyoutLastGroupId), out var v) ? v : 0L;
         set => _db.SetSetting(KeyFlyoutLastGroupId, value.ToString());
     }
+
+    /// <summary>
+    /// Where the flyout opens. Cursor = default (above-and-left of pointer);
+    /// MonitorCenter = horizontally centered on the cursor's active monitor.
+    /// </summary>
+    public FlyoutPosition FlyoutPosition
+    {
+        get
+        {
+            var v = _db.GetSetting(KeyFlyoutPosition);
+            return Enum.TryParse<FlyoutPosition>(v, ignoreCase: true, out var p) ? p : FlyoutPosition.Cursor;
+        }
+        set => _db.SetSetting(KeyFlyoutPosition, value.ToString());
+    }
+}
+
+public enum FlyoutPosition
+{
+    Cursor = 0,
+    MonitorCenter = 1,
 }
 
 public enum Theme

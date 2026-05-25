@@ -262,8 +262,16 @@
                                            ToolTip="{Binding Title}" />
                                 <TextBlock Text="{Binding Preview}"
                                            Style="{StaticResource Mocha.Body.Subtle}"
-                                           Margin="0,2,0,0"
-                                           ToolTip="{Binding Body}" />
+                                           Margin="0,2,0,0">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <TextBlock Text="{Binding Body}"
+                                                       FontFamily="{Binding BodyTooltipFontFamily}"
+                                                       MaxWidth="640"
+                                                       TextWrapping="Wrap" />
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
                             </StackPanel>
                             <TextBlock Grid.Column="2"
                                        Text="📌"

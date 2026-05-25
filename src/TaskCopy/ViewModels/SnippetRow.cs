@@ -1,3 +1,4 @@
+using System.Windows.Media;
 using TaskCopy.Models;
 
 namespace TaskCopy.ViewModels;
@@ -17,6 +18,11 @@ public sealed class SnippetRow
     public string Preview => Snippet.Preview;
     public string Body => Snippet.Body;
     public bool Pinned => Snippet.Pinned;
+
+    /// <summary>I25: monospace snippets keep aligned columns in the hover tooltip.</summary>
+    public FontFamily BodyTooltipFontFamily => Snippet.IsMonospace
+        ? new FontFamily("Cascadia Mono, Consolas, Courier New")
+        : new FontFamily("Segoe UI Variable Text, Segoe UI");
 
     public SnippetRow(Snippet snippet, int displayIndex)
     {

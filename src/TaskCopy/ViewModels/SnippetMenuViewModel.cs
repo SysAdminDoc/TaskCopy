@@ -133,12 +133,14 @@ public partial class SnippetMenuViewModel : ObservableObject
         }
 
         // All other modes: pinned first (still ordered by the mode within each band).
+        // I23: MostUsed uses decay-weighted frecency so a snippet used 100x last
+        // year doesn't outrank one used 5x today. Tau = 7 days.
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         IEnumerable<Snippet> ordered = mode switch
         {
             FlyoutSortMode.MostUsed => input
                 .OrderByDescending(s => s.Pinned)
-                .ThenByDescending(s => s.UsedCount)
-                .ThenByDescending(s => s.LastUsedAt ?? 0L)
+                .ThenByDescending(s => Frecency(s, now))
                 .ThenBy(s => s.SortOrder),
             FlyoutSortMode.RecentlyUsed => input
                 .OrderByDescending(s => s.Pinned)
@@ -148,6 +150,19 @@ public partial class SnippetMenuViewModel : ObservableObject
             _ => input.OrderBy(s => s.SortOrder),
         };
         return ordered.ToList();
+    }
+
+    /// <summary>
+    /// I23: count × exp(-Δt / τ) with τ = 7 days. Never-used snippets fall back
+    /// to their used_count (which is 0) so they sit at the bottom in MostUsed mode.
+    /// </summary>
+    private static double Frecency(Snippet s, long nowSeconds)
+    {
+        if (s.UsedCount == 0) return 0.0;
+        var last = s.LastUsedAt ?? s.CreatedAt;
+        var ageDays = Math.Max(0, (nowSeconds - last) / 86400.0);
+        const double Tau = 7.0;
+        return s.UsedCount * Math.Exp(-ageDays / Tau);
     }
 
     partial void OnFilterChanged(string value) => ApplyFilter();

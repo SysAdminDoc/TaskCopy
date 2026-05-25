@@ -139,7 +139,7 @@ public partial class SnippetMenuWindow : Window
         }
     }
 
-    public void ShowAtCursor()
+    public void ShowAtCursor(Data.FlyoutPosition position = Data.FlyoutPosition.Cursor)
     {
         _vm.Refresh();
 
@@ -153,10 +153,23 @@ public partial class SnippetMenuWindow : Window
         var widthPx = size.Width * scale;
         var heightPx = size.Height * scale;
 
-        // Open above-and-left of the cursor (like a real context menu),
-        // then clamp into the monitor work area.
-        var leftPx = cursor.X - widthPx + 24;
-        var topPx = cursor.Y - heightPx + 24;
+        double leftPx, topPx;
+        if (position == Data.FlyoutPosition.MonitorCenter)
+        {
+            // I19: useful on ultrawide monitors where above-and-left of cursor
+            // can pin the flyout to one screen edge. Center horizontally on the
+            // cursor's active monitor; vertically just above the middle so the
+            // user's eye doesn't track far.
+            leftPx = workArea.Left + ((workArea.Right - workArea.Left) - widthPx) / 2.0;
+            topPx = workArea.Top + ((workArea.Bottom - workArea.Top) - heightPx) / 2.5;
+        }
+        else
+        {
+            // Open above-and-left of the cursor (like a real context menu),
+            // then clamp into the monitor work area.
+            leftPx = cursor.X - widthPx + 24;
+            topPx = cursor.Y - heightPx + 24;
+        }
 
         if (leftPx + widthPx > workArea.Right) leftPx = workArea.Right - widthPx - 4;
         if (leftPx < workArea.Left + 4) leftPx = workArea.Left + 4;

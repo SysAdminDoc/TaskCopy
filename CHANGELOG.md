@@ -5,6 +5,23 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] — 2026-05-25
+
+### Added
+- **Active monitor center flyout position (I19)** — Settings → Flyout position lets users open the flyout horizontally centered on the active monitor (default still "At cursor"). Useful on ultrawide displays where the above-and-left anchor can pin against an edge.
+- **Decay-weighted frecency (I23)** — Most-used sort now uses `count × exp(-Δt / 7 days)` so a snippet used 100× last year doesn't outrank one used 5× today.
+- **Flyout tooltip honors `IsMonospace` (I25)** — hover preview keeps aligned columns for code snippets via a `Cascadia Mono` font binding on the tooltip.
+- **`{{cursor}}` cap warning toast (B14)** — when the caret offset exceeds 5,000 left-arrows the cap kicks in and surfaces a one-time tray notification.
+
+### Changed
+- **Dispatcher exceptions show a tray toast (I27)** — replaces the foreground-stealing `MessageBox` with a non-blocking `NotificationIcon.Warning` notification. Modal fallback retained for very early startup catastrophes where the tray icon isn't wired yet.
+- **Backups now fsync to disk (B13)** — after `VACUUM INTO` writes the fresh snapshot, `FileStream.Flush(flushToDisk: true)` forces the OS write-back cache out so a power loss between launch and the next sync can't produce a torn backup.
+- **Migrations run fully inside their transaction (I29)** — `ApplyV2` and `ApplyV3` now pass the `SqliteTransaction` to every `ALTER TABLE` and `PRAGMA table_info`, so a partial migration failure rolls back cleanly and leaves `user_version` at the prior value for the next launch to retry.
+- **Start-with-Windows is registry-canonical (B15)** — the `HKCU\…\Run` registry value is now the source of truth on every startup. The `SettingsStore.StartWithWindows` mirror is reconciled at load time so a user who deleted the Run value externally sees the truth in the Settings checkbox.
+
+### Fixed
+- **Quick-hotkey collisions with the primary hotkey already produce a clear message (B11 closed-by-F22)** — when capturing a per-snippet hotkey that matches the primary `Ctrl+Alt+V` combo, the status bar now says exactly which collision happened instead of just "registration failed."
+
 ## [0.4.0] — 2026-05-25
 
 ### Fixed

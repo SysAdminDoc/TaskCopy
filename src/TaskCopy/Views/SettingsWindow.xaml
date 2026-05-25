@@ -274,6 +274,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" Grid.Column="0"
                                Text="Flyout order"
@@ -286,11 +287,23 @@
                               DisplayMemberPath="Label"
                               ToolTip="How the snippet flyout sorts items. Manual respects your drag order exactly; other modes always promote pinned snippets to the top." />
                     <TextBlock Grid.Row="1" Grid.Column="0"
-                               Text="Theme"
+                               Text="Flyout position"
                                Style="{StaticResource Mocha.Body.Header}"
                                VerticalAlignment="Center"
                                Margin="0,8,0,0" />
                     <ComboBox Grid.Row="1" Grid.Column="1"
+                              Width="240"
+                              ItemsSource="{Binding FlyoutPositionOptions}"
+                              SelectedItem="{Binding SelectedFlyoutPosition}"
+                              DisplayMemberPath="Label"
+                              Margin="0,8,0,0"
+                              ToolTip="Where the snippet flyout opens. 'At cursor' is the default. 'Active monitor center' is more comfortable on ultrawide monitors." />
+                    <TextBlock Grid.Row="2" Grid.Column="0"
+                               Text="Theme"
+                               Style="{StaticResource Mocha.Body.Header}"
+                               VerticalAlignment="Center"
+                               Margin="0,8,0,0" />
+                    <ComboBox Grid.Row="2" Grid.Column="1"
                               Width="240"
                               ItemsSource="{Binding ThemeOptions}"
                               SelectedItem="{Binding SelectedTheme}"
