@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows.Input;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TaskCopy.Data;
@@ -15,6 +17,9 @@ public partial class SettingsViewModel : ObservableObject
     private readonly StartupService _startup;
     private readonly HotkeyService _hotkeys;
 
+    private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
+    private long? _pendingSaveId;
+
     public ObservableCollection<Snippet> Snippets { get; } = new();
 
     [ObservableProperty]
@@ -26,6 +31,12 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(EditBody))]
     private Snippet? _selectedSnippet;
 
+    partial void OnSelectedSnippetChanging(Snippet? value)
+    {
+        // Persist any pending edit before the editor swaps to a new snippet.
+        FlushPendingSave();
+    }
+
     public bool HasSelection => SelectedSnippet is not null;
 
     public string EditTitle
@@ -36,7 +47,7 @@ public partial class SettingsViewModel : ObservableObject
             if (SelectedSnippet is null) return;
             if (SelectedSnippet.Title == value) return;
             SelectedSnippet.Title = value;
-            _db.Update(SelectedSnippet.Id, SelectedSnippet.Title, SelectedSnippet.Body);
+            ScheduleSave(SelectedSnippet);
             OnPropertyChanged();
             DirtyChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -50,9 +61,41 @@ public partial class SettingsViewModel : ObservableObject
             if (SelectedSnippet is null) return;
             if (SelectedSnippet.Body == value) return;
             SelectedSnippet.Body = value;
-            _db.Update(SelectedSnippet.Id, SelectedSnippet.Title, SelectedSnippet.Body);
+            ScheduleSave(SelectedSnippet);
             OnPropertyChanged();
             DirtyChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void ScheduleSave(Snippet snippet)
+    {
+        _pendingSaveId = snippet.Id;
+        _saveTimer.Stop();
+        _saveTimer.Tick -= OnSaveTimerTick;
+        _saveTimer.Tick += OnSaveTimerTick;
+        _saveTimer.Start();
+    }
+
+    private void OnSaveTimerTick(object? sender, EventArgs e) => FlushPendingSave();
+
+    /// <summary>
+    /// Persist any in-memory edits to disk now. Called on selection change,
+    /// window close, and the 300 ms idle timer.
+    /// </summary>
+    public void FlushPendingSave()
+    {
+        _saveTimer.Stop();
+        if (_pendingSaveId is not long id) return;
+        var s = Snippets.FirstOrDefault(x => x.Id == id);
+        _pendingSaveId = null;
+        if (s is null) return;
+        try
+        {
+            _db.Update(s.Id, s.Title, s.Body);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("SettingsViewModel.FlushPendingSave", ex);
         }
     }
 
@@ -157,6 +200,31 @@ public partial class SettingsViewModel : ObservableObject
     private void RebindHotkey()
     {
         HotkeyRebindRequested?.Invoke(this, (HotkeyKey, HotkeyModifiers));
+    }
+
+    [RelayCommand]
+    private void OpenLogFolder()
+    {
+        CrashLog.OpenFolder();
+        StatusMessage = $"Opened {CrashLog.LogDirectory}.";
+    }
+
+    [RelayCommand]
+    private void OpenDataFolder()
+    {
+        var dir = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "TaskCopy");
+        try
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            Process.Start(new ProcessStartInfo { FileName = dir, UseShellExecute = true });
+            StatusMessage = $"Opened {dir}.";
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("OpenDataFolder", ex);
+        }
     }
 
     public void SetHotkey(Key key, ModifierKeys modifiers)

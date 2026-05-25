@@ -70,10 +70,10 @@ Goal: turn TaskCopy from "fancy clipboard" into "muscle-memory text expander."
 
 ### Reliability
 
-- [ ] **I2 — Debounce snippet editor writes (300 ms idle)**
+- [x] **I2 — Debounce snippet editor writes (300 ms idle)**
 - [x] **I3 — Tame `Deactivated → Close` race** (so F2 typing doesn't dismiss the flyout)
-- [ ] **F11 — Second-instance handoff via named pipe `\\.\pipe\TaskCopy`** (signals first instance to open Settings; reuses IPC for v0.4 Windhawk mod)
-- [ ] **I4 — Crash log rotation + "Open log folder" button in Settings**
+- [x] **F11 — Second-instance handoff via named pipe `\\.\pipe\TaskCopy`** (signals first instance to open Settings; reuses IPC for v0.4 Windhawk mod)
+- [x] **I4 — Crash log rotation + "Open log folder" button in Settings**
 
 ---
 

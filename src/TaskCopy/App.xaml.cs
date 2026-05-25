@@ -26,6 +26,7 @@ public partial class App : Application
     private HotkeyService? _hotkeys;
     private ForegroundWindowCapture? _foreground;
     private AutoPasteService? _autoPaste;
+    private SingleInstanceServer? _pipeServer;
 
     private SnippetMenuWindow? _snippetMenu;
     private SettingsWindow? _settingsWindow;
@@ -38,6 +39,9 @@ public partial class App : Application
         _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var createdNew);
         if (!createdNew)
         {
+            // Hand off to the first instance: by default open Settings,
+            // or whatever the CLI args asked for.
+            SingleInstanceServer.TrySend(SingleInstanceServer.ParseCliMessage(e.Args));
             _singleInstanceMutex.Dispose();
             _singleInstanceMutex = null;
             Shutdown(0);
@@ -57,6 +61,9 @@ public partial class App : Application
         _startup = new StartupService();
         _foreground = new ForegroundWindowCapture();
         _autoPaste = new AutoPasteService(_foreground, _settings);
+
+        _pipeServer = new SingleInstanceServer(OnPipeMessage);
+        _pipeServer.Start();
 
         _hotkeys = new HotkeyService();
         _hotkeys.Triggered += (_, _) => Dispatcher.Invoke(ShowSnippetMenu);
@@ -167,9 +174,30 @@ public partial class App : Application
 
         var vm = new SettingsViewModel(_db, _settings, _startup, _hotkeys);
         _settingsWindow = new SettingsWindow(vm);
-        _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+        _settingsWindow.Closed += (_, _) =>
+        {
+            vm.FlushPendingSave();
+            _settingsWindow = null;
+        };
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    private void OnPipeMessage(string msg)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            switch (msg)
+            {
+                case SingleInstanceServer.MsgOpenFlyout:
+                    ShowSnippetMenu();
+                    break;
+                case SingleInstanceServer.MsgOpenSettings:
+                default:
+                    ShowSettings();
+                    break;
+            }
+        });
     }
 
     private void ShowAbout()
@@ -227,6 +255,7 @@ public partial class App : Application
     {
         try
         {
+            _pipeServer?.Stop();
             _hotkeys?.Unregister();
             _trayIcon?.Dispose();
             _hotkeyHost?.Close();
