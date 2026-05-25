@@ -54,7 +54,8 @@ public sealed class SnippetDatabase
         SELECT id, title, body, sort_order, created_at,
                quick_hotkey, used_count, last_used_at, pinned, is_monospace,
                group_id, deleted_at, paste_mode,
-               last_target_process_name, last_target_at, target_app_glob
+               last_target_process_name, last_target_at, target_app_glob,
+               content_kind, image_png, image_width, image_height
         FROM snippets
         """;
 
@@ -114,6 +115,10 @@ public sealed class SnippetDatabase
                 LastTargetProcessName = reader.IsDBNull(13) ? null : reader.GetString(13),
                 LastTargetAt = reader.IsDBNull(14) ? null : reader.GetInt64(14),
                 TargetAppGlob = reader.IsDBNull(15) ? null : reader.GetString(15),
+                ContentKind = reader.IsDBNull(16) ? 0 : (int)reader.GetInt64(16),
+                ImagePng = reader.IsDBNull(17) ? null : reader.GetFieldValue<byte[]>(17),
+                ImageWidth = reader.IsDBNull(18) ? null : (int)reader.GetInt64(18),
+                ImageHeight = reader.IsDBNull(19) ? null : (int)reader.GetInt64(19),
             });
         }
         return list;
@@ -135,6 +140,32 @@ public sealed class SnippetDatabase
         cmd.Parameters.AddWithValue("$o", nextOrder);
         cmd.Parameters.AddWithValue("$c", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         cmd.Parameters.AddWithValue("$g", (object?)groupId ?? DBNull.Value);
+        var id = (long)(cmd.ExecuteScalar() ?? 0L);
+        tx.Commit();
+        return id;
+    }
+
+    public long InsertImage(string title, byte[] pngBytes, int width, int height, long? groupId = null)
+    {
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+        var nextOrder = GetMaxSortOrder(conn) + 1;
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO snippets (
+                title, body, sort_order, created_at, group_id,
+                content_kind, image_png, image_width, image_height
+            )
+            VALUES ($t, '', $o, $c, $g, 1, $png, $w, $h)
+            RETURNING id;
+            """;
+        cmd.Parameters.AddWithValue("$t", title);
+        cmd.Parameters.AddWithValue("$o", nextOrder);
+        cmd.Parameters.AddWithValue("$c", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("$g", (object?)groupId ?? DBNull.Value);
+        cmd.Parameters.Add("$png", SqliteType.Blob).Value = pngBytes;
+        cmd.Parameters.AddWithValue("$w", width);
+        cmd.Parameters.AddWithValue("$h", height);
         var id = (long)(cmd.ExecuteScalar() ?? 0L);
         tx.Commit();
         return id;

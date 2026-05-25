@@ -52,6 +52,8 @@ public static class SnippetMatch
         if (t.Contains(query, StringComparison.OrdinalIgnoreCase)) return 60;
         // Body contains
         if (b.Contains(query, StringComparison.OrdinalIgnoreCase)) return 20;
+        // Image snippets have no body payload; let "image" find them.
+        if (snippet.IsImage && "image".Contains(query, StringComparison.OrdinalIgnoreCase)) return 10;
 
         return 0;
     }

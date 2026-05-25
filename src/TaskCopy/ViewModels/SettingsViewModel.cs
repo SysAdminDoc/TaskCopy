@@ -16,6 +16,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly SettingsStore _settings;
     private readonly StartupService _startup;
     private readonly HotkeyService _hotkeys;
+    private readonly ClipboardService _clipboard;
 
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
     private long? _pendingSaveId;
@@ -538,12 +539,14 @@ public partial class SettingsViewModel : ObservableObject
     private void ManageGroups() => ManageGroupsRequested?.Invoke(this, EventArgs.Empty);
 
     public SettingsViewModel(SnippetDatabase db, SettingsStore settings,
-                              StartupService startup, HotkeyService hotkeys)
+                              StartupService startup, HotkeyService hotkeys,
+                              ClipboardService clipboard)
     {
         _db = db;
         _settings = settings;
         _startup = startup;
         _hotkeys = hotkeys;
+        _clipboard = clipboard;
 
         // Keep the status-bar counter in sync with the snippet + group lists.
         Snippets.CollectionChanged += (_, _) => OnPropertyChanged(nameof(SnippetCountStatus));
@@ -597,6 +600,24 @@ public partial class SettingsViewModel : ObservableObject
         Snippets.Add(fresh);
         SelectedSnippet = fresh;
         StatusMessage = "New snippet added.";
+    }
+
+    [RelayCommand]
+    private void AddImageFromClipboard()
+    {
+        if (!_clipboard.TryReadImagePng(out var pngBytes, out var width, out var height))
+        {
+            StatusMessage = "No supported image on the clipboard, or the image is over the 10 MB / 20 MP limit.";
+            return;
+        }
+
+        var title = $"Image {DateTime.Now:yyyy-MM-dd HH.mm.ss}";
+        var id = _db.InsertImage(title, pngBytes, width, height);
+        var fresh = _db.GetAll().FirstOrDefault(s => s.Id == id);
+        if (fresh is null) return;
+        Snippets.Add(fresh);
+        SelectedSnippet = fresh;
+        StatusMessage = $"Image snippet added ({width}x{height}).";
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]

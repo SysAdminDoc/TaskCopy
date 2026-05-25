@@ -14,6 +14,8 @@ namespace TaskCopy.Services;
 public static class SnippetIO
 {
     private const int FormatVersion = 1;
+    private const int MaxImagePngBytes = 10 * 1024 * 1024;
+    private const long MaxImagePixels = 20_000_000;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -32,7 +34,11 @@ public static class SnippetIO
         bool IsMonospace,
         string? GroupName,
         int PasteMode = 0,
-        string? TargetAppGlob = null);
+        string? TargetAppGlob = null,
+        int ContentKind = 0,
+        string? ImagePngBase64 = null,
+        int? ImageWidth = null,
+        int? ImageHeight = null);
 
     public sealed record ExportGroup(string Name, int SortOrder);
 
@@ -70,7 +76,11 @@ public static class SnippetIO
                 IsMonospace: s.IsMonospace,
                 GroupName: s.GroupId is long gid && nameById.TryGetValue(gid, out var gn) ? gn : null,
                 PasteMode: s.PasteMode,
-                TargetAppGlob: s.TargetAppGlob
+                TargetAppGlob: s.TargetAppGlob,
+                ContentKind: s.ContentKind,
+                ImagePngBase64: s.ImagePng is { Length: > 0 } bytes ? Convert.ToBase64String(bytes) : null,
+                ImageWidth: s.ImageWidth,
+                ImageHeight: s.ImageHeight
             )).ToList(),
             SchemaVersion: Migrations.CurrentVersion);
 
@@ -126,7 +136,38 @@ public static class SnippetIO
                 ? gid
                 : null;
 
-            var id = db.Insert(s.Title, s.Body, groupId);
+            long id;
+            if (s.ContentKind == 1)
+            {
+                if (string.IsNullOrEmpty(s.ImagePngBase64) || s.ImageWidth is null || s.ImageHeight is null)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                byte[] imageBytes;
+                try { imageBytes = Convert.FromBase64String(s.ImagePngBase64); }
+                catch
+                {
+                    skipped++;
+                    continue;
+                }
+                if (s.ImageWidth.Value <= 0
+                    || s.ImageHeight.Value <= 0
+                    || imageBytes.Length is 0 or > MaxImagePngBytes
+                    || (long)s.ImageWidth.Value * s.ImageHeight.Value > MaxImagePixels)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                id = db.InsertImage(s.Title, imageBytes, s.ImageWidth.Value, s.ImageHeight.Value, groupId);
+                if (!string.IsNullOrEmpty(s.Body)) db.Update(id, s.Title, s.Body);
+            }
+            else
+            {
+                id = db.Insert(s.Title, s.Body, groupId);
+            }
             if (s.IsMonospace) db.SetMonospace(id, true);
             if (s.Pinned) db.SetPinned(id, true);
             if (!string.IsNullOrEmpty(s.QuickHotkey)) db.SetQuickHotkey(id, s.QuickHotkey);

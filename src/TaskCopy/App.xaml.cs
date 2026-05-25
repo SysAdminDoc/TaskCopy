@@ -329,7 +329,7 @@ public partial class App : Application
 
     private void ShowSettings()
     {
-        if (_db is null || _settings is null || _startup is null || _hotkeys is null) return;
+        if (_db is null || _settings is null || _startup is null || _hotkeys is null || _clipboard is null) return;
 
         if (_settingsWindow is not null)
         {
@@ -340,7 +340,7 @@ public partial class App : Application
             return;
         }
 
-        var vm = new SettingsViewModel(_db, _settings, _startup, _hotkeys);
+        var vm = new SettingsViewModel(_db, _settings, _startup, _hotkeys, _clipboard);
         vm.ManageGroupsRequested += (_, _) => ShowManageGroups(vm);
         vm.ToggleRecentClipsRequested += (_, enabled) => SetRecentClipsEnabled(enabled);
         vm.ApplyThemeRequested += (_, label) => OfferThemeRelaunch(label);
@@ -376,6 +376,41 @@ public partial class App : Application
     private async Task HandleSnippetCopyAsync(Snippet snippet)
     {
         if (_clipboard is null || _db is null) return;
+
+        if (snippet.IsImage && snippet.ImagePng is { Length: > 0 } imageBytes)
+        {
+            if (!_clipboard.TryCopyImage(imageBytes)) return;
+
+            try { _db.RecordUse(snippet.Id); } catch (Exception ex) { CrashLog.Write("RecordUse.Image", ex); }
+            _snippetMenu?.Close();
+
+            await Task.Delay(20);
+            if (_autoPaste is null) return;
+            var pasteResult = await _autoPaste.TryAutoPasteDetailedAsync(
+                null,
+                typedBody: string.Empty,
+                pasteMode: 0).ConfigureAwait(true);
+            if (pasteResult == AutoPasteService.Result.ForegroundRestoreFailed && !_autoPasteFailToastShown)
+            {
+                _autoPasteFailToastShown = true;
+                _trayIcon?.ShowNotification(
+                    title: "TaskCopy",
+                    message: "Auto-paste was skipped — the target window may be running elevated. The image is on your clipboard; press Ctrl+V to paste it manually.",
+                    icon: NotificationIcon.Info);
+            }
+            if (pasteResult == AutoPasteService.Result.Pasted)
+            {
+                var procName = _foreground?.TryGetLastTargetProcessName();
+                if (!string.IsNullOrEmpty(procName))
+                {
+                    try { _db.SetLastTarget(snippet.Id, procName!); }
+                    catch (Exception ex) { CrashLog.Write("SetLastTarget.Image", ex); }
+                }
+                try { BumpUsageStat(0); }
+                catch (Exception ex) { CrashLog.Write("BumpUsageStat.Image", ex); }
+            }
+            return;
+        }
 
         var previousClipboard = TryReadClipboardText();
 
@@ -469,6 +504,8 @@ public partial class App : Application
     private async Task HandleMultiSnippetCopyAsync(IReadOnlyList<Snippet> snippets)
     {
         if (_clipboard is null || _db is null || _settings is null || snippets.Count == 0) return;
+        snippets = snippets.Where(s => !s.IsImage).ToList();
+        if (snippets.Count == 0) return;
 
         var previousClipboard = TryReadClipboardText();
         var sep = _settings.MultiPasteSeparator;
@@ -689,6 +726,18 @@ public partial class App : Application
         else
         {
             // Copy-only: skip auto-paste regardless of setting.
+            if (match.IsImage && match.ImagePng is { Length: > 0 } imageBytes)
+            {
+                if (!(_clipboard?.TryCopyImage(imageBytes) ?? false))
+                {
+                    WriteCliResult("error: clipboard image write failed");
+                    return;
+                }
+                try { _db.RecordUse(match.Id); } catch { }
+                WriteCliResult($"ok: copy id={match.Id}");
+                return;
+            }
+
             var ctx = new TemplatingContext
             {
                 PreviousClipboard = TryReadClipboardText(),

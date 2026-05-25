@@ -64,6 +64,10 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.6 — "Image snippets" ✅ SHIPPED (2026-05-25)
+
+- [x] **F33 — Image clipboard support** — explicit Settings "Add image" captures the current clipboard image as a PNG-backed snippet with thumbnails; picking it copies/pastes an image. Background clipboard capture remains text-only with a 10 MB / 20 MP explicit image limit.
+
 ## v0.5.5 — "Multi-field forms" ✅ SHIPPED (2026-05-25)
 
 - [x] **F36 — Multi-field forms** (`{{form:Field1|Field2}}`) — one modal gathers several values before expansion; matching `{{ask:Field}}` tokens reuse those values and repeated single-field asks are cached per expansion.
@@ -154,7 +158,6 @@ This is the only active to-do checklist. `RESEARCH_FEATURE_PLAN.md` is archived 
 
 ### App features
 
-- [ ] **F33 — Image clipboard support** — capture/paste CF_DIB with thumbnails and explicit privacy limits.
 - [ ] **F39 — `{{shell:cmd}}` evaluation** — opt-in per snippet, disabled on import, with a warning dialog before first execution.
 - [ ] **F40 — Syntax-highlighted body editor** — AvalonEdit when `IsMonospace`, with plain TextBox fallback.
 - [ ] **F51 — FTS5 search at scale** — body search index once libraries cross the large-snippet threshold.

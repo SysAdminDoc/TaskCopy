@@ -58,10 +58,38 @@ public partial class Snippet : ObservableObject
     [ObservableProperty]
     private string? _targetAppGlob;
 
+    /// <summary>F33: 0 = text snippet, 1 = image snippet.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsImage))]
+    [NotifyPropertyChangedFor(nameof(Preview))]
+    private int _contentKind;
+
+    /// <summary>F33: PNG-encoded image payload for image snippets.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsImage))]
+    [NotifyPropertyChangedFor(nameof(Preview))]
+    private byte[]? _imagePng;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Preview))]
+    private int? _imageWidth;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Preview))]
+    private int? _imageHeight;
+
+    public bool IsImage => ContentKind == 1 && ImagePng is { Length: > 0 };
+
     public string Preview
     {
         get
         {
+            if (IsImage)
+            {
+                return ImageWidth is int w && ImageHeight is int h
+                    ? $"Image {w}x{h}"
+                    : "Image snippet";
+            }
             if (string.IsNullOrEmpty(Body)) return string.Empty;
             var idx = Body.IndexOfAny(['\r', '\n']);
             var line = (idx < 0 ? Body : Body[..idx]).Trim();

@@ -316,7 +316,9 @@ public partial class SnippetMenuViewModel : ObservableObject
     {
         var idx = isOneBased ? oneBasedOrZeroBased - 1 : oneBasedOrZeroBased;
         if (idx < 0 || idx >= Snippets.Count) return false;
-        var id = Snippets[idx].Snippet.Id;
+        var snippet = Snippets[idx].Snippet;
+        if (snippet.IsImage) return false;
+        var id = snippet.Id;
         if (_multiSelection.Remove(id)) { /* removed */ }
         else { _multiSelection.Add(id); }
         HasMultiSelection = _multiSelection.Count > 0;

@@ -5,6 +5,21 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] — 2026-05-25
+
+### Added
+- **Image clipboard support (F33).** Settings now has "Add image" to capture the current clipboard image into an explicit image snippet. Images are stored as PNG bytes in SQLite, displayed as thumbnails in Settings and the flyout, and copied back to the clipboard as images when picked.
+- JSON export/import round-trips image snippets with base64 PNG payloads and dimensions.
+
+### Changed
+- Schema bumped V5 → V6 with `snippets.content_kind`, `image_png`, `image_width`, and `image_height`.
+- Background clipboard capture remains text-only by design; image snippets require explicit "Add image" action and are limited to 10 MB encoded PNG / 20 MP.
+- Multi-paste ignores image snippets because images and text cannot be safely concatenated into one paste payload.
+
+### Architecture
+- `ClipboardService` now reads current clipboard images into PNG and writes image snippets back through WPF `Clipboard.SetImage`.
+- New app-level image converter: `ImagePngToImageSourceConverter`.
+
 ## [0.5.5] — 2026-05-25
 
 ### Added

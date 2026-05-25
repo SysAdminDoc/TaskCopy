@@ -10,6 +10,7 @@
             </ResourceDictionary.MergedDictionaries>
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
             <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter" />
+            <conv:ImagePngToImageSourceConverter x:Key="ImagePngToImageSourceConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

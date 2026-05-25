@@ -11,7 +11,7 @@ namespace TaskCopy.Data;
 internal static class Migrations
 {
     /// <summary>The schema version this build expects.</summary>
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
 
     public static void Apply(SqliteConnection conn)
     {
@@ -21,6 +21,7 @@ internal static class Migrations
         if (version < 3) ApplyV3(conn);
         if (version < 4) ApplyV4(conn);
         if (version < 5) ApplyV5(conn);
+        if (version < 6) ApplyV6(conn);
     }
 
     private static int GetUserVersion(SqliteConnection conn)
@@ -160,6 +161,24 @@ internal static class Migrations
         using var tx = conn.BeginTransaction();
         AddColumnIfMissing(conn, tx, "snippets", "target_app_glob", "TEXT");
         SetUserVersion(conn, 5);
+        tx.Commit();
+    }
+
+    /// <summary>
+    /// F33: image snippets. Text snippets keep content_kind=0 and body as the
+    /// canonical payload. Image snippets set content_kind=1 and store a PNG
+    /// encoding plus dimensions for thumbnails / labels. Clipboard writes
+    /// decode the PNG back into a BitmapSource, which WPF places on the
+    /// clipboard as an image format apps can paste.
+    /// </summary>
+    private static void ApplyV6(SqliteConnection conn)
+    {
+        using var tx = conn.BeginTransaction();
+        AddColumnIfMissing(conn, tx, "snippets", "content_kind", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(conn, tx, "snippets", "image_png", "BLOB");
+        AddColumnIfMissing(conn, tx, "snippets", "image_width", "INTEGER");
+        AddColumnIfMissing(conn, tx, "snippets", "image_height", "INTEGER");
+        SetUserVersion(conn, 6);
         tx.Commit();
     }
 

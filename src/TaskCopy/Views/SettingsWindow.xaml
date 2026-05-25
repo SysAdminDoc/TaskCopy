@@ -59,25 +59,44 @@
                 </ListBox.ContextMenu>
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:Snippet}">
-                        <StackPanel>
-                            <TextBlock Text="{Binding Title}"
-                                       Style="{StaticResource Mocha.Body}"
-                                       ToolTip="{Binding Title}" />
-                            <TextBlock Text="{Binding Preview}"
-                                       Style="{StaticResource Mocha.Body.Subtle}"
-                                       Margin="0,2,0,0"
-                                       ToolTip="{Binding Body}" />
-                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0"
+                                    Width="44"
+                                    Height="34"
+                                    CornerRadius="4"
+                                    ClipToBounds="True"
+                                    Background="{StaticResource Mocha.Surface0.Brush}"
+                                    Margin="0,0,8,0"
+                                    Visibility="{Binding IsImage, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Image Source="{Binding ImagePng, Converter={StaticResource ImagePngToImageSourceConverter}}"
+                                       Stretch="UniformToFill" />
+                            </Border>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding Title}"
+                                           Style="{StaticResource Mocha.Body}"
+                                           ToolTip="{Binding Title}" />
+                                <TextBlock Text="{Binding Preview}"
+                                           Style="{StaticResource Mocha.Body.Subtle}"
+                                           Margin="0,2,0,0"
+                                           ToolTip="{Binding Body}" />
+                            </StackPanel>
+                        </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
+            <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
                 <Button Style="{StaticResource Mocha.Button.Accent}" Content="Add" Command="{Binding AddSnippetCommand}" />
+                <Button Style="{StaticResource Mocha.Button}" Content="Add image" Command="{Binding AddImageFromClipboardCommand}" Margin="8,0,0,0"
+                        ToolTip="Create an image snippet from the current clipboard image. Images are never captured in the background." />
                 <Button Style="{StaticResource Mocha.Button.Danger}" Content="Delete" Command="{Binding DeleteSnippetCommand}" Margin="8,0,0,0" />
                 <Button Style="{StaticResource Mocha.Button}" Content="↑" Command="{Binding MoveUpCommand}" Margin="8,0,0,0" Width="34" />
                 <Button Style="{StaticResource Mocha.Button}" Content="↓" Command="{Binding MoveDownCommand}" Margin="4,0,0,0" Width="34" />
-            </StackPanel>
+            </WrapPanel>
         </Grid>
 
         <!-- Right: editor + preferences -->

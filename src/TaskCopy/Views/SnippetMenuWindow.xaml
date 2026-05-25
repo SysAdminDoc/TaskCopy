@@ -257,6 +257,17 @@
                                        VerticalAlignment="Center"
                                        Margin="0,0,6,0" />
                             <StackPanel Grid.Column="1">
+                                <Border Width="84"
+                                        Height="50"
+                                        CornerRadius="4"
+                                        ClipToBounds="True"
+                                        Background="{StaticResource Mocha.Surface0.Brush}"
+                                        Margin="0,0,0,6"
+                                        HorizontalAlignment="Left"
+                                        Visibility="{Binding IsImage, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <Image Source="{Binding ImagePng, Converter={StaticResource ImagePngToImageSourceConverter}}"
+                                           Stretch="UniformToFill" />
+                                </Border>
                                 <TextBlock Text="{Binding Title}"
                                            Style="{StaticResource Mocha.Body}"
                                            ToolTip="{Binding Title}" />

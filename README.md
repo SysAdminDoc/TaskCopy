@@ -1,6 +1,6 @@
 # TaskCopy
 
-[![Version](https://img.shields.io/badge/version-0.5.5-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.6-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://www.microsoft.com/windows)
 [![Stack](https://img.shields.io/badge/stack-.NET%2010%20%2F%20WPF-512BD4)](https://dotnet.microsoft.com)
@@ -11,9 +11,9 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 
 ## Status
 
-**v0.5.5** — "Multi-field forms." TaskCopy now supports reusable form prompts (`{{form:Name|Ticket}}` plus `{{ask:Name}}` / `{{ask:Ticket}}`) alongside Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
+**v0.5.6** — "Image snippets." TaskCopy can create explicit image snippets from the current clipboard image, store them with thumbnails, and copy/paste them back as clipboard images. The v0.5 line also includes reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
 
-## Features (v0.5.5)
+## Features (v0.5.6)
 
 ### Picker & paste
 - **Tray icon** — left-click opens snippet flyout at the cursor; right-click opens a native Mocha/Latte menu (Open snippets / Settings / About / Quit); double-click opens Settings.
@@ -26,12 +26,13 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 ### Snippet content
 - **Placeholders** — `{{date}}` `{{date:format}}` `{{time}}` `{{time:format}}` `{{clipboard}}` `{{cursor}}` `{{ask:Field}}` `{{form:Field1|Field2}}`. A form token prompts once and reuses values through matching `{{ask:Field}}` tokens. Pipe-chained transforms: `{{clipboard|upper}}`, `{{clipboard|trim|lower}}`, `{{clipboard|jsonpretty}}`, `{{clipboard|urldecode}}`, `{{clipboard|base64decode}}`, `{{clipboard|sha256}}`. Live preview in the editor.
 - **Groups** — organize snippets via the Manage groups dialog; per-snippet Group dropdown; flyout chip strip.
+- **Image snippets** — Settings → Add image captures the current clipboard image into an explicit image snippet, shows thumbnails in Settings and the flyout, and copies/pastes the image back when picked. Background clipboard capture remains text-only.
 - **Pin to top** + flyout sort modes — Manual / Most used (decay-weighted frecency, pinned on top) / Recently used (pinned on top).
 - **Monospace toggle** per snippet — editor + flyout tooltip switch to Cascadia Mono for code.
 
 ### Reliability & data safety
 - **SQLite store** at `%LOCALAPPDATA%\TaskCopy\snippets.db` — schema migrations via `PRAGMA user_version`, `journal_mode = WAL`, FK enforcement, startup `PRAGMA quick_check` integrity check with one-click restore.
-- **JSON / `.taskpack` / Espanso YAML import** + **JSON export**. Espanso static `matches:` entries become snippets; unsupported dynamic matches are skipped. Automatic on-startup backup uses `VACUUM INTO` (3-deep rotation, throttled to once per 24 h).
+- **JSON / `.taskpack` / Espanso YAML import** + **JSON export**. JSON export round-trips text and image snippets; Espanso static `matches:` entries become text snippets while unsupported dynamic matches are skipped. Automatic on-startup backup uses `VACUUM INTO` (3-deep rotation, throttled to once per 24 h).
 - **Restore from backup…** — Settings → Diagnostics lists the available snapshots and swaps them in atomically (with a pre-restore rollback snapshot in case the user changes their mind).
 - **Soft-delete trash** — confirm-delete then 30-day auto-purge. Trash window in Settings shows trashed snippets with per-row Restore / Delete Permanently / Empty Trash.
 - **Single-instance handoff** via named pipe; subsequent launches focus an existing window or take a CLI directive.

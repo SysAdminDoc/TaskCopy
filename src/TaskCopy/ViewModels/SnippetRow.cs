@@ -18,6 +18,8 @@ public sealed class SnippetRow
     public string Preview => Snippet.Preview;
     public string Body => Snippet.Body;
     public bool Pinned => Snippet.Pinned;
+    public bool IsImage => Snippet.IsImage;
+    public byte[]? ImagePng => Snippet.ImagePng;
 
     /// <summary>I25: monospace snippets keep aligned columns in the hover tooltip.</summary>
     public FontFamily BodyTooltipFontFamily => Snippet.IsMonospace
