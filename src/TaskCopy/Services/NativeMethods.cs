@@ -64,6 +64,7 @@ internal static class NativeMethods
     public const uint KEYEVENTF_KEYUP = 0x0002;
     public const ushort VK_CONTROL = 0x11;
     public const ushort VK_V = 0x56;
+    public const ushort VK_LEFT = 0x25;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct INPUT

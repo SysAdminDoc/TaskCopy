@@ -5,6 +5,7 @@ using System.Windows.Media.Imaging;
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
 using TaskCopy.Data;
+using TaskCopy.Models;
 using TaskCopy.Services;
 using TaskCopy.ViewModels;
 using TaskCopy.Views;
@@ -134,7 +135,7 @@ public partial class App : Application
             return;
         }
 
-        var vm = new SnippetMenuViewModel(_db, _clipboard);
+        var vm = new SnippetMenuViewModel(_db);
         vm.EditRequested += (_, _) =>
         {
             _snippetMenu?.Close();
@@ -146,13 +147,7 @@ public partial class App : Application
             ShowAbout();
         };
         vm.QuitRequested += (_, _) => QuitApp();
-        vm.SnippetCopied += async (_, _) =>
-        {
-            // Let the dispatcher finish closing the flyout, then a tiny tick more
-            // so SetForegroundWindow targets the user's prior window instead of us.
-            await Task.Delay(20);
-            Dispatcher.Invoke(() => _autoPaste?.TryAutoPaste());
-        };
+        vm.SnippetCopyRequested += async (_, s) => await HandleSnippetCopyAsync(s);
 
         _snippetMenu = new SnippetMenuWindow(vm);
         _snippetMenu.Closed += (_, _) => _snippetMenu = null;
@@ -181,6 +176,65 @@ public partial class App : Application
         };
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    private async Task HandleSnippetCopyAsync(Snippet snippet)
+    {
+        if (_clipboard is null || _db is null) return;
+
+        var previousClipboard = TryReadClipboardText();
+
+        var ctx = new TemplatingContext
+        {
+            PreviousClipboard = previousClipboard,
+            PromptFor = field => Dispatcher.Invoke(() => AskWindow.Prompt(field)),
+        };
+
+        ExpansionResult expansion;
+        try
+        {
+            expansion = SnippetTemplating.Expand(snippet.Body, ctx);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("SnippetTemplating.Expand", ex);
+            expansion = new ExpansionResult { Body = snippet.Body };
+        }
+
+        if (expansion.Cancelled)
+        {
+            _snippetMenu?.Close();
+            return;
+        }
+
+        if (!_clipboard.TryCopy(expansion.Body))
+        {
+            return;
+        }
+
+        try { _db.RecordUse(snippet.Id); } catch (Exception ex) { CrashLog.Write("RecordUse", ex); }
+
+        _snippetMenu?.Close();
+
+        await Task.Delay(20);
+        Dispatcher.Invoke(() => _autoPaste?.TryAutoPaste(expansion.CursorOffsetFromEnd));
+    }
+
+    private static string TryReadClipboardText()
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                if (Clipboard.ContainsText()) return Clipboard.GetText() ?? string.Empty;
+                return string.Empty;
+            }
+            catch
+            {
+                Thread.Sleep(30);
+            }
+        }
+        return string.Empty;
     }
 
     private void OnPipeMessage(string msg)

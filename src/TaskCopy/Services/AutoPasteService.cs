@@ -21,7 +21,7 @@ public sealed class AutoPasteService
         _settings = settings;
     }
 
-    public bool TryAutoPaste()
+    public bool TryAutoPaste(int? cursorOffsetFromEnd = null)
     {
         if (!_settings.AutoPaste) return false;
         if (!_capture.TryRestore()) return false;
@@ -31,7 +31,15 @@ public sealed class AutoPasteService
         // delivered to TaskCopy's own (already-closing) window.
         Thread.Sleep(30);
 
-        return SendCtrlV();
+        if (!SendCtrlV()) return false;
+
+        if (cursorOffsetFromEnd is int n && n > 0)
+        {
+            // Brief settle so the paste actually lands before we move the caret.
+            Thread.Sleep(15);
+            SendLeftArrows(n);
+        }
+        return true;
     }
 
     private static bool SendCtrlV()
@@ -54,5 +62,23 @@ public sealed class AutoPasteService
 
         var sent = NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<NativeMethods.INPUT>());
         return sent == inputs.Length;
+    }
+
+    private static void SendLeftArrows(int count)
+    {
+        // Cap to a sane upper bound so a malformed snippet can't pin the
+        // keyboard with thousands of arrow presses.
+        const int Max = 5000;
+        if (count > Max) count = Max;
+        var inputs = new NativeMethods.INPUT[count * 2];
+        for (int i = 0; i < count; i++)
+        {
+            inputs[i * 2].type = NativeMethods.INPUT_KEYBOARD;
+            inputs[i * 2].u.ki.wVk = NativeMethods.VK_LEFT;
+            inputs[i * 2 + 1].type = NativeMethods.INPUT_KEYBOARD;
+            inputs[i * 2 + 1].u.ki.wVk = NativeMethods.VK_LEFT;
+            inputs[i * 2 + 1].u.ki.dwFlags = NativeMethods.KEYEVENTF_KEYUP;
+        }
+        NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<NativeMethods.INPUT>());
     }
 }

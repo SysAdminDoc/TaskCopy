@@ -19,7 +19,6 @@ public partial class SnippetMenuWindow : Window
 
         Deactivated += OnDeactivated;
         PreviewKeyDown += OnPreviewKeyDown;
-        vm.SnippetCopied += (_, _) => Dispatcher.Invoke(Close);
     }
 
     private void OnDeactivated(object? sender, EventArgs e)

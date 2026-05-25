@@ -10,7 +10,6 @@ namespace TaskCopy.ViewModels;
 public partial class SnippetMenuViewModel : ObservableObject
 {
     private readonly SnippetDatabase _db;
-    private readonly ClipboardService _clipboard;
     private List<Snippet> _all = new();
 
     public ObservableCollection<SnippetRow> Snippets { get; } = new();
@@ -30,15 +29,19 @@ public partial class SnippetMenuViewModel : ObservableObject
     [ObservableProperty]
     private int _selectedIndex = -1;
 
-    public event EventHandler? SnippetCopied;
+    /// <summary>
+    /// Raised when the user picks a snippet. The orchestrator (App) expands
+    /// placeholders, writes the clipboard, records use, closes the flyout,
+    /// and triggers auto-paste.
+    /// </summary>
+    public event EventHandler<Snippet>? SnippetCopyRequested;
     public event EventHandler? EditRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler? QuitRequested;
 
-    public SnippetMenuViewModel(SnippetDatabase db, ClipboardService clipboard)
+    public SnippetMenuViewModel(SnippetDatabase db)
     {
         _db = db;
-        _clipboard = clipboard;
     }
 
     public void Refresh()
@@ -128,10 +131,7 @@ public partial class SnippetMenuViewModel : ObservableObject
     private void Copy(Snippet? snippet)
     {
         if (snippet is null) return;
-        if (_clipboard.TryCopy(snippet.Body))
-        {
-            SnippetCopied?.Invoke(this, EventArgs.Empty);
-        }
+        SnippetCopyRequested?.Invoke(this, snippet);
     }
 
     [RelayCommand]

@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using TaskCopy.ViewModels;
 
@@ -60,5 +61,40 @@ public partial class SettingsWindow : Window
         _capturingHotkey = false;
         _vm.SetHotkey(key, modifiers);
         e.Handled = true;
+    }
+
+    private void OnInsertDate(object sender, RoutedEventArgs e) => InsertAtCaret("{{date}}");
+    private void OnInsertTime(object sender, RoutedEventArgs e) => InsertAtCaret("{{time}}");
+    private void OnInsertClipboard(object sender, RoutedEventArgs e) => InsertAtCaret("{{clipboard}}");
+    private void OnInsertCursor(object sender, RoutedEventArgs e) => InsertAtCaret("{{cursor}}");
+
+    private void OnInsertAsk(object sender, RoutedEventArgs e)
+    {
+        var field = AskWindow.Prompt("Prompt label", this);
+        if (string.IsNullOrEmpty(field)) return;
+        InsertAtCaret($"{{{{ask:{field}}}}}");
+    }
+
+    private void InsertAtCaret(string text)
+    {
+        if (!_vm.HasSelection) return;
+        var caret = BodyEditor.CaretIndex;
+        var selStart = BodyEditor.SelectionStart;
+        var selLen = BodyEditor.SelectionLength;
+
+        var body = _vm.EditBody ?? string.Empty;
+        if (selLen > 0)
+        {
+            body = body.Remove(selStart, selLen).Insert(selStart, text);
+            caret = selStart + text.Length;
+        }
+        else
+        {
+            body = body.Insert(caret, text);
+            caret += text.Length;
+        }
+        _vm.EditBody = body;
+        BodyEditor.Focus();
+        BodyEditor.CaretIndex = caret;
     }
 }

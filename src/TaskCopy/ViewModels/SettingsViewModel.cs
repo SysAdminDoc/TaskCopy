@@ -29,6 +29,8 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     [NotifyPropertyChangedFor(nameof(EditTitle))]
     [NotifyPropertyChangedFor(nameof(EditBody))]
+    [NotifyPropertyChangedFor(nameof(EditIsMonospace))]
+    [NotifyPropertyChangedFor(nameof(EditBodyFontFamily))]
     private Snippet? _selectedSnippet;
 
     partial void OnSelectedSnippetChanging(Snippet? value)
@@ -66,6 +68,25 @@ public partial class SettingsViewModel : ObservableObject
             DirtyChanged?.Invoke(this, EventArgs.Empty);
         }
     }
+
+    public bool EditIsMonospace
+    {
+        get => SelectedSnippet?.IsMonospace ?? false;
+        set
+        {
+            if (SelectedSnippet is null) return;
+            if (SelectedSnippet.IsMonospace == value) return;
+            SelectedSnippet.IsMonospace = value;
+            try { _db.SetMonospace(SelectedSnippet.Id, value); } catch (Exception ex) { CrashLog.Write("SetMonospace", ex); }
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(EditBodyFontFamily));
+        }
+    }
+
+    public System.Windows.Media.FontFamily EditBodyFontFamily =>
+        (SelectedSnippet?.IsMonospace ?? false)
+            ? new System.Windows.Media.FontFamily("Cascadia Mono, Consolas, Courier New")
+            : new System.Windows.Media.FontFamily("Segoe UI Variable Text, Segoe UI");
 
     private void ScheduleSave(Snippet snippet)
     {
