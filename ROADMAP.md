@@ -87,7 +87,7 @@ Goal: scale snippets past 50, add power-user editing affordances.
 - [x] **F8 — Frecency / Pin / "Recent" ordering** (`used_count`/`last_used_at`/`pinned` columns)
 - [x] **F9 — JSON import/export + automatic on-startup backup** (rotated 3-deep via `VACUUM INTO`)
 - [x] **F14 — Snippet preview popup on hover + monospace body toggle** (per-snippet `is_monospace`) — preview tooltips already shipped in v0.2 (I9); monospace toggle shipped here, hover popup deferred (current tooltip covers it).
-- [ ] **F15 — Optional clipboard auto-capture (Recent clips section)** (`AddClipboardFormatListener` + `recent_clips` table; respects `ExcludeClipboardContentFromMonitors`)
+- [x] **F15 — Optional clipboard auto-capture (Recent clips section)** (`AddClipboardFormatListener` + `recent_clips` table; respects `ExcludeClipboardContentFromMonitors`) — capture + Settings toggle + "Clear" shipped; flyout "Recent" section deferred (clips are stored and clearable, but not yet shown in the picker).
 - [ ] **I6 — Confirm-delete (with "don't ask again") + soft-delete trash** (`deleted_at INTEGER NULL`)
 - [ ] **I7 — Drag-reorder in Settings list**
 - [x] **I8 — Insert-token buttons in editor toolbar (`{{date}}`, `{{clipboard}}`, `{{ask}}`)**

@@ -242,6 +242,9 @@ public partial class SettingsViewModel : ObservableObject
     private bool _autoPaste;
 
     [ObservableProperty]
+    private bool _recentClipsEnabled;
+
+    [ObservableProperty]
     private string _statusMessage = string.Empty;
 
     public sealed record FlyoutSortModeOption(FlyoutSortMode Mode, string Label)
@@ -278,6 +281,7 @@ public partial class SettingsViewModel : ObservableObject
         HotkeyDisplay = HotkeyService.FormatHotkey(HotkeyKey, HotkeyModifiers);
         StartWithWindows = _startup.IsEnabled;
         AutoPaste = _settings.AutoPaste;
+        RecentClipsEnabled = _settings.RecentClipsEnabled;
     }
 
     public void ReloadGroups()
@@ -454,5 +458,32 @@ public partial class SettingsViewModel : ObservableObject
     {
         _settings.AutoPaste = value;
         StatusMessage = value ? "Auto-paste enabled." : "Auto-paste disabled.";
+    }
+
+    partial void OnRecentClipsEnabledChanged(bool value)
+    {
+        // Persisted + watcher-toggled by App via SetRecentClipsEnabled;
+        // SetRecentClipsEnabled is wired through the optional callback.
+        ToggleRecentClipsRequested?.Invoke(this, value);
+        StatusMessage = value
+            ? "Recent clipboard auto-capture is ON. Items flagged 'do not include' are still excluded."
+            : "Recent clipboard auto-capture is OFF.";
+    }
+
+    public event EventHandler<bool>? ToggleRecentClipsRequested;
+
+    [RelayCommand]
+    private void ClearRecentClips()
+    {
+        try
+        {
+            _db.ClearRecentClips();
+            StatusMessage = "Recent clipboard items cleared.";
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("ClearRecentClips", ex);
+            StatusMessage = $"Clear failed: {ex.Message}";
+        }
     }
 }

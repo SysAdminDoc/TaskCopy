@@ -28,6 +28,7 @@ public partial class App : Application
     private ForegroundWindowCapture? _foreground;
     private AutoPasteService? _autoPaste;
     private SingleInstanceServer? _pipeServer;
+    private ClipboardWatcher? _clipboardWatcher;
 
     private SnippetMenuWindow? _snippetMenu;
     private SettingsWindow? _settingsWindow;
@@ -91,6 +92,11 @@ public partial class App : Application
         // Per-snippet quick hotkeys (F7) — register every snippet that has a
         // quick_hotkey set. Failures are surfaced via RegistrationFailed.
         _hotkeys.RegisterAllSnippets(_db.GetAll().Select(s => (s.Id, s.QuickHotkey)));
+
+        // Clipboard auto-capture (F15) — off by default, opt-in via Settings.
+        _clipboardWatcher = new ClipboardWatcher(_hotkeyHost);
+        _clipboardWatcher.Captured += OnClipboardCaptured;
+        if (_settings.RecentClipsEnabled) _clipboardWatcher.Start();
 
         _trayIcon = new TaskbarIcon
         {
@@ -183,6 +189,7 @@ public partial class App : Application
 
         var vm = new SettingsViewModel(_db, _settings, _startup, _hotkeys);
         vm.ManageGroupsRequested += (_, _) => ShowManageGroups(vm);
+        vm.ToggleRecentClipsRequested += (_, enabled) => SetRecentClipsEnabled(enabled);
         _settingsWindow = new SettingsWindow(vm);
         _settingsWindow.Closed += (_, _) =>
         {
@@ -233,6 +240,11 @@ public partial class App : Application
             return;
         }
 
+        // Suppress the watcher echo *before* writing — clipboard listeners
+        // fire synchronously in WM_CLIPBOARDUPDATE on the same dispatcher
+        // pump and the comparison key needs to be in place when they do.
+        _clipboardWatcher?.SuppressNext(expansion.Body);
+
         if (!_clipboard.TryCopy(expansion.Body))
         {
             return;
@@ -261,6 +273,25 @@ public partial class App : Application
             }
         }
         return string.Empty;
+    }
+
+    private void OnClipboardCaptured(object? sender, string body)
+    {
+        if (_db is null || _settings is null) return;
+        try { _db.InsertRecentClip(body, _settings.RecentClipsMax); }
+        catch (Exception ex) { CrashLog.Write("InsertRecentClip", ex); }
+    }
+
+    /// <summary>
+    /// Toggle clipboard auto-capture (F15). Called by Settings when the user
+    /// flips the checkbox. Starting the watcher requires the hidden HWND.
+    /// </summary>
+    public void SetRecentClipsEnabled(bool enabled)
+    {
+        if (_settings is null || _clipboardWatcher is null) return;
+        _settings.RecentClipsEnabled = enabled;
+        if (enabled) _clipboardWatcher.Start();
+        else _clipboardWatcher.Stop();
     }
 
     private void OnPipeMessage(string msg)
@@ -350,6 +381,7 @@ public partial class App : Application
     {
         try
         {
+            _clipboardWatcher?.Dispose();
             _pipeServer?.Stop();
             _hotkeys?.Unregister();
             _trayIcon?.Dispose();
