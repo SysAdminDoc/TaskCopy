@@ -54,7 +54,7 @@ public sealed class SnippetDatabase
         SELECT id, title, body, sort_order, created_at,
                quick_hotkey, used_count, last_used_at, pinned, is_monospace,
                group_id, deleted_at, paste_mode,
-               last_target_process_name, last_target_at
+               last_target_process_name, last_target_at, target_app_glob
         FROM snippets
         """;
 
@@ -113,6 +113,7 @@ public sealed class SnippetDatabase
                 PasteMode = reader.IsDBNull(12) ? 0 : (int)reader.GetInt64(12),
                 LastTargetProcessName = reader.IsDBNull(13) ? null : reader.GetString(13),
                 LastTargetAt = reader.IsDBNull(14) ? null : reader.GetInt64(14),
+                TargetAppGlob = reader.IsDBNull(15) ? null : reader.GetString(15),
             });
         }
         return list;
@@ -277,6 +278,17 @@ public sealed class SnippetDatabase
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE snippets SET used_count = used_count + 1, last_used_at = $now WHERE id = $id;";
         cmd.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>F35: set the comma-separated process-name glob list (NULL clears).</summary>
+    public void SetTargetAppGlob(long id, string? glob)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET target_app_glob = $g WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$g", (object?)glob ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$id", id);
         cmd.ExecuteNonQuery();
     }

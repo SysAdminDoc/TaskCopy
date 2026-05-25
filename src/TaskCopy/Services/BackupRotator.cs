@@ -10,7 +10,8 @@ namespace TaskCopy.Services;
 /// </summary>
 public static class BackupRotator
 {
-    public static void Rotate(SnippetDatabase db, int keep = 3)
+    public static void Rotate(SnippetDatabase db, int keep = 3,
+                                bool encrypt = false, string? password = null)
     {
         if (keep < 1) return;
         var dir = Path.GetDirectoryName(db.DbPath);
@@ -19,7 +20,11 @@ public static class BackupRotator
         var name = Path.GetFileNameWithoutExtension(db.DbPath);
         var ext = Path.GetExtension(db.DbPath);
 
-        string Slot(int i) => Path.Combine(dir, $"{name}.bak.{i}{ext}");
+        // F49: when encryption is on, the suffix changes to .enc so the file
+        // type is obvious + a plain SQLite tool won't accidentally try to open
+        // a ciphertext blob as a database. The rotator handles either suffix.
+        string Suffix() => encrypt ? ".enc" : ext;
+        string Slot(int i) => Path.Combine(dir, $"{name}.bak.{i}{Suffix()}");
 
         // Drop the oldest, then shift each one up by one slot.
         var oldest = Slot(keep - 1);
@@ -34,9 +39,38 @@ public static class BackupRotator
             try { File.Move(src, dst); } catch { /* best-effort */ }
         }
 
-        // Fresh snapshot in slot 0.
+        // Fresh snapshot in slot 0. When encryption is on, we VACUUM INTO a
+        // temp plaintext file first, run quick_check against it, then encrypt
+        // to the final slot — same verify discipline as the plaintext path.
         var fresh = Slot(0);
         if (File.Exists(fresh)) TryDelete(fresh);
+
+        if (encrypt && !string.IsNullOrEmpty(password))
+        {
+            var plaintextTemp = Path.Combine(dir, $"{name}.bak.tmp{ext}");
+            try
+            {
+                if (File.Exists(plaintextTemp)) TryDelete(plaintextTemp);
+                db.BackupTo(plaintextTemp);
+
+                // Verify the plaintext snapshot before encrypting.
+                var status = SnippetDatabase.IntegrityCheck(plaintextTemp);
+                if (!string.Equals(status, "ok", StringComparison.OrdinalIgnoreCase))
+                {
+                    CrashLog.Write("BackupRotator.RotateEncrypted.Verify",
+                        new Exception($"quick_check on temp plaintext failed: {status}"));
+                    return;
+                }
+
+                BackupCrypto.EncryptFile(plaintextTemp, fresh, password);
+            }
+            finally
+            {
+                if (File.Exists(plaintextTemp)) TryDelete(plaintextTemp);
+            }
+            return;
+        }
+
         db.BackupTo(fresh);
 
         // B13: SQLite's VACUUM INTO is transactionally safe inside SQLite but
@@ -93,11 +127,22 @@ public static class BackupRotator
         var list = new List<BackupSlot>(keep);
         for (int i = 0; i < keep; i++)
         {
-            var path = Path.Combine(dir, $"{name}.bak.{i}{ext}");
-            if (!File.Exists(path)) continue;
-            var stamp = File.GetLastWriteTimeUtc(path);
-            var count = SnippetDatabase.TryCountSnippets(path);
-            list.Add(new BackupSlot(i, path, stamp, count));
+            // F49: both .db and .enc shapes are accepted. Encrypted slots show
+            // -1 for snippet count (we can't open them without the password)
+            // and the BackupSlot.IsEncrypted flag flags them to the restore UI.
+            var dbPath = Path.Combine(dir, $"{name}.bak.{i}{ext}");
+            var encPath = Path.Combine(dir, $"{name}.bak.{i}.enc");
+            if (File.Exists(dbPath))
+            {
+                var stamp = File.GetLastWriteTimeUtc(dbPath);
+                var count = SnippetDatabase.TryCountSnippets(dbPath);
+                list.Add(new BackupSlot(i, dbPath, stamp, count, IsEncrypted: false));
+            }
+            else if (File.Exists(encPath))
+            {
+                var stamp = File.GetLastWriteTimeUtc(encPath);
+                list.Add(new BackupSlot(i, encPath, stamp, -1, IsEncrypted: true));
+            }
         }
         return list;
     }
@@ -107,10 +152,14 @@ public static class BackupRotator
     /// pre-restore snapshot first ({name}.bak.preRestore{ext}) so the
     /// operation is itself reversible.
     ///
+    /// F49: when the source is encrypted (BackupCrypto.IsEncryptedBackup),
+    /// the caller must supply <paramref name="password"/>. Decrypts to a
+    /// temp file first, verifies via quick_check, then swaps in.
+    ///
     /// Caller is responsible for ensuring no SqliteConnection is open on the
     /// live DB when this runs.
     /// </summary>
-    public static void RestoreFrom(SnippetDatabase db, string sourceBackupPath)
+    public static void RestoreFrom(SnippetDatabase db, string sourceBackupPath, string? password = null)
     {
         if (!File.Exists(sourceBackupPath))
             throw new FileNotFoundException("Backup file not found.", sourceBackupPath);
@@ -137,7 +186,38 @@ public static class BackupRotator
             }
         }
 
-        // Drop the live file (+ WAL sidecars) and swap in the backup.
+        // F49: if the source is encrypted, decrypt to a temp before swap.
+        // Verify quick_check on the decrypted file; bail (without touching
+        // the live DB) when the password is wrong or the ciphertext is bad.
+        if (BackupCrypto.IsEncryptedBackup(sourceBackupPath))
+        {
+            if (string.IsNullOrEmpty(password))
+                throw new InvalidOperationException("This backup is encrypted; a password is required.");
+
+            var decryptedTemp = Path.Combine(dir, $"{name}.bak.decrypt-tmp{ext}");
+            try
+            {
+                if (File.Exists(decryptedTemp)) TryDelete(decryptedTemp);
+                if (!BackupCrypto.TryDecryptFile(sourceBackupPath, decryptedTemp, password!))
+                    throw new InvalidOperationException("Decryption failed — wrong password or corrupt backup.");
+
+                var status = SnippetDatabase.IntegrityCheck(decryptedTemp);
+                if (!string.Equals(status, "ok", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException($"Decrypted backup failed integrity check: {status}");
+
+                TryDelete(db.DbPath + "-wal");
+                TryDelete(db.DbPath + "-shm");
+                TryDelete(db.DbPath);
+                File.Copy(decryptedTemp, db.DbPath, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(decryptedTemp)) TryDelete(decryptedTemp);
+            }
+            return;
+        }
+
+        // Plaintext path — original v0.4.3 behavior.
         TryDelete(db.DbPath + "-wal");
         TryDelete(db.DbPath + "-shm");
         TryDelete(db.DbPath);
@@ -146,9 +226,17 @@ public static class BackupRotator
 }
 
 /// <summary>One row in the "Restore from backup" picker.</summary>
-public sealed record BackupSlot(int Index, string Path, DateTime LastWriteUtc, int SnippetCount)
+public sealed record BackupSlot(int Index, string Path, DateTime LastWriteUtc, int SnippetCount, bool IsEncrypted = false)
 {
-    public string DisplayLabel =>
-        $"Backup #{Index} — {LastWriteUtc.ToLocalTime():yyyy-MM-dd HH:mm}"
-        + (SnippetCount >= 0 ? $" · {SnippetCount} snippet{(SnippetCount == 1 ? "" : "s")}" : " · (unreadable)");
+    public string DisplayLabel
+    {
+        get
+        {
+            var stamp = $"Backup #{Index} — {LastWriteUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
+            if (IsEncrypted) return $"{stamp} · encrypted (password required)";
+            return SnippetCount >= 0
+                ? $"{stamp} · {SnippetCount} snippet{(SnippetCount == 1 ? "" : "s")}"
+                : $"{stamp} · (unreadable)";
+        }
+    }
 }

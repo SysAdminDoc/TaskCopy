@@ -54,6 +54,10 @@ public partial class Snippet : ObservableObject
     [ObservableProperty]
     private long? _lastTargetAt;
 
+    /// <summary>F35: comma-separated `*`-wildcard process-name patterns. Empty = universal.</summary>
+    [ObservableProperty]
+    private string? _targetAppGlob;
+
     public string Preview
     {
         get

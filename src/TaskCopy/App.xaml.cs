@@ -45,6 +45,13 @@ public partial class App : Application
     // One-time-per-session suppression for the "auto-paste skipped" toast.
     private bool _autoPasteFailToastShown;
 
+    /// <summary>
+    /// F49: in-memory backup password — populated when the user enters it via
+    /// Settings. Never persisted; lost on app exit. Only used to feed
+    /// BackupRotator.Rotate on the next startup-or-toggle cycle.
+    /// </summary>
+    private string? _inMemoryBackupPassword;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -135,8 +142,24 @@ public partial class App : Application
                 var elapsed = now - _settings.LastBackupAt;
                 if (elapsed >= 24 * 60 * 60 || _settings.LastBackupAt == 0)
                 {
-                    BackupRotator.Rotate(_db);
-                    _settings.LastBackupAt = now;
+                    // F49: when backup encryption is enabled, we need the user's
+                    // password to produce a usable .bak.{N}.enc. On startup
+                    // we don't have it yet (no UI prompt at OnStartup time), so
+                    // the rotator is deferred until the user opens Settings
+                    // and the in-memory password cache is populated. The skip
+                    // is logged so the user can spot it via Copy diagnostics.
+                    if (_settings.BackupEncrypted && string.IsNullOrEmpty(_inMemoryBackupPassword))
+                    {
+                        CrashLog.Write("BackupRotator.Rotate.SkipEncrypted",
+                            new Exception("Encryption is enabled but no password is cached in this session. Open Settings and re-enter the backup password to trigger a fresh snapshot."));
+                    }
+                    else
+                    {
+                        BackupRotator.Rotate(_db,
+                            encrypt: _settings.BackupEncrypted,
+                            password: _settings.BackupEncrypted ? _inMemoryBackupPassword : null);
+                        _settings.LastBackupAt = now;
+                    }
                 }
             }
             catch (Exception ex) { CrashLog.Write("BackupRotator.Rotate", ex); }
@@ -280,6 +303,9 @@ public partial class App : Application
         }
 
         var vm = new SnippetMenuViewModel(_db, _settings);
+        // F35: hand the captured foreground process name to the VM so its
+        // ApplyFilter can drop snippets whose target_app_glob doesn't match.
+        vm.CurrentTargetApp = _foreground?.TryGetLastTargetProcessName();
         vm.EditRequested += (_, _) =>
         {
             _snippetMenu?.Close();
@@ -322,6 +348,7 @@ public partial class App : Application
         vm.RestoreBackupRequested += (_, _) => ShowRestoreBackup(vm);
         vm.ResetToDefaultsRequested += (_, _) => ShowResetToDefaults(vm);
         vm.ShowBodyHistoryRequested += (_, snippet) => ShowBodyHistory(vm, snippet);
+        vm.ToggleBackupEncryptionRequested += (_, enabled) => HandleBackupEncryptionToggle(vm, enabled);
         // F47: hand the modal helper down so SettingsViewModel doesn't need a
         // Views-namespace using directive.
         vm.DeleteConfirmer = title => ConfirmDeleteWindow.Prompt(title, _settingsWindow);
@@ -748,6 +775,66 @@ public partial class App : Application
         w.ShowDialog();
     }
 
+    /// <summary>
+    /// F49: handle the Settings checkbox flip. Turning ON prompts for a
+    /// password (twice; via two AskWindow shots) and persists the PBKDF2
+    /// verification token + caches the password in-memory for this session.
+    /// Turning OFF prompts for the current password to confirm, then clears
+    /// the token. Either way, on cancel/failure the ViewModel's checkbox is
+    /// reverted to truth.
+    /// </summary>
+    private void HandleBackupEncryptionToggle(SettingsViewModel vm, bool enabled)
+    {
+        if (_settings is null) return;
+        if (enabled)
+        {
+            var first = AskWindow.Prompt("Backup encryption — set password", _settingsWindow);
+            if (string.IsNullOrEmpty(first))
+            {
+                vm.RevertBackupEncryptedBinding(_settings.BackupEncrypted);
+                return;
+            }
+            var second = AskWindow.Prompt("Backup encryption — confirm password", _settingsWindow);
+            if (second != first)
+            {
+                MessageBox.Show("Passwords didn't match. Encryption stays OFF.",
+                    "TaskCopy — Backup encryption",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                vm.RevertBackupEncryptedBinding(_settings.BackupEncrypted);
+                return;
+            }
+
+            _settings.BackupPasswordToken = BackupCrypto.MakePasswordToken(first);
+            _settings.BackupEncrypted = true;
+            _inMemoryBackupPassword = first;
+
+            MessageBox.Show(
+                "Backup encryption is ON. The next snapshot writes to .bak.0.enc.\n\n"
+                + "If you forget this password there is no recovery — encrypted backups become unreadable.",
+                "TaskCopy — Backup encryption",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        // Turning OFF — require the current password so a stranger can't
+        // disable the feature on an unlocked machine.
+        if (!string.IsNullOrEmpty(_settings.BackupPasswordToken))
+        {
+            var pwd = AskWindow.Prompt("Confirm current password to disable encryption", _settingsWindow);
+            if (string.IsNullOrEmpty(pwd) || !BackupCrypto.VerifyPasswordToken(_settings.BackupPasswordToken, pwd))
+            {
+                MessageBox.Show("Password didn't match. Encryption stays ON.",
+                    "TaskCopy — Backup encryption",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                vm.RevertBackupEncryptedBinding(_settings.BackupEncrypted);
+                return;
+            }
+        }
+        _settings.BackupEncrypted = false;
+        _settings.BackupPasswordToken = string.Empty;
+        _inMemoryBackupPassword = null;
+    }
+
     /// <summary>F46: open the body-history modal for a specific snippet.</summary>
     private void ShowBodyHistory(SettingsViewModel parentVm, Models.Snippet snippet)
     {
@@ -809,7 +896,17 @@ public partial class App : Application
 
         try
         {
-            BackupRotator.RestoreFrom(_db, slots[0].Path);
+            string? pwd = null;
+            if (slots[0].IsEncrypted)
+            {
+                pwd = AskWindow.Prompt("Backup password", _settingsWindow);
+                if (string.IsNullOrEmpty(pwd))
+                {
+                    parentVm.StatusMessage = "Restore cancelled — no password entered.";
+                    return;
+                }
+            }
+            BackupRotator.RestoreFrom(_db, slots[0].Path, pwd);
             parentVm.StatusMessage = $"Restored {slots[0].DisplayLabel}. Relaunch to apply.";
             MessageBox.Show(
                 "Restore complete. TaskCopy will now restart so the new database is opened cleanly.",

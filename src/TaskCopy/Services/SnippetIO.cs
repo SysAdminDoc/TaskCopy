@@ -31,7 +31,8 @@ public static class SnippetIO
         bool Pinned,
         bool IsMonospace,
         string? GroupName,
-        int PasteMode = 0);
+        int PasteMode = 0,
+        string? TargetAppGlob = null);
 
     public sealed record ExportGroup(string Name, int SortOrder);
 
@@ -68,7 +69,8 @@ public static class SnippetIO
                 Pinned: s.Pinned,
                 IsMonospace: s.IsMonospace,
                 GroupName: s.GroupId is long gid && nameById.TryGetValue(gid, out var gn) ? gn : null,
-                PasteMode: s.PasteMode
+                PasteMode: s.PasteMode,
+                TargetAppGlob: s.TargetAppGlob
             )).ToList(),
             SchemaVersion: Migrations.CurrentVersion);
 
@@ -129,6 +131,7 @@ public static class SnippetIO
             if (s.Pinned) db.SetPinned(id, true);
             if (!string.IsNullOrEmpty(s.QuickHotkey)) db.SetQuickHotkey(id, s.QuickHotkey);
             if (s.PasteMode != 0) db.SetPasteMode(id, s.PasteMode);
+            if (!string.IsNullOrEmpty(s.TargetAppGlob)) db.SetTargetAppGlob(id, s.TargetAppGlob);
             existingTitles.Add(s.Title);
             added++;
         }

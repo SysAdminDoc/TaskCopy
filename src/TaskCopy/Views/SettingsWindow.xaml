@@ -51,8 +51,12 @@
                      DragOver="OnSnippetListDragOver"
                      Drop="OnSnippetListDrop"
                      PreviewKeyDown="OnSnippetListKeyDown"
+                     ContextMenuOpening="OnSnippetListContextMenuOpening"
                      AutomationProperties.Name="Snippets"
-                     AutomationProperties.HelpText="List of saved snippets. Drag to reorder. Del to delete, Ctrl+N to add, F2 to rename. Use Add / Delete / Move buttons or arrow keys.">
+                     AutomationProperties.HelpText="List of saved snippets. Drag to reorder. Del to delete, Ctrl+N to add, F2 to rename. Right-click to move to group. Use Add / Delete / Move buttons or arrow keys.">
+                <ListBox.ContextMenu>
+                    <ContextMenu x:Name="SnippetListContextMenu" Style="{StaticResource Mocha.ContextMenu}" />
+                </ListBox.ContextMenu>
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:Snippet}">
                         <StackPanel>
@@ -185,6 +189,12 @@
                             Command="{Binding ShowBodyHistoryCommand}"
                             Margin="4,0,0,0"
                             ToolTip="Show up to 10 past versions of this snippet's body. Restore any of them with one click." />
+                    <TextBlock Text="Show in app:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="14,0,6,0" />
+                    <TextBox Style="{StaticResource Mocha.TextBox}"
+                             Width="200"
+                             Text="{Binding EditTargetAppGlob, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding HasSelection}"
+                             ToolTip="F35: comma-separated *-wildcard process names (e.g. outlook.exe, *code*.exe). When set, this snippet only appears in the flyout when the captured foreground app matches. Empty = universal." />
                 </StackPanel>
                 <TextBox Grid.Row="2"
                          x:Name="BodyEditor"
@@ -279,6 +289,11 @@
                             Command="{Binding ClearRecentClipsCommand}"
                             Margin="12,0,0,0"
                             ToolTip="Delete every stored recent clipboard item from the database." />
+                    <CheckBox Style="{StaticResource Mocha.CheckBox}"
+                              Content="Encrypt backups with password"
+                              IsChecked="{Binding BackupEncrypted}"
+                              Margin="20,0,0,0"
+                              ToolTip="When ON, rotated backups are encrypted with AES-256-GCM. You will be prompted for a password. Lose the password = lose the encrypted backups (no recovery)." />
                 </StackPanel>
 
                 <Grid Grid.Row="4" Grid.ColumnSpan="2" Margin="0,12,0,0">

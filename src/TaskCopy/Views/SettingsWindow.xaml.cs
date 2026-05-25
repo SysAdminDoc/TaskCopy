@@ -96,6 +96,40 @@ public partial class SettingsWindow : Window
     // Keyboard accelerators on the snippet list (I32)
     // -----------------------------------------------------------------------
 
+    /// <summary>
+    /// I41 (light): right-click on a snippet row in Settings → "Move to group →
+    /// (Ungrouped) / Work / Personal / ..." Picks straight from the live
+    /// `Groups` collection so the menu reflects whatever the user has defined.
+    /// </summary>
+    private void OnSnippetListContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        SnippetListContextMenu.Items.Clear();
+        if (_vm.SelectedSnippet is null)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var moveToHeader = new MenuItem
+        {
+            Header = $"Move \"{_vm.SelectedSnippet.Title}\" to…",
+            Style = (Style)Application.Current.Resources["Mocha.MenuItem"],
+        };
+        SnippetListContextMenu.Items.Add(moveToHeader);
+
+        foreach (var g in _vm.Groups)
+        {
+            var captured = g;
+            var item = new MenuItem
+            {
+                Header = g.Name,
+                Style = (Style)Application.Current.Resources["Mocha.MenuItem"],
+            };
+            item.Click += (_, _) => _vm.EditGroup = captured;
+            moveToHeader.Items.Add(item);
+        }
+    }
+
     private void OnSnippetListKeyDown(object sender, KeyEventArgs e)
     {
         // Don't steal keys when the user is interacting with the rename-in-place

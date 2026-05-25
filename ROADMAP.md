@@ -64,6 +64,14 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.2 — "Encrypted backups + per-app rules" ✅ SHIPPED (2026-05-25)
+
+Schema bumped V4 → V5.
+
+- [x] **F49** — Opt-in backup encryption. AES-256-GCM + PBKDF2-SHA256 (600k iters). New `Services/BackupCrypto.cs`. Settings checkbox "Encrypt backups with password" — disabling requires the current password. Lost password = unrecoverable backups; UX explicitly warns. Restore picker shows "encrypted (password required)" for `.enc` slots.
+- [x] **F35** — Per-app rules. New `snippets.target_app_glob` column (V5). Comma-separated `*`-wildcard process-name patterns. Flyout VM honors it via `AppGlob.Matches(glob, capturedForegroundProcess)`. JSON export round-trips.
+- [x] **I41 (light)** — Right-click context menu on Settings snippet list → "Move to group" submenu. Lighter than duplicating the flyout chip strip into Settings.
+
 ## v0.5.1 — "Multi-clip paste + flyout perf" ✅ SHIPPED (2026-05-25)
 
 - [x] **F32** — Multi-clip paste. Ctrl+click / Ctrl+Space toggles selection; Enter pastes the concatenated bundle with `settings.multipaste.separator` (default `\n\n`). Esc has three-stage clear.

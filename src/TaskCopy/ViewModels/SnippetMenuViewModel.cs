@@ -14,6 +14,9 @@ public partial class SnippetMenuViewModel : ObservableObject
     private List<Snippet> _all = new();
     private List<RecentClip> _allRecent = new();
 
+    /// <summary>F35: caller supplies the captured foreground process name so per-snippet target_app_glob can filter.</summary>
+    public string? CurrentTargetApp { get; set; }
+
     // I37: BulkObservableCollection suppresses per-item CollectionChanged
     // events during ApplyFilter's rebuild, then fires one Reset. WPF rebinds
     // the whole list in one frame instead of issuing N add/remove events —
@@ -223,6 +226,10 @@ public partial class SnippetMenuViewModel : ObservableObject
             // Group filter: 0 = All, -1 = Ungrouped, positive = specific group.
             if (groupId == -1L && s.GroupId is not null) continue;
             if (groupId > 0L && s.GroupId != groupId) continue;
+
+            // F35: per-app rule — hide snippets whose target_app_glob is set
+            // and doesn't match the captured foreground process. Unset = universal.
+            if (!AppGlob.Matches(s.TargetAppGlob, CurrentTargetApp)) continue;
 
             nextSnippets.Add(new SnippetRow(s, displayIndex));
             displayIndex++;

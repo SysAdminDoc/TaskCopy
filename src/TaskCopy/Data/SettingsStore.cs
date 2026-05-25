@@ -23,6 +23,8 @@ public sealed class SettingsStore
     private const string KeyStatsTotalPastes = "stats.total_pastes";
     private const string KeyStatsTotalChars = "stats.total_chars";
     private const string KeyMultiPasteSeparator = "multipaste.separator";
+    private const string KeyBackupEncrypted = "backup.encrypted";
+    private const string KeyBackupPwToken = "backup.pw_token";
 
     private readonly SnippetDatabase _db;
 
@@ -185,6 +187,25 @@ public sealed class SettingsStore
             return v is null ? "\n\n" : v;
         }
         set => _db.SetSetting(KeyMultiPasteSeparator, value ?? string.Empty);
+    }
+
+    /// <summary>
+    /// F49: when true, BackupRotator.Rotate wraps each new snapshot with
+    /// AES-256-GCM before writing it to disk. The password itself is NEVER
+    /// stored — only a PBKDF2 verification token (BackupPasswordToken) lives
+    /// in this KV. Toggling off does NOT decrypt existing .bak.{N}.enc files.
+    /// </summary>
+    public bool BackupEncrypted
+    {
+        get => string.Equals(_db.GetSetting(KeyBackupEncrypted), "1", StringComparison.Ordinal);
+        set => _db.SetSetting(KeyBackupEncrypted, value ? "1" : "0");
+    }
+
+    /// <summary>F49: PBKDF2 verification token. Empty/missing = no encryption configured.</summary>
+    public string BackupPasswordToken
+    {
+        get => _db.GetSetting(KeyBackupPwToken) ?? string.Empty;
+        set => _db.SetSetting(KeyBackupPwToken, value ?? string.Empty);
     }
 
     /// <summary>

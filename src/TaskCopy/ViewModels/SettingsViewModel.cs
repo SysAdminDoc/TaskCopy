@@ -59,6 +59,7 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(EditPinned))]
     [NotifyPropertyChangedFor(nameof(EditQuickHotkeyDisplay))]
     [NotifyPropertyChangedFor(nameof(EditPasteMode))]
+    [NotifyPropertyChangedFor(nameof(EditTargetAppGlob))]
     private Snippet? _selectedSnippet;
 
     partial void OnSelectedSnippetChanging(Snippet? value)
@@ -175,6 +176,27 @@ public partial class SettingsViewModel : ObservableObject
             if (SelectedSnippet.Pinned == value) return;
             SelectedSnippet.Pinned = value;
             try { _db.SetPinned(SelectedSnippet.Id, value); } catch (Exception ex) { CrashLog.Write("SetPinned", ex); }
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// F35: per-snippet "Target app filter" — comma-separated `*`-wildcard
+    /// patterns for process names (e.g. "outlook.exe,*code*.exe"). Empty
+    /// means "universal — show in every app." Persisted via
+    /// SnippetDatabase.SetTargetAppGlob.
+    /// </summary>
+    public string EditTargetAppGlob
+    {
+        get => SelectedSnippet?.TargetAppGlob ?? string.Empty;
+        set
+        {
+            if (SelectedSnippet is null) return;
+            var newVal = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+            if (string.Equals(SelectedSnippet.TargetAppGlob ?? string.Empty, newVal ?? string.Empty, StringComparison.Ordinal)) return;
+            SelectedSnippet.TargetAppGlob = newVal;
+            try { _db.SetTargetAppGlob(SelectedSnippet.Id, newVal); }
+            catch (Exception ex) { CrashLog.Write("SetTargetAppGlob", ex); }
             OnPropertyChanged();
         }
     }
@@ -549,6 +571,9 @@ public partial class SettingsViewModel : ObservableObject
         }
         AutoPaste = _settings.AutoPaste;
         RecentClipsEnabled = _settings.RecentClipsEnabled;
+        _suppressEncryptionToggleEvent = true;
+        try { BackupEncrypted = _settings.BackupEncrypted; }
+        finally { _suppressEncryptionToggleEvent = false; }
     }
 
     public void ReloadGroups()
@@ -967,6 +992,34 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     public event EventHandler<bool>? ToggleRecentClipsRequested;
+
+    [ObservableProperty]
+    private bool _backupEncrypted;
+
+    /// <summary>F49: App owns the password capture (Views layer); VM exposes the toggle.</summary>
+    public event EventHandler<bool>? ToggleBackupEncryptionRequested;
+
+    /// <summary>True while LoadFromStore is populating from disk — suppresses the F49 prompt event.</summary>
+    private bool _suppressEncryptionToggleEvent;
+
+    partial void OnBackupEncryptedChanged(bool value)
+    {
+        // Don't write to _settings here; App handles password capture + token
+        // generation + verification, then sets _settings.BackupEncrypted itself.
+        // We only emit the request; rolling back the binding on cancel is the
+        // App's responsibility.
+        if (_suppressEncryptionToggleEvent) return;
+        ToggleBackupEncryptionRequested?.Invoke(this, value);
+    }
+
+    /// <summary>App calls this when the password capture failed or the user cancelled.</summary>
+    public void RevertBackupEncryptedBinding(bool actualValue)
+    {
+        // Don't re-fire the event during the revert. Set the field directly
+        // and notify so the checkbox snaps back to truth.
+        if (BackupEncrypted == actualValue) return;
+        SetProperty(ref _backupEncrypted, actualValue, nameof(BackupEncrypted));
+    }
 
     [RelayCommand]
     private void ClearRecentClips()

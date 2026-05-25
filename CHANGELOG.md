@@ -5,6 +5,23 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] — 2026-05-25
+
+### Added
+- **Opt-in backup encryption (F49).** New "Encrypt backups with password" Settings checkbox. When ON, `BackupRotator.Rotate` writes `.bak.{N}.enc` files wrapped with AES-256-GCM; the key is derived from the user's password via PBKDF2-SHA256 (600,000 iters, per OWASP 2023). The password itself is **never** persisted — only a small PBKDF2 verification token (`settings.backup.pw_token`). Per-file salt + nonce so two backups of the same DB look different. Restore prompts for the password; wrong password / corrupt ciphertext fails closed. Encrypted slots show "encrypted (password required)" in the Restore picker. New `Services/BackupCrypto.cs` carries all the crypto + a `IsEncryptedBackup` magic-header probe. Disabling encryption requires the current password (so a stranger on an unlocked machine can't silently turn it off).
+- **Per-app rules (F35).** New `snippets.target_app_glob` column (schema V5). Comma-separated `*`-wildcard process-name patterns (`outlook.exe,*code*.exe`) restrict which apps a snippet shows in. `ForegroundWindowCapture.TryGetLastTargetProcessName` (added in v0.5.0 for F48) feeds the captured foreground name into the flyout VM; `SnippetMenuViewModel.ApplyFilter` drops non-matching snippets. New Settings textbox "Show in app:" lets the user set the glob per snippet. JSON export/import round-trips the field.
+- **I41 (light) — "Move to group" context menu.** Right-click on a snippet row in Settings → submenu lists every defined group + "(Ungrouped)". Click sets `EditGroup`, which writes via the existing `SnippetDatabase.SetGroup` path. Lighter than duplicating the flyout chip strip into Settings.
+
+### Changed
+- `Migrations.CurrentVersion` 4 → 5 via `ApplyV5` (transactional, idempotent).
+- `BackupRotator.Rotate` accepts optional `encrypt` + `password` parameters; when encrypted, the temp plaintext goes through `quick_check` before being wrapped + the temp is wiped from disk in a `finally`. `ListAvailable` enumerates both `.db` and `.enc` slots; `BackupSlot.IsEncrypted` flags them to the restore UI.
+- `BackupRotator.RestoreFrom` gained an optional `password` parameter; encrypted sources decrypt to a temp, run `quick_check`, then swap in. Wrong password leaves the live DB untouched.
+
+### Architecture
+- New services: `Services/BackupCrypto.cs`, `Services/AppGlob.cs`.
+- New settings KV: `backup.encrypted`, `backup.pw_token`.
+- `App._inMemoryBackupPassword` field caches the password for this session only — never persisted, lost on app exit. Re-enter via Settings to enable post-restart backup rotation.
+
 ## [0.5.1] — 2026-05-25
 
 ### Added

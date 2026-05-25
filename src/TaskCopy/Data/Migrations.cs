@@ -11,7 +11,7 @@ namespace TaskCopy.Data;
 internal static class Migrations
 {
     /// <summary>The schema version this build expects.</summary>
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
 
     public static void Apply(SqliteConnection conn)
     {
@@ -20,6 +20,7 @@ internal static class Migrations
         if (version < 2) ApplyV2(conn);
         if (version < 3) ApplyV3(conn);
         if (version < 4) ApplyV4(conn);
+        if (version < 5) ApplyV5(conn);
     }
 
     private static int GetUserVersion(SqliteConnection conn)
@@ -144,6 +145,21 @@ internal static class Migrations
         AddColumnIfMissing(conn, tx, "snippets", "last_target_at", "INTEGER");
 
         SetUserVersion(conn, 4);
+        tx.Commit();
+    }
+
+    /// <summary>
+    /// F35: per-app rules. snippets.target_app_glob is a comma-separated list
+    /// of `*`-wildcard process-name patterns (e.g. "outlook.exe,Outlook*.exe"
+    /// or "code*.exe,*-insiders.exe"). When set, the snippet is only shown in
+    /// the flyout when the captured foreground process name matches any
+    /// pattern. Empty/NULL = universal (current behavior).
+    /// </summary>
+    private static void ApplyV5(SqliteConnection conn)
+    {
+        using var tx = conn.BeginTransaction();
+        AddColumnIfMissing(conn, tx, "snippets", "target_app_glob", "TEXT");
+        SetUserVersion(conn, 5);
         tx.Commit();
     }
 
