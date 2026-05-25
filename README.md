@@ -1,6 +1,6 @@
 # TaskCopy
 
-[![Version](https://img.shields.io/badge/version-0.5.8-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.9-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://www.microsoft.com/windows)
 [![Stack](https://img.shields.io/badge/stack-.NET%2010%20%2F%20WPF-512BD4)](https://dotnet.microsoft.com)
@@ -11,9 +11,9 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 
 ## Status
 
-**v0.5.8** — opt-in shell placeholders. `{{shell:cmd}}` stays literal unless the individual snippet has **Allow shell** enabled, then TaskCopy warns before first execution in a session and runs the command with bounded output/timeout. The v0.5 line also includes image snippets, reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
+**v0.5.9** — syntax-highlighted code editor. Monospace snippets now use AvalonEdit with line numbers and built-in highlighting in Settings, while normal snippets keep the plain text editor. The v0.5 line also includes opt-in shell placeholders, image snippets, reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
 
-## Features (v0.5.8)
+## Features (v0.5.9)
 
 ### Picker & paste
 - **Tray icon** — left-click opens snippet flyout at the cursor; right-click opens a native Mocha/Latte menu (Open snippets / Settings / About / Quit); double-click opens Settings.
@@ -28,7 +28,7 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 - **Groups** — organize snippets via the Manage groups dialog; per-snippet Group dropdown; flyout chip strip.
 - **Image snippets** — Settings → Add image captures the current clipboard image into an explicit image snippet, shows thumbnails in Settings and the flyout, and copies/pastes the image back when picked. Background clipboard capture remains text-only.
 - **Pin to top** + flyout sort modes — Manual / Most used (decay-weighted frecency, pinned on top) / Recently used (pinned on top).
-- **Monospace toggle** per snippet — editor + flyout tooltip switch to Cascadia Mono for code.
+- **Monospace/code mode** per snippet — Settings switches to an AvalonEdit code editor with line numbers and syntax highlighting; flyout tooltips use Cascadia Mono for aligned code.
 
 ### Reliability & data safety
 - **SQLite store** at `%LOCALAPPDATA%\TaskCopy\snippets.db` — schema migrations via `PRAGMA user_version`, `journal_mode = WAL`, FK enforcement, startup `PRAGMA quick_check` integrity check with one-click restore.
@@ -57,6 +57,7 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 - [CommunityToolkit.Mvvm 8.4.0](https://github.com/CommunityToolkit/dotnet) — MVVM primitives
 - [Microsoft.Data.Sqlite 9.0.0](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/) — snippet store
 - [YamlDotNet 16.1.0](https://github.com/aaubry/YamlDotNet) — Espanso YAML import
+- [AvalonEdit 6.3.1](https://github.com/icsharpcode/AvalonEdit) — code editor
 
 ## Install
 

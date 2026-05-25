@@ -64,6 +64,10 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.9 — "Syntax-highlighted editor" ✅ SHIPPED (2026-05-25)
+
+- [x] **F40 — Syntax-highlighted body editor** — monospace snippets use AvalonEdit with line numbers and built-in highlighting; normal snippets keep the plain WPF TextBox fallback.
+
 ## v0.5.8 — "Opt-in shell placeholders" ✅ SHIPPED (2026-05-25)
 
 - [x] **F39 — `{{shell:cmd}}` evaluation** — per-snippet **Allow shell** opt-in, first-run warning per session, 2 s timeout, 4 KB output cap, and imported snippets remain disabled.
@@ -166,7 +170,6 @@ This is the only active to-do checklist. `RESEARCH_FEATURE_PLAN.md` is archived 
 
 ### App features
 
-- [ ] **F40 — Syntax-highlighted body editor** — AvalonEdit when `IsMonospace`, with plain TextBox fallback.
 - [ ] **F51 — FTS5 search at scale** — body search index once libraries cross the large-snippet threshold.
 - [ ] **F30 — Encrypted snippet store** — BYO password; likely SQLCipher dependency swap. Separate from already-shipped encrypted backups.
 - [ ] **F31 — BYO cloud sync** — S3 / B2 / Dropbox via user credentials.

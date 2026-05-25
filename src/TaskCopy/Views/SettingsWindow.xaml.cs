@@ -269,11 +269,15 @@ public partial class SettingsWindow : Window
     private void InsertAtCaret(string text)
     {
         if (!_vm.HasSelection) return;
-        var caret = BodyEditor.CaretIndex;
-        var selStart = BodyEditor.SelectionStart;
-        var selLen = BodyEditor.SelectionLength;
+        var codeEditorVisible = BodyCodeEditor.IsVisible;
+        var caret = codeEditorVisible ? BodyCodeEditor.CaretOffset : BodyEditor.CaretIndex;
+        var selStart = codeEditorVisible ? BodyCodeEditor.SelectionStart : BodyEditor.SelectionStart;
+        var selLen = codeEditorVisible ? BodyCodeEditor.SelectionLength : BodyEditor.SelectionLength;
 
         var body = _vm.EditBody ?? string.Empty;
+        caret = Math.Clamp(caret, 0, body.Length);
+        selStart = Math.Clamp(selStart, 0, body.Length);
+        selLen = Math.Clamp(selLen, 0, body.Length - selStart);
         if (selLen > 0)
         {
             body = body.Remove(selStart, selLen).Insert(selStart, text);
@@ -285,7 +289,15 @@ public partial class SettingsWindow : Window
             caret += text.Length;
         }
         _vm.EditBody = body;
-        BodyEditor.Focus();
-        BodyEditor.CaretIndex = caret;
+        if (codeEditorVisible)
+        {
+            BodyCodeEditor.Focus();
+            BodyCodeEditor.CaretOffset = Math.Min(caret, BodyCodeEditor.Text.Length);
+        }
+        else
+        {
+            BodyEditor.Focus();
+            BodyEditor.CaretIndex = Math.Min(caret, BodyEditor.Text.Length);
+        }
     }
 }

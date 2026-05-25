@@ -5,6 +5,18 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.9] — 2026-05-25
+
+### Added
+- **Syntax-highlighted body editor (F40).** Monospace snippets now switch the Settings body editor to AvalonEdit with line numbers and built-in C# highlighting. Non-monospace snippets keep the existing WPF TextBox.
+
+### Changed
+- Insert-token buttons now write to either the plain TextBox or AvalonEdit editor, depending on which editor is visible.
+
+### Architecture
+- New dependency: `AvalonEdit` 6.3.1.120.
+- New binding helper: `Views/AvalonEditBinding.cs`.
+
 ## [0.5.8] — 2026-05-25
 
 ### Added
