@@ -5,6 +5,17 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.10] — 2026-05-25
+
+### Added
+- **FTS5 search at scale (F51).** Schema V8 adds a maintained `snippets_fts` virtual table with insert/update/delete triggers. Flyout search switches to FTS5 for unfielded queries once the live library reaches 500 snippets.
+
+### Changed
+- Small libraries keep the existing in-memory prefix-weighted scorer, preserving the fast path and current ranking behavior for typical users.
+
+### Architecture
+- New repository API: `SnippetDatabase.SearchFtsIds`.
+
 ## [0.5.9] — 2026-05-25
 
 ### Added

@@ -9,6 +9,8 @@ namespace TaskCopy.ViewModels;
 
 public partial class SnippetMenuViewModel : ObservableObject
 {
+    private const int FtsThreshold = 500;
+
     private readonly SnippetDatabase _db;
     private readonly SettingsStore _settings;
     private List<Snippet> _all = new();
@@ -208,6 +210,15 @@ public partial class SnippetMenuViewModel : ObservableObject
         if (string.IsNullOrEmpty(q))
         {
             candidates = _all;
+        }
+        else if (_all.Count >= FtsThreshold && !q.Contains(':'))
+        {
+            var rank = _db.SearchFtsIds(q)
+                .Select((id, index) => (id, index))
+                .ToDictionary(p => p.id, p => p.index);
+            candidates = _all
+                .Where(s => rank.ContainsKey(s.Id))
+                .OrderBy(s => rank[s.Id]);
         }
         else
         {

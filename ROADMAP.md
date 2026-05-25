@@ -64,6 +64,10 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.10 — "FTS5 search at scale" ✅ SHIPPED (2026-05-25)
+
+- [x] **F51 — FTS5 search at scale** — schema V8 maintains a SQLite FTS5 index and the flyout uses it for unfielded searches once a live library has 500+ snippets.
+
 ## v0.5.9 — "Syntax-highlighted editor" ✅ SHIPPED (2026-05-25)
 
 - [x] **F40 — Syntax-highlighted body editor** — monospace snippets use AvalonEdit with line numbers and built-in highlighting; normal snippets keep the plain WPF TextBox fallback.
@@ -170,7 +174,6 @@ This is the only active to-do checklist. `RESEARCH_FEATURE_PLAN.md` is archived 
 
 ### App features
 
-- [ ] **F51 — FTS5 search at scale** — body search index once libraries cross the large-snippet threshold.
 - [ ] **F30 — Encrypted snippet store** — BYO password; likely SQLCipher dependency swap. Separate from already-shipped encrypted backups.
 - [ ] **F31 — BYO cloud sync** — S3 / B2 / Dropbox via user credentials.
 

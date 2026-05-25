@@ -1,6 +1,7 @@
 using System.IO;
 using Microsoft.Data.Sqlite;
 using TaskCopy.Models;
+using TaskCopy.Services;
 
 namespace TaskCopy.Data;
 
@@ -82,6 +83,49 @@ public sealed class SnippetDatabase
             cmd.Parameters.AddWithValue("$g", groupId.Value);
         }
         return Read(cmd);
+    }
+
+    public List<long> SearchFtsIds(string query, int limit = 2_000)
+    {
+        var ftsQuery = BuildFtsQuery(query);
+        if (string.IsNullOrEmpty(ftsQuery)) return new List<long>();
+
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT rowid
+            FROM snippets_fts
+            WHERE snippets_fts MATCH $q
+            ORDER BY bm25(snippets_fts)
+            LIMIT $limit;
+            """;
+        cmd.Parameters.AddWithValue("$q", ftsQuery);
+        cmd.Parameters.AddWithValue("$limit", Math.Clamp(limit, 1, 10_000));
+
+        try
+        {
+            using var reader = cmd.ExecuteReader();
+            var ids = new List<long>();
+            while (reader.Read()) ids.Add(reader.GetInt64(0));
+            return ids;
+        }
+        catch (SqliteException ex)
+        {
+            CrashLog.Write("SnippetDatabase.SearchFtsIds", ex);
+            return new List<long>();
+        }
+    }
+
+    private static string BuildFtsQuery(string query)
+    {
+        var terms = query
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(t => t.Trim('"'))
+            .Where(t => t.Length > 0)
+            .Take(8)
+            .Select(t => "\"" + t.Replace("\"", "\"\"") + "\"*")
+            .ToList();
+        return string.Join(" ", terms);
     }
 
     public List<Snippet> GetTrashed()

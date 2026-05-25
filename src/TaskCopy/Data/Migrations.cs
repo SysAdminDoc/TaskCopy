@@ -11,7 +11,7 @@ namespace TaskCopy.Data;
 internal static class Migrations
 {
     /// <summary>The schema version this build expects.</summary>
-    public const int CurrentVersion = 7;
+    public const int CurrentVersion = 8;
 
     public static void Apply(SqliteConnection conn)
     {
@@ -23,6 +23,7 @@ internal static class Migrations
         if (version < 5) ApplyV5(conn);
         if (version < 6) ApplyV6(conn);
         if (version < 7) ApplyV7(conn);
+        if (version < 8) ApplyV8(conn);
     }
 
     private static int GetUserVersion(SqliteConnection conn)
@@ -193,6 +194,51 @@ internal static class Migrations
         using var tx = conn.BeginTransaction();
         AddColumnIfMissing(conn, tx, "snippets", "allow_shell", "INTEGER NOT NULL DEFAULT 0");
         SetUserVersion(conn, 7);
+        tx.Commit();
+    }
+
+    /// <summary>
+    /// F51: FTS5 search index for large snippet libraries. The flyout still
+    /// uses the in-memory scorer for small libraries; this index kicks in once
+    /// scanning becomes a noticeable cost.
+    /// </summary>
+    private static void ApplyV8(SqliteConnection conn)
+    {
+        using var tx = conn.BeginTransaction();
+        using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = """
+            CREATE VIRTUAL TABLE IF NOT EXISTS snippets_fts
+            USING fts5(title, body, content='snippets', content_rowid='id');
+
+            INSERT INTO snippets_fts(rowid, title, body)
+            SELECT id, title, body FROM snippets
+            WHERE deleted_at IS NULL
+              AND id NOT IN (SELECT rowid FROM snippets_fts);
+
+            CREATE TRIGGER IF NOT EXISTS snippets_fts_ai
+            AFTER INSERT ON snippets BEGIN
+                INSERT INTO snippets_fts(rowid, title, body)
+                VALUES (new.id, new.title, new.body);
+            END;
+
+            CREATE TRIGGER IF NOT EXISTS snippets_fts_ad
+            AFTER DELETE ON snippets BEGIN
+                INSERT INTO snippets_fts(snippets_fts, rowid, title, body)
+                VALUES ('delete', old.id, old.title, old.body);
+            END;
+
+            CREATE TRIGGER IF NOT EXISTS snippets_fts_au
+            AFTER UPDATE OF title, body, deleted_at ON snippets BEGIN
+                INSERT INTO snippets_fts(snippets_fts, rowid, title, body)
+                VALUES ('delete', old.id, old.title, old.body);
+                INSERT INTO snippets_fts(rowid, title, body)
+                SELECT new.id, new.title, new.body
+                WHERE new.deleted_at IS NULL;
+            END;
+            """;
+        cmd.ExecuteNonQuery();
+        SetUserVersion(conn, 8);
         tx.Commit();
     }
 

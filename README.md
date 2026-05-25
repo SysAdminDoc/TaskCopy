@@ -1,6 +1,6 @@
 # TaskCopy
 
-[![Version](https://img.shields.io/badge/version-0.5.9-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.10-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://www.microsoft.com/windows)
 [![Stack](https://img.shields.io/badge/stack-.NET%2010%20%2F%20WPF-512BD4)](https://dotnet.microsoft.com)
@@ -11,14 +11,14 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 
 ## Status
 
-**v0.5.9** — syntax-highlighted code editor. Monospace snippets now use AvalonEdit with line numbers and built-in highlighting in Settings, while normal snippets keep the plain text editor. The v0.5 line also includes opt-in shell placeholders, image snippets, reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
+**v0.5.10** — FTS5 search at scale. Large snippet libraries use a maintained SQLite FTS5 index for flyout search, while smaller libraries keep the existing in-memory prefix-weighted scorer. The v0.5 line also includes syntax-highlighted code editing, opt-in shell placeholders, image snippets, reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
 
-## Features (v0.5.9)
+## Features (v0.5.10)
 
 ### Picker & paste
 - **Tray icon** — left-click opens snippet flyout at the cursor; right-click opens a native Mocha/Latte menu (Open snippets / Settings / About / Quit); double-click opens Settings.
 - **Global hotkey** (`Ctrl+Alt+V` default) — opens the same flyout from anywhere; rebindable in Settings (safe-fail: the previous combo stays active if a new one can't be registered).
-- **Flyout search + keyboard nav** — type to filter on Title/Body; Up/Down moves the highlight; Enter copies; Esc clears the filter then closes on a second press. Fuzzy/prefix-weighted ranking so `sig` finds `Email signature` before `design rationale`.
+- **Flyout search + keyboard nav** — type to filter on Title/Body; Up/Down moves the highlight; Enter copies; Esc clears the filter then closes on a second press. Fuzzy/prefix-weighted ranking so `sig` finds `Email signature` before `design rationale`; libraries with 500+ snippets use a maintained SQLite FTS5 index for body search speed.
 - **Alt+1..9 quick-pick** in the open flyout; **per-snippet hotkeys** (any combo, e.g. `Ctrl+Alt+S`) for direct copy + auto-paste from anywhere.
 - **Group chips** in the flyout when ≥1 group is defined — click to filter, persists across opens.
 - **Auto-paste** — after copy, TaskCopy restores the previously focused window and synthesises `Ctrl+V`. Per-snippet "Type characters" mode for apps that swallow `Ctrl+V` (legacy terminals, RDP sessions, password fields). Default ON; toggle in Settings.
