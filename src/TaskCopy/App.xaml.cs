@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
@@ -27,6 +28,7 @@ public partial class App : Application
 
     private SnippetMenuWindow? _snippetMenu;
     private SettingsWindow? _settingsWindow;
+    private AboutWindow? _aboutWindow;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -69,11 +71,11 @@ public partial class App : Application
         _trayIcon = new TaskbarIcon
         {
             IconSource = new BitmapImage(new Uri("pack://application:,,,/Assets/app.ico")),
-            ToolTipText = "TaskCopy — click for snippets",
+            ToolTipText = "TaskCopy — left-click for snippets, right-click for menu",
             NoLeftClickDelay = true,
+            ContextMenu = BuildTrayMenu(),
         };
         _trayIcon.TrayLeftMouseUp += (_, _) => ShowSnippetMenu();
-        _trayIcon.TrayRightMouseUp += (_, _) => ShowSnippetMenu();
         _trayIcon.TrayMouseDoubleClick += (_, _) => ShowSettings();
         _trayIcon.ForceCreate(enablesEfficiencyMode: true);
 
@@ -101,6 +103,11 @@ public partial class App : Application
             _snippetMenu?.Close();
             ShowSettings();
         };
+        vm.AboutRequested += (_, _) =>
+        {
+            _snippetMenu?.Close();
+            ShowAbout();
+        };
         vm.QuitRequested += (_, _) => QuitApp();
 
         _snippetMenu = new SnippetMenuWindow(vm);
@@ -126,6 +133,49 @@ public partial class App : Application
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    private void ShowAbout()
+    {
+        if (_aboutWindow is not null)
+        {
+            _aboutWindow.Activate();
+            return;
+        }
+
+        _aboutWindow = new AboutWindow
+        {
+            Owner = _settingsWindow,
+        };
+        _aboutWindow.Closed += (_, _) => _aboutWindow = null;
+        _aboutWindow.Show();
+    }
+
+    private ContextMenu BuildTrayMenu()
+    {
+        var menu = new ContextMenu
+        {
+            Style = (Style)Resources["Mocha.ContextMenu"],
+        };
+        menu.Items.Add(NewMenuItem("Open snippets", (_, _) => ShowSnippetMenu(),
+            HotkeyService.FormatHotkey(_settings!.HotkeyKey, _settings.HotkeyModifiers)));
+        menu.Items.Add(NewMenuItem("Settings…", (_, _) => ShowSettings()));
+        menu.Items.Add(NewMenuItem("About", (_, _) => ShowAbout()));
+        menu.Items.Add(new Separator { Style = (Style)Resources["Mocha.MenuSeparator"] });
+        menu.Items.Add(NewMenuItem("Quit TaskCopy", (_, _) => QuitApp()));
+        return menu;
+    }
+
+    private MenuItem NewMenuItem(string header, RoutedEventHandler onClick, string? gesture = null)
+    {
+        var item = new MenuItem
+        {
+            Header = header,
+            Style = (Style)Resources["Mocha.MenuItem"],
+        };
+        if (!string.IsNullOrEmpty(gesture)) item.InputGestureText = gesture;
+        item.Click += onClick;
+        return item;
     }
 
     private void QuitApp()

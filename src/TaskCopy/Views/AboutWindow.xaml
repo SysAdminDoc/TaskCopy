@@ -1,0 +1,68 @@
+<Window x:Class="TaskCopy.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About TaskCopy"
+        Width="420" Height="280"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Mocha.Base.Brush}"
+        Foreground="{StaticResource Mocha.Text.Brush}"
+        FontFamily="{StaticResource Mocha.Font}"
+        FontSize="13"
+        UseLayoutRounding="True">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="TaskCopy"
+                   FontSize="22"
+                   FontWeight="SemiBold"
+                   Foreground="{StaticResource Mocha.Mauve.Brush}" />
+
+        <TextBlock Grid.Row="1"
+                   x:Name="VersionText"
+                   Style="{StaticResource Mocha.Body.Subtle}"
+                   Margin="0,4,0,0" />
+
+        <TextBlock Grid.Row="2"
+                   Text="Single-click clipboard snippet menu for Windows."
+                   Style="{StaticResource Mocha.Body}"
+                   Margin="0,12,0,0"
+                   TextWrapping="Wrap" />
+
+        <StackPanel Grid.Row="3" Margin="0,16,0,0">
+            <TextBlock Style="{StaticResource Mocha.Body.Subtle}"
+                       TextWrapping="Wrap"
+                       Text="MIT licensed. Tray + global hotkey (Ctrl+Alt+V by default). Storage at %LOCALAPPDATA%\TaskCopy\." />
+            <TextBlock x:Name="RepoLink"
+                       Style="{StaticResource Mocha.Body}"
+                       Foreground="{StaticResource Mocha.Blue.Brush}"
+                       Cursor="Hand"
+                       Text="https://github.com/SysAdminDoc/TaskCopy"
+                       Margin="0,8,0,0"
+                       MouseLeftButtonUp="OnOpenRepo" />
+            <TextBlock x:Name="LicenseLink"
+                       Style="{StaticResource Mocha.Body}"
+                       Foreground="{StaticResource Mocha.Blue.Brush}"
+                       Cursor="Hand"
+                       Text="View LICENSE"
+                       Margin="0,4,0,0"
+                       MouseLeftButtonUp="OnOpenLicense" />
+        </StackPanel>
+
+        <Button Grid.Row="4"
+                Style="{StaticResource Mocha.Button}"
+                Content="Close"
+                HorizontalAlignment="Right"
+                Width="92"
+                IsCancel="True"
+                Click="OnClose" />
+    </Grid>
+</Window>

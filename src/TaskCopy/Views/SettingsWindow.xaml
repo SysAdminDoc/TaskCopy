@@ -47,8 +47,13 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:Snippet}">
                         <StackPanel>
-                            <TextBlock Text="{Binding Title}" Style="{StaticResource Mocha.Body}" />
-                            <TextBlock Text="{Binding Preview}" Style="{StaticResource Mocha.Body.Subtle}" Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding Title}"
+                                       Style="{StaticResource Mocha.Body}"
+                                       ToolTip="{Binding Title}" />
+                            <TextBlock Text="{Binding Preview}"
+                                       Style="{StaticResource Mocha.Body.Subtle}"
+                                       Margin="0,2,0,0"
+                                       ToolTip="{Binding Body}" />
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>

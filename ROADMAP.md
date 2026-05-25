@@ -47,7 +47,7 @@ Goal: turn TaskCopy from "fancy clipboard" into "muscle-memory text expander."
 - [ ] **F1 — Finish auto-paste** (`Services/ForegroundWindowCapture` + new `Services/AutoPasteService` using `SendInput`; enable settings checkbox)
 - [ ] **F2 — Search + type-ahead filter in the flyout** (`SnippetMenuViewModel.Filter`, `SnippetMenuWindow` TextBox row + keyboard nav)
 - [ ] **F3 — Number-key quick-pick `1`..`9`** (flyout `OnKeyDown` + row index glyph)
-- [ ] **F4 — Tray right-click → Settings / Quit / About / Open snippets context menu** (move flyout to left-click only, add native context menu; also add Settings + Quit + About rows to flyout footer)
+- [x] **F4 — Tray right-click → Settings / Quit / About / Open snippets context menu** (move flyout to left-click only, add native context menu; also add Settings + Quit + About rows to flyout footer)
 
 ### P0 bug fixes
 
@@ -59,8 +59,8 @@ Goal: turn TaskCopy from "fancy clipboard" into "muscle-memory text expander."
 - [x] **I12 — Use `Local\` mutex instead of `Global\`**
 - [x] **I13 — Enable Efficiency Mode on tray icon**
 - [x] **I14 — `Snippet.Preview` split on `\r` or `\n` (not just `\n`)**
-- [ ] **I15 — About surface w/ version + link to GitHub + LICENSE**
-- [ ] **I9 — Tooltip on truncated titles**
+- [x] **I15 — About surface w/ version + link to GitHub + LICENSE**
+- [x] **I9 — Tooltip on truncated titles**
 - [x] **I11 — Atomic `Insert` (transaction + `RETURNING id`)**
 
 ### Foundation for later phases

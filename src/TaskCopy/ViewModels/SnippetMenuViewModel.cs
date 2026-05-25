@@ -22,6 +22,7 @@ public partial class SnippetMenuViewModel : ObservableObject
 
     public event EventHandler? SnippetCopied;
     public event EventHandler? EditRequested;
+    public event EventHandler? AboutRequested;
     public event EventHandler? QuitRequested;
 
     public SnippetMenuViewModel(SnippetDatabase db, ClipboardService clipboard)
@@ -55,6 +56,9 @@ public partial class SnippetMenuViewModel : ObservableObject
 
     [RelayCommand]
     private void Edit() => EditRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void About() => AboutRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
     private void Quit() => QuitRequested?.Invoke(this, EventArgs.Empty);
