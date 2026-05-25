@@ -60,6 +60,12 @@ public partial class App : Application
         _db = new SnippetDatabase(Path.Combine(dataDir, "snippets.db"));
         _settings = new SettingsStore(_db);
 
+        // Apply theme before any window opens — Mocha is the default and is
+        // already merged via App.xaml, but if the user picked Latte (or Auto
+        // resolves to Latte on a Light system) we swap the palette here.
+        try { ThemeService.Apply(ThemeService.Resolve(_settings.Theme)); }
+        catch (Exception ex) { CrashLog.Write("ThemeService.Apply", ex); }
+
         // Daily-rotated 3-deep VACUUM INTO backups + 30-day trash purge,
         // ran off the UI thread so startup latency stays unchanged.
         _ = Task.Run(() =>

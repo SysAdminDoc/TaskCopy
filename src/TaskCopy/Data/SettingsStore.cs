@@ -12,6 +12,7 @@ public sealed class SettingsStore
     private const string KeyFlyoutSortMode = "flyout.sort_mode";
     private const string KeyRecentClipsEnabled = "recent_clips.enabled";
     private const string KeyRecentClipsMax = "recent_clips.max";
+    private const string KeyTheme = "theme";
 
     private readonly SnippetDatabase _db;
 
@@ -80,6 +81,23 @@ public sealed class SettingsStore
         }
         set => _db.SetSetting(KeyRecentClipsMax, value.ToString());
     }
+
+    public Theme Theme
+    {
+        get
+        {
+            var v = _db.GetSetting(KeyTheme);
+            return Enum.TryParse<Theme>(v, ignoreCase: true, out var t) ? t : Theme.Mocha;
+        }
+        set => _db.SetSetting(KeyTheme, value.ToString());
+    }
+}
+
+public enum Theme
+{
+    Mocha = 0,
+    Latte = 1,
+    Auto = 2,
 }
 
 public enum FlyoutSortMode

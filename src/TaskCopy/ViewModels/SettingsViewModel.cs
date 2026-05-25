@@ -181,6 +181,26 @@ public partial class SettingsViewModel : ObservableObject
         new(FlyoutSortMode.RecentlyUsed,  "Recently used first (pinned on top)"),
     ];
 
+    public IReadOnlyList<ThemeOption> ThemeOptions { get; } =
+    [
+        new(Theme.Mocha, "Catppuccin Mocha (dark)"),
+        new(Theme.Latte, "Catppuccin Latte (light)"),
+        new(Theme.Auto,  "Follow system"),
+    ];
+
+    public ThemeOption SelectedTheme
+    {
+        get => ThemeOptions.FirstOrDefault(t => t.Value == _settings.Theme) ?? ThemeOptions[0];
+        set
+        {
+            if (value is null) return;
+            if (_settings.Theme == value.Value) return;
+            _settings.Theme = value.Value;
+            OnPropertyChanged();
+            StatusMessage = $"Theme set to {value.Label}. Restart TaskCopy for the change to take effect.";
+        }
+    }
+
     public FlyoutSortModeOption SelectedFlyoutSort
     {
         get => FlyoutSortModes.FirstOrDefault(m => m.Mode == _settings.FlyoutSortMode)
@@ -248,6 +268,11 @@ public partial class SettingsViewModel : ObservableObject
     private string _statusMessage = string.Empty;
 
     public sealed record FlyoutSortModeOption(FlyoutSortMode Mode, string Label)
+    {
+        public override string ToString() => Label;
+    }
+
+    public sealed record ThemeOption(Theme Value, string Label)
     {
         public override string ToString() => Label;
     }

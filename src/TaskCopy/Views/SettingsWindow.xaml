@@ -232,16 +232,32 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0"
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0"
                                Text="Flyout order"
                                Style="{StaticResource Mocha.Body.Header}"
                                VerticalAlignment="Center" />
-                    <ComboBox Grid.Column="1"
+                    <ComboBox Grid.Row="0" Grid.Column="1"
                               Width="240"
                               ItemsSource="{Binding FlyoutSortModes}"
                               SelectedItem="{Binding SelectedFlyoutSort}"
                               DisplayMemberPath="Label"
                               ToolTip="How the snippet flyout sorts items. Manual respects your drag order exactly; other modes always promote pinned snippets to the top." />
+                    <TextBlock Grid.Row="1" Grid.Column="0"
+                               Text="Theme"
+                               Style="{StaticResource Mocha.Body.Header}"
+                               VerticalAlignment="Center"
+                               Margin="0,8,0,0" />
+                    <ComboBox Grid.Row="1" Grid.Column="1"
+                              Width="240"
+                              ItemsSource="{Binding ThemeOptions}"
+                              SelectedItem="{Binding SelectedTheme}"
+                              DisplayMemberPath="Label"
+                              Margin="0,8,0,0"
+                              ToolTip="Catppuccin Mocha (default), Catppuccin Latte (light), or Follow system (reads HKCU AppsUseLightTheme at launch). Restart required for changes." />
                 </Grid>
 
                 <StackPanel Grid.Row="5" Grid.ColumnSpan="2"

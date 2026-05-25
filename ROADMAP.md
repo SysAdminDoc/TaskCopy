@@ -97,7 +97,7 @@ Goal: scale snippets past 50, add power-user editing affordances.
 
 ## v0.4.0 — Power-user surfaces
 
-- [ ] **F16 — Light / system-theme follow** (`Themes/Latte.xaml` + runtime swap on `WM_SETTINGCHANGE`)
+- [x] **F16 — Light / system-theme follow** (`Themes/Latte.xaml` + startup swap; restart required to apply — live `WM_SETTINGCHANGE` swap deferred because the styles bind brushes via StaticResource).
 - [ ] **Windhawk companion mod** (`windhawk/taskcopy-taskbar-menu.wh.cpp`) — depends on F11 IPC primitive
   - Hook `TaskbarResources::OnTaskListButtonContextRequested` (Win11) + `CTaskListWnd::_HandleContextMenu` (Win10)
   - Inject "TaskCopy ▶" submenu populated from named-pipe IPC
