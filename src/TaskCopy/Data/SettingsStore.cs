@@ -20,6 +20,8 @@ public sealed class SettingsStore
     private const string KeyExternalEditorCommand = "editor.command";
     private const string KeyFlyoutLastX = "flyout.last_x";
     private const string KeyFlyoutLastY = "flyout.last_y";
+    private const string KeyStatsTotalPastes = "stats.total_pastes";
+    private const string KeyStatsTotalChars = "stats.total_chars";
 
     private readonly SnippetDatabase _db;
 
@@ -154,6 +156,20 @@ public sealed class SettingsStore
     {
         get => _db.GetSetting(KeyExternalEditorCommand) ?? string.Empty;
         set => _db.SetSetting(KeyExternalEditorCommand, value ?? string.Empty);
+    }
+
+    /// <summary>F37: lifetime count of successful auto-pastes — surfaced in About.</summary>
+    public long StatsTotalPastes
+    {
+        get => long.TryParse(_db.GetSetting(KeyStatsTotalPastes), out var v) ? v : 0L;
+        set => _db.SetSetting(KeyStatsTotalPastes, value.ToString());
+    }
+
+    /// <summary>F37: lifetime sum of expanded-body lengths — proxy for "characters typed for you."</summary>
+    public long StatsTotalChars
+    {
+        get => long.TryParse(_db.GetSetting(KeyStatsTotalChars), out var v) ? v : 0L;
+        set => _db.SetSetting(KeyStatsTotalChars, value.ToString());
     }
 
     /// <summary>

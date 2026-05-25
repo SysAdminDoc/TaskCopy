@@ -320,6 +320,7 @@ public partial class App : Application
         vm.ShowTrashRequested += (_, _) => ShowTrash(vm);
         vm.RestoreBackupRequested += (_, _) => ShowRestoreBackup(vm);
         vm.ResetToDefaultsRequested += (_, _) => ShowResetToDefaults(vm);
+        vm.ShowBodyHistoryRequested += (_, snippet) => ShowBodyHistory(vm, snippet);
         // F47: hand the modal helper down so SettingsViewModel doesn't need a
         // Views-namespace using directive.
         vm.DeleteConfirmer = title => ConfirmDeleteWindow.Prompt(title, _settingsWindow);
@@ -401,6 +402,33 @@ public partial class App : Application
                 message: "Auto-paste was skipped — the target window may be running elevated. The text is on your clipboard; press Ctrl+V to paste it manually.",
                 icon: NotificationIcon.Info);
         }
+
+        // F48: record the paste target for future per-app rules / stats. Only
+        // when the paste actually succeeded — copy-only flows shouldn't.
+        if (result == AutoPasteService.Result.Pasted)
+        {
+            var procName = _foreground?.TryGetLastTargetProcessName();
+            if (!string.IsNullOrEmpty(procName))
+            {
+                try { _db.SetLastTarget(snippet.Id, procName!); }
+                catch (Exception ex) { CrashLog.Write("SetLastTarget", ex); }
+            }
+            // F37: count successful pastes for the About dashboard.
+            try { BumpUsageStat(expansion.Body.Length); }
+            catch (Exception ex) { CrashLog.Write("BumpUsageStat", ex); }
+        }
+    }
+
+    /// <summary>
+    /// F37: nudge the lifetime paste counter + total chars-pasted. Surfaced
+    /// in the About window as "you've pasted X snippets / Y characters." Cheap
+    /// — two integer settings per paste.
+    /// </summary>
+    private void BumpUsageStat(int expandedLength)
+    {
+        if (_settings is null) return;
+        _settings.StatsTotalPastes = _settings.StatsTotalPastes + 1;
+        _settings.StatsTotalChars = _settings.StatsTotalChars + Math.Max(0, expandedLength);
     }
 
     private async Task HandleRecentClipCopyAsync(RecentClip clip)
@@ -521,7 +549,11 @@ public partial class App : Application
 
     private void HandleCliCopyOrPaste(string idOrTitle, bool paste)
     {
-        if (_db is null || string.IsNullOrWhiteSpace(idOrTitle)) return;
+        if (_db is null || string.IsNullOrWhiteSpace(idOrTitle))
+        {
+            WriteCliResult($"error: missing argument for --{(paste ? "paste" : "copy")}");
+            return;
+        }
         var all = _db.GetAll();
         Snippet? match = null;
         if (long.TryParse(idOrTitle, out var id))
@@ -532,6 +564,7 @@ public partial class App : Application
         if (match is null)
         {
             CrashLog.Write("CliCopyOrPaste", new Exception($"No snippet matched '{idOrTitle}'."));
+            WriteCliResult($"not-found: {idOrTitle}");
             return;
         }
 
@@ -541,6 +574,7 @@ public partial class App : Application
             // moment the CLI arrived is the right paste target.
             _foreground?.Capture();
             _ = HandleSnippetCopyAsync(match);
+            WriteCliResult($"ok: paste id={match.Id}");
         }
         else
         {
@@ -553,12 +587,25 @@ public partial class App : Application
             try
             {
                 var expansion = SnippetTemplating.Expand(match.Body, ctx);
-                if (expansion.Cancelled) return;
+                if (expansion.Cancelled)
+                {
+                    WriteCliResult("cancelled: user dismissed ask prompt");
+                    return;
+                }
                 _clipboardWatcher?.SuppressNext(expansion.Body);
-                _clipboard?.TryCopy(expansion.Body);
+                if (!(_clipboard?.TryCopy(expansion.Body) ?? false))
+                {
+                    WriteCliResult("error: clipboard write failed");
+                    return;
+                }
                 try { _db.RecordUse(match.Id); } catch { }
+                WriteCliResult($"ok: copy id={match.Id}");
             }
-            catch (Exception ex) { CrashLog.Write("CliCopy", ex); }
+            catch (Exception ex)
+            {
+                CrashLog.Write("CliCopy", ex);
+                WriteCliResult($"error: {ex.Message}");
+            }
         }
     }
 
@@ -577,8 +624,32 @@ public partial class App : Application
             {
                 w.WriteLine($"{s.Id}\t{s.Title}");
             }
+            WriteCliResult($"ok: list path={path}");
         }
-        catch (Exception ex) { CrashLog.Write("DumpList", ex); }
+        catch (Exception ex)
+        {
+            CrashLog.Write("DumpList", ex);
+            WriteCliResult($"error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// I39: write one-line result that the CLI caller can read after a
+    /// `--copy` / `--paste` / `--list` invocation. The second instance
+    /// disposes the pipe immediately so we can't do real bidirectional
+    /// IPC; the file-on-disk + agreed path is the workaround.
+    /// </summary>
+    private static void WriteCliResult(string line)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "TaskCopy");
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, ".cli-result"), line + Environment.NewLine);
+        }
+        catch (Exception ex) { CrashLog.Write("WriteCliResult", ex); }
     }
 
     private void ShowManageGroups(SettingsViewModel parentVm)
@@ -592,6 +663,20 @@ public partial class App : Application
             // new/renamed/deleted groups, and re-load snippets so any group_id
             // cleared by ON DELETE SET NULL is reflected.
             parentVm.LoadFromStore();
+        };
+        w.ShowDialog();
+    }
+
+    /// <summary>F46: open the body-history modal for a specific snippet.</summary>
+    private void ShowBodyHistory(SettingsViewModel parentVm, Models.Snippet snippet)
+    {
+        if (_db is null) return;
+        var vm = new BodyHistoryViewModel(_db, snippet.Id, snippet.Title);
+        var w = new BodyHistoryWindow(vm) { Owner = _settingsWindow };
+        vm.RestoreRequested += (_, body) =>
+        {
+            parentVm.ApplyRestoredBody(body);
+            w.Close();
         };
         w.ShowDialog();
     }
@@ -753,7 +838,7 @@ public partial class App : Application
             return;
         }
 
-        _aboutWindow = new AboutWindow
+        _aboutWindow = new AboutWindow(_settings)
         {
             Owner = _settingsWindow,
         };

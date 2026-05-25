@@ -28,4 +28,26 @@ public sealed class ForegroundWindowCapture
         return LastForegroundWindow != IntPtr.Zero
                && NativeMethods.SetForegroundWindow(LastForegroundWindow);
     }
+
+    /// <summary>
+    /// F48: resolve the captured HWND to a process name (without extension).
+    /// Returns null when the HWND is gone, the PID can't be opened, or any
+    /// step fails — paste-target tracking is best-effort and never blocking.
+    /// </summary>
+    public string? TryGetLastTargetProcessName()
+    {
+        if (LastForegroundWindow == IntPtr.Zero) return null;
+        try
+        {
+            NativeMethods.GetWindowThreadProcessId(LastForegroundWindow, out var pid);
+            if (pid == 0) return null;
+            using var proc = Process.GetProcessById((int)pid);
+            // ProcessName is exe-without-extension on Windows ("notepad" not "notepad.exe").
+            return proc.ProcessName + ".exe";
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }

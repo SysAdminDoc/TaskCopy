@@ -47,6 +47,8 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(MoveDownCommand))]
     [NotifyCanExecuteChangedFor(nameof(RebindQuickHotkeyCommand))]
     [NotifyCanExecuteChangedFor(nameof(ClearQuickHotkeyBindingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ShowBodyHistoryCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenInExternalEditorCommand))]
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     [NotifyPropertyChangedFor(nameof(EditTitle))]
     [NotifyPropertyChangedFor(nameof(EditBody))]
@@ -410,11 +412,38 @@ public partial class SettingsViewModel : ObservableObject
         try
         {
             _db.Update(s.Id, s.Title, s.Body);
+            // F46: record one history row per flush so a stray edit can be
+            // reverted via the History modal. Trim to 10 newest per snippet.
+            _db.RecordBodyHistory(s.Id, s.Body);
         }
         catch (Exception ex)
         {
             CrashLog.Write("SettingsViewModel.FlushPendingSave", ex);
         }
+    }
+
+    /// <summary>F46: App wires this to ShowBodyHistory so the modal can open.</summary>
+    public event EventHandler<Snippet>? ShowBodyHistoryRequested;
+
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void ShowBodyHistory()
+    {
+        if (SelectedSnippet is null) return;
+        // Flush any pending edit first so the latest state is in history before
+        // the user might restore an older one.
+        FlushPendingSave();
+        ShowBodyHistoryRequested?.Invoke(this, SelectedSnippet);
+    }
+
+    /// <summary>App calls this when the user picks Restore in the history modal.</summary>
+    public void ApplyRestoredBody(string body)
+    {
+        if (SelectedSnippet is null) return;
+        // EditBody push triggers OnPropertyChanged + the 300ms debounced save
+        // (which itself writes a new history row — small intentional record so
+        // a user who Restores can re-Restore back to whatever they came from).
+        EditBody = body;
+        StatusMessage = "Restored body from history. A new history entry is being written.";
     }
 
     [ObservableProperty]

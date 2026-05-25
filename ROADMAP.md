@@ -64,6 +64,16 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.0 — "Snippet history + stats + CLI reliability" ✅ SHIPPED (2026-05-25)
+
+Schema bumped V3 → V4. Adds the most-requested data-safety net (per-snippet edit history) and unlocks future per-app rules.
+
+- [x] **F46** — Body edit history. New `snippet_body_history` table (10 newest per snippet, FK CASCADE). History modal in Settings with Restore + per-row delete.
+- [x] **F48** — Per-snippet last-paste target. Captures the target process name post auto-paste. Foundation for F35 per-app rules.
+- [x] **F37** — Lifetime usage statistics in About: "You've pasted N snippets — about M minutes of typing TaskCopy did for you."
+- [x] **I39** — `--copy`/`--paste`/`--list` write outcome to `%LOCALAPPDATA%\TaskCopy\.cli-result` so scripts can branch on the actual lookup result.
+- [x] **B22** — Culture-sensitive string sort audit verified clean (every `Contains`/`StartsWith`/`Equals` already uses `StringComparison.OrdinalIgnoreCase`).
+
 ## v0.4.6 — "Sticky position + repo hygiene" ✅ SHIPPED (2026-05-25)
 
 - [x] **F50 — "Last position (sticky)" flyout position** (new `FlyoutPosition.LastPosition`, persisted via `SettingsStore.FlyoutLastPosition`, restored on next open with monitor-work-area clamping).

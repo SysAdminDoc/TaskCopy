@@ -11,7 +11,7 @@ namespace TaskCopy.Data;
 internal static class Migrations
 {
     /// <summary>The schema version this build expects.</summary>
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 
     public static void Apply(SqliteConnection conn)
     {
@@ -19,6 +19,7 @@ internal static class Migrations
         if (version < 1) ApplyV1(conn);
         if (version < 2) ApplyV2(conn);
         if (version < 3) ApplyV3(conn);
+        if (version < 4) ApplyV4(conn);
     }
 
     private static int GetUserVersion(SqliteConnection conn)
@@ -106,6 +107,43 @@ internal static class Migrations
         using var tx = conn.BeginTransaction();
         AddColumnIfMissing(conn, tx, "snippets", "paste_mode", "INTEGER NOT NULL DEFAULT 0");
         SetUserVersion(conn, 3);
+        tx.Commit();
+    }
+
+    /// <summary>
+    /// v0.5 schema:
+    ///   F46: snippet_body_history table (one row per debounced flush, capped
+    ///        at 10 per snippet by the repository layer). FK CASCADE so a hard
+    ///        delete drops history with the snippet.
+    ///   F48: snippets.last_target_process_name + last_target_at columns —
+    ///        records which app received the most recent successful auto-paste
+    ///        for the snippet (informational; foundation for future F35 per-app
+    ///        rules).
+    /// </summary>
+    private static void ApplyV4(SqliteConnection conn)
+    {
+        using var tx = conn.BeginTransaction();
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS snippet_body_history (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    snippet_id  INTEGER NOT NULL REFERENCES snippets(id) ON DELETE CASCADE,
+                    body        TEXT NOT NULL,
+                    saved_at    INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_snippet_body_history_snippet
+                    ON snippet_body_history(snippet_id, saved_at DESC);
+                """;
+            cmd.ExecuteNonQuery();
+        }
+
+        AddColumnIfMissing(conn, tx, "snippets", "last_target_process_name", "TEXT");
+        AddColumnIfMissing(conn, tx, "snippets", "last_target_at", "INTEGER");
+
+        SetUserVersion(conn, 4);
         tx.Commit();
     }
 

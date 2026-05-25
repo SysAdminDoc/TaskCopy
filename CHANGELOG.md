@@ -5,6 +5,30 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-05-25
+
+### Added
+- **Snippet body edit history (F46).** Every debounced save records one row in the new `snippet_body_history` table (capped at 10 most recent per snippet, FK CASCADE drops them on hard-delete). The snippet editor toolbar grows a "History…" button opening a modal of past versions with timestamps; per-row "Restore" pushes the body back through the normal EditBody path (which itself records a fresh history row, so a restore is itself revertible). Per-row "Delete this version" for one-off pruning.
+- **Per-snippet last-paste target tracking (F48).** New `snippets.last_target_process_name` + `last_target_at` columns. After a successful auto-paste, `ForegroundWindowCapture.TryGetLastTargetProcessName` resolves the captured HWND's PID → process name and writes it back. Foundation for future F35 per-app rules; no UI surface yet beyond the DB.
+- **Lifetime usage statistics (F37).** New `settings.stats.total_pastes` + `stats.total_chars` counters incremented on every successful auto-paste. About window now leads with "You've pasted N snippets — about M minutes of typing TaskCopy did for you." (5 chars/sec estimate). Falls back to a friendly empty state on a fresh install.
+- **CLI result file (I39).** `--copy` / `--paste` / `--list` now write a one-line outcome (`ok: …` / `not-found: …` / `error: …`) to `%LOCALAPPDATA%\TaskCopy\.cli-result`. Lets PowerShell / cmd scripts know whether a snippet lookup actually hit. Pipe IPC stays one-way; the file is the workaround for `WinExe` not having attached stdout.
+
+### Changed
+- **Schema bumped V3 → V4** via `Migrations.ApplyV4` (idempotent, transactional). Migration covers F46 + F48.
+- **About window now requires a `SettingsStore` constructor argument** to surface the usage-stats line. Default constructor still works for backward compatibility (just hides the stats line).
+
+### Verified
+- **B22 culture-sensitive string sort audit — clean.** Every `Contains`/`StartsWith`/`Equals`/`HashSet`/`Any(g.Name)` callsite in the codebase already passes `StringComparison.OrdinalIgnoreCase` (or compares on a numeric/char). No latent culture-sensitive surprise.
+
+### Architecture
+- New model: `Models/BodyHistoryEntry.cs`.
+- New view: `Views/BodyHistoryWindow.xaml(.cs)`.
+- New viewmodel: `ViewModels/BodyHistoryViewModel.cs`.
+- New repository surfaces: `SnippetDatabase.RecordBodyHistory`, `GetBodyHistory`, `DeleteBodyHistoryEntry`, `SetLastTarget`.
+- New service surface: `ForegroundWindowCapture.TryGetLastTargetProcessName`.
+- `SettingsViewModel.FlushPendingSave` now records a history row after each disk write.
+- `App.HandleSnippetCopyAsync` records last-target + bumps stats post successful auto-paste.
+
 ## [0.4.6] — 2026-05-25
 
 ### Added

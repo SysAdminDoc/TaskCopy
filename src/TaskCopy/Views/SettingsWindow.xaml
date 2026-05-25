@@ -179,8 +179,12 @@
                     <Button Style="{StaticResource Mocha.Button}"
                             Content="Open in editor…"
                             Command="{Binding OpenInExternalEditorCommand}"
-                            Margin="0,0,0,0"
                             ToolTip="Open the body in your preferred external editor (resolves Settings → Editor command, then $EDITOR, then `code --wait`, then notepad). Saves back on close." />
+                    <Button Style="{StaticResource Mocha.Button}"
+                            Content="History…"
+                            Command="{Binding ShowBodyHistoryCommand}"
+                            Margin="4,0,0,0"
+                            ToolTip="Show up to 10 past versions of this snippet's body. Restore any of them with one click." />
                 </StackPanel>
                 <TextBox Grid.Row="2"
                          x:Name="BodyEditor"

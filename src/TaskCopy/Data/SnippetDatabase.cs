@@ -53,7 +53,8 @@ public sealed class SnippetDatabase
     private const string SnippetSelectAll = """
         SELECT id, title, body, sort_order, created_at,
                quick_hotkey, used_count, last_used_at, pinned, is_monospace,
-               group_id, deleted_at, paste_mode
+               group_id, deleted_at, paste_mode,
+               last_target_process_name, last_target_at
         FROM snippets
         """;
 
@@ -110,6 +111,8 @@ public sealed class SnippetDatabase
                 GroupId = reader.IsDBNull(10) ? null : reader.GetInt64(10),
                 DeletedAt = reader.IsDBNull(11) ? null : reader.GetInt64(11),
                 PasteMode = reader.IsDBNull(12) ? 0 : (int)reader.GetInt64(12),
+                LastTargetProcessName = reader.IsDBNull(13) ? null : reader.GetString(13),
+                LastTargetAt = reader.IsDBNull(14) ? null : reader.GetInt64(14),
             });
         }
         return list;
@@ -274,6 +277,91 @@ public sealed class SnippetDatabase
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE snippets SET used_count = used_count + 1, last_used_at = $now WHERE id = $id;";
         cmd.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>F48: record which app received the snippet's last successful auto-paste.</summary>
+    public void SetLastTarget(long snippetId, string processName)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET last_target_process_name = $p, last_target_at = $now WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$p", processName);
+        cmd.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("$id", snippetId);
+        cmd.ExecuteNonQuery();
+    }
+
+    // -----------------------------------------------------------------------
+    // F46: snippet body history (10 newest versions per snippet, FK CASCADE)
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Record one body version after a debounced save. Trims to keep at most
+    /// <paramref name="keep"/> rows per snippet (default 10).
+    /// </summary>
+    public void RecordBodyHistory(long snippetId, string body, int keep = 10)
+    {
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+
+        using (var ins = conn.CreateCommand())
+        {
+            ins.Transaction = tx;
+            ins.CommandText = "INSERT INTO snippet_body_history (snippet_id, body, saved_at) VALUES ($s, $b, $now);";
+            ins.Parameters.AddWithValue("$s", snippetId);
+            ins.Parameters.AddWithValue("$b", body);
+            ins.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            ins.ExecuteNonQuery();
+        }
+
+        // Trim: keep N most recent per snippet.
+        using (var trim = conn.CreateCommand())
+        {
+            trim.Transaction = tx;
+            trim.CommandText = """
+                DELETE FROM snippet_body_history
+                WHERE snippet_id = $s
+                AND id NOT IN (
+                    SELECT id FROM snippet_body_history
+                    WHERE snippet_id = $s
+                    ORDER BY saved_at DESC LIMIT $n
+                );
+                """;
+            trim.Parameters.AddWithValue("$s", snippetId);
+            trim.Parameters.AddWithValue("$n", keep);
+            trim.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+    }
+
+    public List<BodyHistoryEntry> GetBodyHistory(long snippetId)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT id, body, saved_at FROM snippet_body_history WHERE snippet_id = $s ORDER BY saved_at DESC;";
+        cmd.Parameters.AddWithValue("$s", snippetId);
+        using var reader = cmd.ExecuteReader();
+        var list = new List<BodyHistoryEntry>();
+        while (reader.Read())
+        {
+            list.Add(new BodyHistoryEntry
+            {
+                Id = reader.GetInt64(0),
+                Body = reader.GetString(1),
+                SavedAt = reader.GetInt64(2),
+            });
+        }
+        return list;
+    }
+
+    public void DeleteBodyHistoryEntry(long id)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM snippet_body_history WHERE id = $id;";
         cmd.Parameters.AddWithValue("$id", id);
         cmd.ExecuteNonQuery();
     }
