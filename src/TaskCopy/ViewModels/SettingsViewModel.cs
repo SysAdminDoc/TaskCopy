@@ -307,13 +307,34 @@ public partial class SettingsViewModel : ObservableObject
     private void DeleteSnippet()
     {
         if (SelectedSnippet is null) return;
-        var idx = Snippets.IndexOf(SelectedSnippet);
-        _db.Delete(SelectedSnippet.Id);
+
+        var title = SelectedSnippet.Title;
+        var result = System.Windows.MessageBox.Show(
+            $"Delete snippet \"{title}\"?\n\nIt will be moved to the trash and permanently removed after 30 days.",
+            "TaskCopy",
+            System.Windows.MessageBoxButton.OKCancel,
+            System.Windows.MessageBoxImage.Question,
+            System.Windows.MessageBoxResult.Cancel);
+        if (result != System.Windows.MessageBoxResult.OK) return;
+
+        var snippet = SelectedSnippet;
+        var idx = Snippets.IndexOf(snippet);
+
+        // Unregister any per-snippet hotkey before soft-delete so it stops firing.
+        if (!string.IsNullOrEmpty(snippet.QuickHotkey)) _hotkeys.UnregisterSnippet(snippet.Id);
+
+        _db.SoftDelete(snippet.Id);
         Snippets.RemoveAt(idx);
         SelectedSnippet = idx < Snippets.Count ? Snippets[idx]
                           : idx > 0 ? Snippets[idx - 1] : null;
-        StatusMessage = "Snippet deleted.";
+        StatusMessage = $"Moved \"{title}\" to trash.";
     }
+
+    /// <summary>
+    /// Persist the current order of Snippets to the DB. Called from the
+    /// SettingsWindow drag-reorder handler after a successful drop.
+    /// </summary>
+    public void PersistCurrentOrder() => PersistOrder();
 
     [RelayCommand(CanExecute = nameof(CanMoveUp))]
     private void MoveUp()

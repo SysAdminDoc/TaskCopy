@@ -40,10 +40,18 @@
                        Margin="2,0,0,6" />
 
             <ListBox Grid.Row="1"
+                     x:Name="SnippetList"
                      Style="{StaticResource Mocha.ListBox}"
                      ItemContainerStyle="{StaticResource Mocha.ListBoxItem}"
                      ItemsSource="{Binding Snippets}"
-                     SelectedItem="{Binding SelectedSnippet}">
+                     SelectedItem="{Binding SelectedSnippet}"
+                     AllowDrop="True"
+                     PreviewMouseLeftButtonDown="OnSnippetListMouseDown"
+                     PreviewMouseMove="OnSnippetListMouseMove"
+                     DragOver="OnSnippetListDragOver"
+                     Drop="OnSnippetListDrop"
+                     AutomationProperties.Name="Snippets"
+                     AutomationProperties.HelpText="List of saved snippets. Drag to reorder. Use Add / Delete / Move buttons or arrow keys.">
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:Snippet}">
                         <StackPanel>
@@ -101,7 +109,8 @@
             <TextBox Grid.Row="1"
                      Style="{StaticResource Mocha.TextBox}"
                      Text="{Binding EditTitle, UpdateSourceTrigger=PropertyChanged}"
-                     IsEnabled="{Binding HasSelection}" />
+                     IsEnabled="{Binding HasSelection}"
+                     AutomationProperties.Name="Snippet title" />
 
             <Grid Grid.Row="2" Margin="0,10,0,0">
                 <Grid.RowDefinitions>
@@ -158,7 +167,9 @@
                          AcceptsTab="True"
                          TextWrapping="Wrap"
                          VerticalScrollBarVisibility="Auto"
-                         VerticalContentAlignment="Top" />
+                         VerticalContentAlignment="Top"
+                         AutomationProperties.Name="Snippet body"
+                         AutomationProperties.HelpText="Use the Insert buttons above to add placeholders like {{date}} or {{cursor}}." />
             </Grid>
 
             <Border Grid.Row="3" Style="{StaticResource Mocha.Separator}" Margin="0,12,0,8" />

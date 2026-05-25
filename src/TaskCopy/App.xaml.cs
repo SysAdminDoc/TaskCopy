@@ -60,12 +60,20 @@ public partial class App : Application
         _db = new SnippetDatabase(Path.Combine(dataDir, "snippets.db"));
         _settings = new SettingsStore(_db);
 
-        // Daily-rotated 3-deep VACUUM INTO backups, ran off the UI thread so
-        // startup latency stays unchanged.
+        // Daily-rotated 3-deep VACUUM INTO backups + 30-day trash purge,
+        // ran off the UI thread so startup latency stays unchanged.
         _ = Task.Run(() =>
         {
             try { BackupRotator.Rotate(_db); }
             catch (Exception ex) { CrashLog.Write("BackupRotator.Rotate", ex); }
+
+            try
+            {
+                var cutoff = DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeSeconds();
+                var n = _db.PurgeDeletedOlderThan(cutoff);
+                if (n > 0) CrashLog.Write("PurgeTrash", new Exception($"Purged {n} soft-deleted snippets older than 30 days."));
+            }
+            catch (Exception ex) { CrashLog.Write("PurgeDeleted", ex); }
         });
         _clipboard = new ClipboardService();
         _startup = new StartupService();

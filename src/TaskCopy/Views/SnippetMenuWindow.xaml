@@ -64,6 +64,8 @@
                      Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
                      Margin="12,0,12,8"
                      ToolTip="Type to filter; Up/Down to navigate; Enter to copy; Esc to clear/close; 1-9 to pick"
+                     AutomationProperties.Name="Snippet filter"
+                     AutomationProperties.HelpText="Type to filter the snippet list. Use the Up and Down arrows to navigate, Enter to copy, Escape to clear or close."
                      Visibility="{Binding HasAnySnippets, Converter={StaticResource BoolToVisibilityConverter}}" />
 
             <!-- Separator -->
@@ -81,6 +83,7 @@
                      KeyboardNavigation.TabNavigation="None"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     AutomationProperties.Name="Snippets"
                      Visibility="{Binding HasSnippets, Converter={StaticResource BoolToVisibilityConverter}}">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
@@ -116,7 +119,8 @@
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:SnippetRow}">
-                        <Grid>
+                        <Grid AutomationProperties.Name="{Binding Title}"
+                              AutomationProperties.HelpText="{Binding Preview}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="22" />
                                 <ColumnDefinition Width="*" />

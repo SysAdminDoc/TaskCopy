@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using TaskCopy.Models;
 using TaskCopy.ViewModels;
 
 namespace TaskCopy.Views;
@@ -9,6 +11,8 @@ public partial class SettingsWindow : Window
 {
     private readonly SettingsViewModel _vm;
     private bool _capturingHotkey;
+    private Point? _dragOrigin;
+    private Snippet? _draggedSnippet;
 
     public SettingsWindow(SettingsViewModel vm)
     {
@@ -73,6 +77,70 @@ public partial class SettingsWindow : Window
         var field = AskWindow.Prompt("Prompt label", this);
         if (string.IsNullOrEmpty(field)) return;
         InsertAtCaret($"{{{{ask:{field}}}}}");
+    }
+
+    // -----------------------------------------------------------------------
+    // Drag-reorder for the snippet list (I7)
+    // -----------------------------------------------------------------------
+
+    private void OnSnippetListMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragOrigin = e.GetPosition(SnippetList);
+        _draggedSnippet = (FindAncestor<ListBoxItem>(e.OriginalSource as DependencyObject))?.DataContext as Snippet;
+    }
+
+    private void OnSnippetListMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _draggedSnippet is null || _dragOrigin is null) return;
+        var pos = e.GetPosition(SnippetList);
+        if (Math.Abs(pos.X - _dragOrigin.Value.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(pos.Y - _dragOrigin.Value.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+        var payload = _draggedSnippet;
+        _dragOrigin = null;
+        _draggedSnippet = null;
+        try
+        {
+            DragDrop.DoDragDrop(SnippetList, payload, DragDropEffects.Move);
+        }
+        catch
+        {
+            // tolerate aborted drags (e.g. another modal stole focus)
+        }
+    }
+
+    private void OnSnippetListDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(typeof(Snippet)) ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void OnSnippetListDrop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetData(typeof(Snippet)) is not Snippet source) return;
+        var target = (FindAncestor<ListBoxItem>(e.OriginalSource as DependencyObject))?.DataContext as Snippet;
+        if (target is null || ReferenceEquals(source, target)) return;
+
+        var oldIdx = _vm.Snippets.IndexOf(source);
+        var newIdx = _vm.Snippets.IndexOf(target);
+        if (oldIdx < 0 || newIdx < 0 || oldIdx == newIdx) return;
+
+        _vm.Snippets.Move(oldIdx, newIdx);
+        _vm.PersistCurrentOrder();
+        _vm.SelectedSnippet = source;
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? start) where T : DependencyObject
+    {
+        var cur = start;
+        while (cur is not null)
+        {
+            if (cur is T t) return t;
+            cur = VisualTreeHelper.GetParent(cur);
+        }
+        return null;
     }
 
     private void InsertAtCaret(string text)
