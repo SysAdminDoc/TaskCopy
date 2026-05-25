@@ -85,7 +85,7 @@ Goal: scale snippets past 50, add power-user editing affordances.
 - [ ] **F6 — Snippet groups / folders** (`groups` table + nullable `group_id` on `snippets`, flyout pivot)
 - [ ] **F7 — Per-snippet quick hotkey** (`quick_hotkey TEXT NULL` column + multi-register in `HotkeyService`)
 - [ ] **F8 — Frecency / Pin / "Recent" ordering** (`used_count`/`last_used_at`/`pinned` columns)
-- [ ] **F9 — JSON import/export + automatic on-startup backup** (rotated 3-deep via `VACUUM INTO`)
+- [x] **F9 — JSON import/export + automatic on-startup backup** (rotated 3-deep via `VACUUM INTO`)
 - [x] **F14 — Snippet preview popup on hover + monospace body toggle** (per-snippet `is_monospace`) — preview tooltips already shipped in v0.2 (I9); monospace toggle shipped here, hover popup deferred (current tooltip covers it).
 - [ ] **F15 — Optional clipboard auto-capture (Recent clips section)** (`AddClipboardFormatListener` + `recent_clips` table; respects `ExcludeClipboardContentFromMonitors`)
 - [ ] **I6 — Confirm-delete (with "don't ask again") + soft-delete trash** (`deleted_at INTEGER NULL`)

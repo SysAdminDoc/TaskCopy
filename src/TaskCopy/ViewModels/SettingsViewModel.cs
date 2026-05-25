@@ -231,6 +231,55 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ExportSnippets()
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = $"taskcopy-snippets-{DateTime.Now:yyyyMMdd}.json",
+            Filter = "JSON (*.json)|*.json",
+            DefaultExt = ".json",
+            AddExtension = true,
+        };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            var n = SnippetIO.Export(_db, dlg.FileName);
+            StatusMessage = $"Exported {n} snippet{(n == 1 ? "" : "s")} to {dlg.FileName}.";
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("ExportSnippets", ex);
+            StatusMessage = $"Export failed: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void ImportSnippets()
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "JSON (*.json)|*.json",
+            CheckFileExists = true,
+        };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            var r = SnippetIO.Import(_db, dlg.FileName);
+            // Reload so the new snippets appear in Settings immediately.
+            LoadFromStore();
+            StatusMessage = $"Imported {r.Added} snippet{(r.Added == 1 ? "" : "s")}"
+                + (r.Skipped > 0 ? $", skipped {r.Skipped} duplicate{(r.Skipped == 1 ? "" : "s")}" : "")
+                + (r.GroupsCreated > 0 ? $", created {r.GroupsCreated} group{(r.GroupsCreated == 1 ? "" : "s")}" : "")
+                + ".";
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("ImportSnippets", ex);
+            StatusMessage = $"Import failed: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
     private void OpenDataFolder()
     {
         var dir = System.IO.Path.Combine(

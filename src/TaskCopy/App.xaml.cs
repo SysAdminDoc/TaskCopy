@@ -58,6 +58,14 @@ public partial class App : Application
 
         _db = new SnippetDatabase(Path.Combine(dataDir, "snippets.db"));
         _settings = new SettingsStore(_db);
+
+        // Daily-rotated 3-deep VACUUM INTO backups, ran off the UI thread so
+        // startup latency stays unchanged.
+        _ = Task.Run(() =>
+        {
+            try { BackupRotator.Rotate(_db); }
+            catch (Exception ex) { CrashLog.Write("BackupRotator.Rotate", ex); }
+        });
         _clipboard = new ClipboardService();
         _startup = new StartupService();
         _foreground = new ForegroundWindowCapture();
