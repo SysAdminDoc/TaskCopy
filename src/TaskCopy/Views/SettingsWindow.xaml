@@ -127,6 +127,12 @@
                                   IsEnabled="{Binding HasSelection}"
                                   ToolTip="Switch this snippet's editor and tooltip to a monospaced font (good for code)."
                                   Margin="14,0,0,0" />
+                        <TextBlock Text="Hotkey:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="14,0,6,0" />
+                        <ComboBox Width="130"
+                                  ItemsSource="{Binding QuickHotkeyOptions}"
+                                  SelectedItem="{Binding EditQuickHotkey}"
+                                  IsEnabled="{Binding HasSelection}"
+                                  ToolTip="Optional: bind this snippet to a global Ctrl+Alt+&lt;N&gt; chord so it copies (+ auto-pastes) from anywhere without opening the flyout." />
                     </StackPanel>
                 </Grid>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">

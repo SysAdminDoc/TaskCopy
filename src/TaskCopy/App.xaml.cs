@@ -76,6 +76,8 @@ public partial class App : Application
 
         _hotkeys = new HotkeyService();
         _hotkeys.Triggered += (_, _) => Dispatcher.Invoke(ShowSnippetMenu);
+        _hotkeys.SnippetTriggered += (_, snippetId) =>
+            Dispatcher.BeginInvoke(() => OnSnippetHotkeyAsync(snippetId));
         _hotkeys.RegistrationFailed += (_, msg) =>
             Dispatcher.Invoke(() => _trayIcon?.ShowNotification(
                 title: "TaskCopy",
@@ -85,6 +87,10 @@ public partial class App : Application
         _hotkeyHost = new HotkeyHostWindow();
         MainWindow = _hotkeyHost;
         _hotkeys.TryRegister(_settings.HotkeyKey, _settings.HotkeyModifiers);
+
+        // Per-snippet quick hotkeys (F7) — register every snippet that has a
+        // quick_hotkey set. Failures are surfaced via RegistrationFailed.
+        _hotkeys.RegisterAllSnippets(_db.GetAll().Select(s => (s.Id, s.QuickHotkey)));
 
         _trayIcon = new TaskbarIcon
         {
@@ -185,6 +191,17 @@ public partial class App : Application
         };
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    private async Task OnSnippetHotkeyAsync(long snippetId)
+    {
+        if (_db is null) return;
+        var snippet = _db.GetAll().FirstOrDefault(s => s.Id == snippetId);
+        if (snippet is null) return;
+        // Capture foreground BEFORE we run any UI work — for direct hotkeys
+        // there's no flyout to pre-capture from.
+        _foreground?.Capture();
+        await HandleSnippetCopyAsync(snippet);
     }
 
     private async Task HandleSnippetCopyAsync(Snippet snippet)

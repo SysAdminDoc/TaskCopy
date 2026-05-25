@@ -37,6 +37,7 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(EditBodyFontFamily))]
     [NotifyPropertyChangedFor(nameof(EditGroup))]
     [NotifyPropertyChangedFor(nameof(EditPinned))]
+    [NotifyPropertyChangedFor(nameof(EditQuickHotkey))]
     private Snippet? _selectedSnippet;
 
     partial void OnSelectedSnippetChanging(Snippet? value)
@@ -121,6 +122,54 @@ public partial class SettingsViewModel : ObservableObject
             if (SelectedSnippet.Pinned == value) return;
             SelectedSnippet.Pinned = value;
             try { _db.SetPinned(SelectedSnippet.Id, value); } catch (Exception ex) { CrashLog.Write("SetPinned", ex); }
+            OnPropertyChanged();
+        }
+    }
+
+    public const string QuickHotkeyNone = "(None)";
+
+    public IReadOnlyList<string> QuickHotkeyOptions { get; } =
+    [
+        QuickHotkeyNone,
+        "Ctrl+Alt+1", "Ctrl+Alt+2", "Ctrl+Alt+3", "Ctrl+Alt+4", "Ctrl+Alt+5",
+        "Ctrl+Alt+6", "Ctrl+Alt+7", "Ctrl+Alt+8", "Ctrl+Alt+9",
+    ];
+
+    public string EditQuickHotkey
+    {
+        get
+        {
+            var v = SelectedSnippet?.QuickHotkey;
+            return string.IsNullOrEmpty(v) ? QuickHotkeyNone : v;
+        }
+        set
+        {
+            if (SelectedSnippet is null) return;
+            var newValue = string.Equals(value, QuickHotkeyNone, StringComparison.Ordinal) ? null : value;
+            if (string.Equals(SelectedSnippet.QuickHotkey ?? string.Empty, newValue ?? string.Empty, StringComparison.Ordinal)) return;
+
+            var snippet = SelectedSnippet;
+            snippet.QuickHotkey = newValue;
+
+            try { _db.SetQuickHotkey(snippet.Id, newValue); }
+            catch (Exception ex) { CrashLog.Write("SetQuickHotkey", ex); }
+
+            _hotkeys.UnregisterSnippet(snippet.Id);
+            if (!string.IsNullOrEmpty(newValue))
+            {
+                if (_hotkeys.TryRegisterSnippet(snippet.Id, newValue))
+                {
+                    StatusMessage = $"Quick hotkey {newValue} set for \"{snippet.Title}\".";
+                }
+                else
+                {
+                    StatusMessage = $"Quick hotkey {newValue} could not be registered — already in use? Try another.";
+                }
+            }
+            else
+            {
+                StatusMessage = $"Quick hotkey cleared for \"{snippet.Title}\".";
+            }
             OnPropertyChanged();
         }
     }
