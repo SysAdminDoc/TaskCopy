@@ -11,7 +11,7 @@ namespace TaskCopy.Data;
 internal static class Migrations
 {
     /// <summary>The schema version this build expects.</summary>
-    public const int CurrentVersion = 6;
+    public const int CurrentVersion = 7;
 
     public static void Apply(SqliteConnection conn)
     {
@@ -22,6 +22,7 @@ internal static class Migrations
         if (version < 4) ApplyV4(conn);
         if (version < 5) ApplyV5(conn);
         if (version < 6) ApplyV6(conn);
+        if (version < 7) ApplyV7(conn);
     }
 
     private static int GetUserVersion(SqliteConnection conn)
@@ -179,6 +180,19 @@ internal static class Migrations
         AddColumnIfMissing(conn, tx, "snippets", "image_width", "INTEGER");
         AddColumnIfMissing(conn, tx, "snippets", "image_height", "INTEGER");
         SetUserVersion(conn, 6);
+        tx.Commit();
+    }
+
+    /// <summary>
+    /// F39: explicit per-snippet opt-in for {{shell:cmd}} placeholders.
+    /// Imports never turn this on; users must enable it locally after reading
+    /// the warning. 0 = shell placeholders remain literal, 1 = evaluator may run.
+    /// </summary>
+    private static void ApplyV7(SqliteConnection conn)
+    {
+        using var tx = conn.BeginTransaction();
+        AddColumnIfMissing(conn, tx, "snippets", "allow_shell", "INTEGER NOT NULL DEFAULT 0");
+        SetUserVersion(conn, 7);
         tx.Commit();
     }
 

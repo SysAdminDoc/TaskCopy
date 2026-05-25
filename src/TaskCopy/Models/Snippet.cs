@@ -78,6 +78,10 @@ public partial class Snippet : ObservableObject
     [NotifyPropertyChangedFor(nameof(Preview))]
     private int? _imageHeight;
 
+    /// <summary>F39: true only when the user explicitly allows {{shell:cmd}} for this snippet.</summary>
+    [ObservableProperty]
+    private bool _allowShell;
+
     public bool IsImage => ContentKind == 1 && ImagePng is { Length: > 0 };
 
     public string Preview

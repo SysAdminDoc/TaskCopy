@@ -44,6 +44,7 @@ public partial class App : Application
 
     // One-time-per-session suppression for the "auto-paste skipped" toast.
     private bool _autoPasteFailToastShown;
+    private bool _shellWarningAcceptedThisSession;
 
     /// <summary>
     /// F49: in-memory backup password — populated when the user enters it via
@@ -352,6 +353,7 @@ public partial class App : Application
         // F47: hand the modal helper down so SettingsViewModel doesn't need a
         // Views-namespace using directive.
         vm.DeleteConfirmer = title => ConfirmDeleteWindow.Prompt(title, _settingsWindow);
+        vm.ShellOptInConfirmer = ConfirmShellOptIn;
         _settingsWindow = new SettingsWindow(vm);
         _settingsWindow.Closed += (_, _) =>
         {
@@ -360,6 +362,32 @@ public partial class App : Application
         };
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    private bool ConfirmShellOptIn()
+    {
+        var result = MessageBox.Show(
+            "Shell placeholders run local commands as your Windows user. Only enable this for snippets you wrote and understand. Imported snippets never enable it automatically.\n\nEnable shell placeholders for this snippet?",
+            "TaskCopy - Allow shell placeholder",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Warning,
+            MessageBoxResult.Cancel);
+        return result == MessageBoxResult.OK;
+    }
+
+    private bool ConfirmShellExecution(string command)
+    {
+        if (_shellWarningAcceptedThisSession) return true;
+        var preview = command.Length > 300 ? command[..300] + "..." : command;
+        var result = MessageBox.Show(
+            $"This snippet is about to run a local shell command:\n\n{preview}\n\nContinue? You will not be asked again for shell snippets in this TaskCopy session.",
+            "TaskCopy - Run shell command",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Warning,
+            MessageBoxResult.Cancel);
+        if (result != MessageBoxResult.OK) return false;
+        _shellWarningAcceptedThisSession = true;
+        return true;
     }
 
     private async Task OnSnippetHotkeyAsync(long snippetId)
@@ -419,6 +447,9 @@ public partial class App : Application
             PreviousClipboard = previousClipboard,
             PromptFor = field => Dispatcher.Invoke(() => AskWindow.Prompt(field)),
             PromptForMany = fields => Dispatcher.Invoke(() => FormWindow.Prompt(fields)),
+            AllowShell = snippet.AllowShell,
+            ConfirmShellExecution = command => Dispatcher.Invoke(() => ConfirmShellExecution(command)),
+            RunShellCommand = ShellSnippetEvaluator.Run,
         };
 
         ExpansionResult expansion;
@@ -522,6 +553,9 @@ public partial class App : Application
                 PreviousClipboard = previousClipboard,
                 PromptFor = f => Dispatcher.Invoke(() => AskWindow.Prompt(f)),
                 PromptForMany = fields => Dispatcher.Invoke(() => FormWindow.Prompt(fields)),
+                AllowShell = snippet.AllowShell,
+                ConfirmShellExecution = command => Dispatcher.Invoke(() => ConfirmShellExecution(command)),
+                RunShellCommand = ShellSnippetEvaluator.Run,
             };
             ExpansionResult expansion;
             try { expansion = SnippetTemplating.Expand(snippet.Body, ctx); }
@@ -743,6 +777,9 @@ public partial class App : Application
                 PreviousClipboard = TryReadClipboardText(),
                 PromptFor = field => Dispatcher.Invoke(() => AskWindow.Prompt(field)),
                 PromptForMany = fields => Dispatcher.Invoke(() => FormWindow.Prompt(fields)),
+                AllowShell = match.AllowShell,
+                ConfirmShellExecution = command => Dispatcher.Invoke(() => ConfirmShellExecution(command)),
+                RunShellCommand = ShellSnippetEvaluator.Run,
             };
             try
             {

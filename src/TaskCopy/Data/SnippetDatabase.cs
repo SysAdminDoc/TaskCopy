@@ -55,7 +55,8 @@ public sealed class SnippetDatabase
                quick_hotkey, used_count, last_used_at, pinned, is_monospace,
                group_id, deleted_at, paste_mode,
                last_target_process_name, last_target_at, target_app_glob,
-               content_kind, image_png, image_width, image_height
+               content_kind, image_png, image_width, image_height,
+               allow_shell
         FROM snippets
         """;
 
@@ -119,6 +120,7 @@ public sealed class SnippetDatabase
                 ImagePng = reader.IsDBNull(17) ? null : reader.GetFieldValue<byte[]>(17),
                 ImageWidth = reader.IsDBNull(18) ? null : (int)reader.GetInt64(18),
                 ImageHeight = reader.IsDBNull(19) ? null : (int)reader.GetInt64(19),
+                AllowShell = !reader.IsDBNull(20) && reader.GetInt64(20) != 0,
             });
         }
         return list;
@@ -320,6 +322,16 @@ public sealed class SnippetDatabase
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE snippets SET target_app_glob = $g WHERE id = $id;";
         cmd.Parameters.AddWithValue("$g", (object?)glob ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void SetAllowShell(long id, bool allow)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE snippets SET allow_shell = $a WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$a", allow ? 1 : 0);
         cmd.Parameters.AddWithValue("$id", id);
         cmd.ExecuteNonQuery();
     }

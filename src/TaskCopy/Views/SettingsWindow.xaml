@@ -149,7 +149,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Body" Style="{StaticResource Mocha.Body.Header}" Margin="2,0,0,4" />
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,2,4">
+                    <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,2,4">
                         <CheckBox Style="{StaticResource Mocha.CheckBox}"
                                   Content="📌 Pin"
                                   IsChecked="{Binding EditPinned}"
@@ -160,6 +160,12 @@
                                   IsChecked="{Binding EditIsMonospace}"
                                   IsEnabled="{Binding HasSelection}"
                                   ToolTip="Switch this snippet's editor and tooltip to a monospaced font (good for code)."
+                                  Margin="14,0,0,0" />
+                        <CheckBox Style="{StaticResource Mocha.CheckBox}"
+                                  Content="Allow shell"
+                                  IsChecked="{Binding EditAllowShell}"
+                                  IsEnabled="{Binding HasSelection}"
+                                  ToolTip="Allow {{shell:cmd}} placeholders in this snippet. Commands run locally; imported snippets never enable this automatically."
                                   Margin="14,0,0,0" />
                         <TextBlock Text="Hotkey:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="14,0,6,0" />
                         <TextBlock Text="{Binding EditQuickHotkeyDisplay}"
@@ -176,7 +182,7 @@
                                 Command="{Binding ClearQuickHotkeyBindingCommand}"
                                 Margin="4,0,0,0"
                                 ToolTip="Remove the per-snippet hotkey binding." />
-                    </StackPanel>
+                    </WrapPanel>
                 </Grid>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
                     <TextBlock Text="Paste:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="2,0,6,0" />
@@ -200,6 +206,8 @@
                             ToolTip="Inserts {{ask:Field}} — prompts for a value at paste time." />
                     <Button Style="{StaticResource Mocha.Button}" Content="{}{{form:…}}" Click="OnInsertForm" Margin="4,0,0,0"
                             ToolTip="Inserts {{form:Field1|Field2}} — prompts for several reusable field values at paste time." />
+                    <Button Style="{StaticResource Mocha.Button}" Content="{}{{shell:…}}" Click="OnInsertShell" Margin="4,0,0,0"
+                            ToolTip="Inserts {{shell:cmd}} — runs only when Allow shell is enabled for this snippet." />
                     <Border Width="1" Background="{StaticResource Mocha.Surface1.Brush}" Margin="10,4" />
                     <Button Style="{StaticResource Mocha.Button}"
                             Content="Open in editor…"

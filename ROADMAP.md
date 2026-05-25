@@ -64,6 +64,10 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.8 — "Opt-in shell placeholders" ✅ SHIPPED (2026-05-25)
+
+- [x] **F39 — `{{shell:cmd}}` evaluation** — per-snippet **Allow shell** opt-in, first-run warning per session, 2 s timeout, 4 KB output cap, and imported snippets remain disabled.
+
 ## v0.5.7 — Build hotfix ✅ SHIPPED (2026-05-25)
 
 - [x] **F33 build hotfix** — explicit `System.IO` imports for image clipboard/converter code; Release build is clean under .NET SDK 10.0.300.
@@ -162,7 +166,6 @@ This is the only active to-do checklist. `RESEARCH_FEATURE_PLAN.md` is archived 
 
 ### App features
 
-- [ ] **F39 — `{{shell:cmd}}` evaluation** — opt-in per snippet, disabled on import, with a warning dialog before first execution.
 - [ ] **F40 — Syntax-highlighted body editor** — AvalonEdit when `IsMonospace`, with plain TextBox fallback.
 - [ ] **F51 — FTS5 search at scale** — body search index once libraries cross the large-snippet threshold.
 - [ ] **F30 — Encrypted snippet store** — BYO password; likely SQLCipher dependency swap. Separate from already-shipped encrypted backups.

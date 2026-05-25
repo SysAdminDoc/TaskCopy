@@ -5,7 +5,8 @@ namespace TaskCopy.Services;
 
 /// <summary>
 /// Pure function that expands snippet placeholders like {{date}}, {{time}},
-/// {{clipboard}}, {{cursor}}, {{ask:Field}}, and {{form:Field1|Field2}}.
+/// {{clipboard}}, {{cursor}}, {{ask:Field}}, {{form:Field1|Field2}},
+/// and opt-in {{shell:cmd}}.
 /// Unknown tokens are left literal. Single pass — no recursion (a templated
 /// value can't itself contain tokens).
 /// </summary>
@@ -49,10 +50,11 @@ public static class SnippetTemplating
 
             // F28: pipe-chained transforms — "clipboard|trim|upper" splits into
             // the producer token "clipboard" + transform list ["trim", "upper"].
-            // F36: `form:` uses `|` as the field separator, so it does not
-            // participate in pipe transforms.
-            var rawIsForm = raw.StartsWith("form:", StringComparison.OrdinalIgnoreCase);
-            var pipeIdx = rawIsForm ? -1 : raw.IndexOf('|');
+            // F36/F39: `form:` and `shell:` use `|` inside their own syntax, so
+            // they do not participate in pipe transforms.
+            var rawUsesLiteralPipes = raw.StartsWith("form:", StringComparison.OrdinalIgnoreCase)
+                                      || raw.StartsWith("shell:", StringComparison.OrdinalIgnoreCase);
+            var pipeIdx = rawUsesLiteralPipes ? -1 : raw.IndexOf('|');
             var token = pipeIdx < 0 ? raw : raw[..pipeIdx].TrimEnd();
             var transforms = pipeIdx < 0
                 ? Array.Empty<string>()
@@ -175,6 +177,29 @@ public static class SnippetTemplating
             return true;
         }
 
+        if (lower.StartsWith("shell:", StringComparison.Ordinal))
+        {
+            var command = token[6..].Trim();
+            if (command.Length == 0)
+            {
+                replacement = string.Empty;
+                return true;
+            }
+            if (!ctx.AllowShell)
+            {
+                replacement = $"{{{{{token}}}}}";
+                return true;
+            }
+            if (ctx.ConfirmShellExecution is not null && !ctx.ConfirmShellExecution(command))
+            {
+                cancelled = true;
+                return true;
+            }
+
+            replacement = ctx.RunShellCommand?.Invoke(command) ?? string.Empty;
+            return true;
+        }
+
         if (lower.StartsWith("ask:", StringComparison.Ordinal))
         {
             var field = token[4..].Trim();
@@ -200,6 +225,9 @@ public sealed class TemplatingContext
     public string PreviousClipboard { get; init; } = string.Empty;
     public Func<string, string?>? PromptFor { get; init; }
     public Func<IReadOnlyList<string>, IReadOnlyDictionary<string, string>?>? PromptForMany { get; init; }
+    public bool AllowShell { get; init; }
+    public Func<string, bool>? ConfirmShellExecution { get; init; }
+    public Func<string, string>? RunShellCommand { get; init; }
     public DateTime Now { get; init; } = DateTime.Now;
 }
 

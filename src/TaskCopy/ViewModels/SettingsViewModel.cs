@@ -61,6 +61,7 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(EditQuickHotkeyDisplay))]
     [NotifyPropertyChangedFor(nameof(EditPasteMode))]
     [NotifyPropertyChangedFor(nameof(EditTargetAppGlob))]
+    [NotifyPropertyChangedFor(nameof(EditAllowShell))]
     private Snippet? _selectedSnippet;
 
     partial void OnSelectedSnippetChanging(Snippet? value)
@@ -182,6 +183,29 @@ public partial class SettingsViewModel : ObservableObject
             SelectedSnippet.Pinned = value;
             try { _db.SetPinned(SelectedSnippet.Id, value); } catch (Exception ex) { CrashLog.Write("SetPinned", ex); }
             OnPropertyChanged();
+        }
+    }
+
+    public bool EditAllowShell
+    {
+        get => SelectedSnippet?.AllowShell ?? false;
+        set
+        {
+            if (SelectedSnippet is null) return;
+            if (SelectedSnippet.AllowShell == value) return;
+            if (value && !(ShellOptInConfirmer?.Invoke() ?? false))
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            SelectedSnippet.AllowShell = value;
+            try { _db.SetAllowShell(SelectedSnippet.Id, value); }
+            catch (Exception ex) { CrashLog.Write("SetAllowShell", ex); }
+            OnPropertyChanged();
+            StatusMessage = value
+                ? $"Shell placeholders enabled for \"{SelectedSnippet.Title}\"."
+                : $"Shell placeholders disabled for \"{SelectedSnippet.Title}\".";
         }
     }
 
@@ -531,6 +555,7 @@ public partial class SettingsViewModel : ObservableObject
     /// dependency on the WPF window type itself.
     /// </summary>
     public Func<string, (bool Confirmed, bool DontAskAgain)>? DeleteConfirmer { get; set; }
+    public Func<bool>? ShellOptInConfirmer { get; set; }
 
     [RelayCommand]
     private void ShowTrash() => ShowTrashRequested?.Invoke(this, EventArgs.Empty);

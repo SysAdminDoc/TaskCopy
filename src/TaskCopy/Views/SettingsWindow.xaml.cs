@@ -99,6 +99,13 @@ public partial class SettingsWindow : Window
         InsertAtCaret($"{{{{form:{fields}}}}}");
     }
 
+    private void OnInsertShell(object sender, RoutedEventArgs e)
+    {
+        var command = AskWindow.Prompt("Shell command", this);
+        if (string.IsNullOrWhiteSpace(command)) return;
+        InsertAtCaret($"{{{{shell:{command}}}}}");
+    }
+
     // -----------------------------------------------------------------------
     // Keyboard accelerators on the snippet list (I32)
     // -----------------------------------------------------------------------

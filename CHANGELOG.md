@@ -5,6 +5,21 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.8] — 2026-05-25
+
+### Added
+- **Opt-in shell placeholders (F39).** `{{shell:cmd}}` runs only when the selected snippet has **Allow shell** enabled. Disabled snippets paste the token literally.
+- First shell execution in a TaskCopy session shows a warning with the command preview; cancelling aborts the snippet expansion.
+- Shell commands run through a bounded `cmd.exe` wrapper with a 2 s timeout and 4 KB output cap.
+
+### Changed
+- Schema bumped V6 → V7 with `snippets.allow_shell`.
+- Imported snippets never enable shell execution automatically; the setting is local and user-controlled.
+
+### Architecture
+- New service: `Services/ShellSnippetEvaluator.cs`.
+- `TemplatingContext` gained `AllowShell`, `ConfirmShellExecution`, and `RunShellCommand`.
+
 ## [0.5.7] — 2026-05-25
 
 ### Fixed
