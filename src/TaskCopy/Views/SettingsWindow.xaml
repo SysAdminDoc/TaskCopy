@@ -135,9 +135,9 @@
 
                 <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
                           Style="{StaticResource Mocha.CheckBox}"
-                          Content="Auto-paste into the previous window after copy (v0.2 preview)"
+                          Content="Auto-paste into the previous window after copy"
                           IsChecked="{Binding AutoPaste}"
-                          IsEnabled="False"
+                          ToolTip="When ON, TaskCopy refocuses the window that was active before you opened the flyout and sends Ctrl+V automatically."
                           Margin="0,6,0,0" />
             </Grid>
         </Grid>

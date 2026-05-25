@@ -35,7 +35,13 @@ public sealed class SettingsStore
 
     public bool AutoPaste
     {
-        get => string.Equals(_db.GetSetting(KeyAutoPaste), "1", StringComparison.Ordinal);
+        // Default ON for new installs (no setting written yet); existing
+        // explicit "0" still respected.
+        get
+        {
+            var v = _db.GetSetting(KeyAutoPaste);
+            return v is null || string.Equals(v, "1", StringComparison.Ordinal);
+        }
         set => _db.SetSetting(KeyAutoPaste, value ? "1" : "0");
     }
 }

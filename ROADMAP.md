@@ -44,7 +44,7 @@ Goal: turn TaskCopy from "fancy clipboard" into "muscle-memory text expander."
 
 ### P0 features
 
-- [ ] **F1 — Finish auto-paste** (`Services/ForegroundWindowCapture` + new `Services/AutoPasteService` using `SendInput`; enable settings checkbox)
+- [x] **F1 — Finish auto-paste** (`Services/ForegroundWindowCapture` + new `Services/AutoPasteService` using `SendInput`; enable settings checkbox)
 - [ ] **F2 — Search + type-ahead filter in the flyout** (`SnippetMenuViewModel.Filter`, `SnippetMenuWindow` TextBox row + keyboard nav)
 - [ ] **F3 — Number-key quick-pick `1`..`9`** (flyout `OnKeyDown` + row index glyph)
 - [x] **F4 — Tray right-click → Settings / Quit / About / Open snippets context menu** (move flyout to left-click only, add native context menu; also add Settings + Quit + About rows to flyout footer)

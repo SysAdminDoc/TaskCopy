@@ -25,6 +25,7 @@ public partial class App : Application
     private StartupService? _startup;
     private HotkeyService? _hotkeys;
     private ForegroundWindowCapture? _foreground;
+    private AutoPasteService? _autoPaste;
 
     private SnippetMenuWindow? _snippetMenu;
     private SettingsWindow? _settingsWindow;
@@ -55,6 +56,7 @@ public partial class App : Application
         _clipboard = new ClipboardService();
         _startup = new StartupService();
         _foreground = new ForegroundWindowCapture();
+        _autoPaste = new AutoPasteService(_foreground, _settings);
 
         _hotkeys = new HotkeyService();
         _hotkeys.Triggered += (_, _) => Dispatcher.Invoke(ShowSnippetMenu);
@@ -109,6 +111,13 @@ public partial class App : Application
             ShowAbout();
         };
         vm.QuitRequested += (_, _) => QuitApp();
+        vm.SnippetCopied += async (_, _) =>
+        {
+            // Let the dispatcher finish closing the flyout, then a tiny tick more
+            // so SetForegroundWindow targets the user's prior window instead of us.
+            await Task.Delay(20);
+            Dispatcher.Invoke(() => _autoPaste?.TryAutoPaste());
+        };
 
         _snippetMenu = new SnippetMenuWindow(vm);
         _snippetMenu.Closed += (_, _) => _snippetMenu = null;
