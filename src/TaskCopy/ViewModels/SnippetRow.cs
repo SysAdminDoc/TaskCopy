@@ -16,6 +16,7 @@ public sealed class SnippetRow
     public string Title => Snippet.Title;
     public string Preview => Snippet.Preview;
     public string Body => Snippet.Body;
+    public bool Pinned => Snippet.Pinned;
 
     public SnippetRow(Snippet snippet, int displayIndex)
     {

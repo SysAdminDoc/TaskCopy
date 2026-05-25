@@ -37,6 +37,7 @@
     <SolidColorBrush x:Key="Mocha.Lavender.Brush" Color="{StaticResource Mocha.Lavender}" />
     <SolidColorBrush x:Key="Mocha.Red.Brush" Color="{StaticResource Mocha.Red}" />
     <SolidColorBrush x:Key="Mocha.Green.Brush" Color="{StaticResource Mocha.Green}" />
+    <SolidColorBrush x:Key="Mocha.Yellow.Brush" Color="{StaticResource Mocha.Yellow}" />
 
     <FontFamily x:Key="Mocha.Font">Segoe UI Variable Text, Segoe UI</FontFamily>
 

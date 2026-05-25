@@ -9,6 +9,9 @@ public sealed class SettingsStore
     private const string KeyStartWithWindows = "startup.enabled";
     private const string KeyAutoPaste = "behavior.autopaste";
     private const string KeyFirstRunComplete = "firstrun.complete";
+    private const string KeyFlyoutSortMode = "flyout.sort_mode";
+    private const string KeyRecentClipsEnabled = "recent_clips.enabled";
+    private const string KeyRecentClipsMax = "recent_clips.max";
 
     private readonly SnippetDatabase _db;
 
@@ -50,4 +53,38 @@ public sealed class SettingsStore
         => string.Equals(_db.GetSetting(KeyFirstRunComplete), "1", StringComparison.Ordinal);
 
     public void MarkFirstRunComplete() => _db.SetSetting(KeyFirstRunComplete, "1");
+
+    public FlyoutSortMode FlyoutSortMode
+    {
+        get
+        {
+            var v = _db.GetSetting(KeyFlyoutSortMode);
+            return Enum.TryParse<FlyoutSortMode>(v, out var m) ? m : FlyoutSortMode.Manual;
+        }
+        set => _db.SetSetting(KeyFlyoutSortMode, value.ToString());
+    }
+
+    public bool RecentClipsEnabled
+    {
+        // Off by default — opt-in (privacy + name-says-snippets posture).
+        get => string.Equals(_db.GetSetting(KeyRecentClipsEnabled), "1", StringComparison.Ordinal);
+        set => _db.SetSetting(KeyRecentClipsEnabled, value ? "1" : "0");
+    }
+
+    public int RecentClipsMax
+    {
+        get
+        {
+            var v = _db.GetSetting(KeyRecentClipsMax);
+            return int.TryParse(v, out var n) && n > 0 ? n : 50;
+        }
+        set => _db.SetSetting(KeyRecentClipsMax, value.ToString());
+    }
+}
+
+public enum FlyoutSortMode
+{
+    Manual = 0,
+    MostUsed = 1,
+    RecentlyUsed = 2,
 }

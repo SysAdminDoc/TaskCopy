@@ -143,7 +143,7 @@ public partial class App : Application
             return;
         }
 
-        var vm = new SnippetMenuViewModel(_db);
+        var vm = new SnippetMenuViewModel(_db, _settings);
         vm.EditRequested += (_, _) =>
         {
             _snippetMenu?.Close();

@@ -10,6 +10,7 @@ namespace TaskCopy.ViewModels;
 public partial class SnippetMenuViewModel : ObservableObject
 {
     private readonly SnippetDatabase _db;
+    private readonly SettingsStore _settings;
     private List<Snippet> _all = new();
 
     public ObservableCollection<SnippetRow> Snippets { get; } = new();
@@ -39,16 +40,43 @@ public partial class SnippetMenuViewModel : ObservableObject
     public event EventHandler? AboutRequested;
     public event EventHandler? QuitRequested;
 
-    public SnippetMenuViewModel(SnippetDatabase db)
+    public SnippetMenuViewModel(SnippetDatabase db, SettingsStore settings)
     {
         _db = db;
+        _settings = settings;
     }
 
     public void Refresh()
     {
-        _all = _db.GetAll();
+        _all = SortForFlyout(_db.GetAll(), _settings.FlyoutSortMode);
         HasAnySnippets = _all.Count > 0;
         ApplyFilter();
+    }
+
+    private static List<Snippet> SortForFlyout(List<Snippet> input, FlyoutSortMode mode)
+    {
+        // Manual respects the user's drag order exactly (no pin promotion).
+        if (mode == FlyoutSortMode.Manual)
+        {
+            return input.OrderBy(s => s.SortOrder).ThenBy(s => s.Id).ToList();
+        }
+
+        // All other modes: pinned first (still ordered by the mode within each band).
+        IEnumerable<Snippet> ordered = mode switch
+        {
+            FlyoutSortMode.MostUsed => input
+                .OrderByDescending(s => s.Pinned)
+                .ThenByDescending(s => s.UsedCount)
+                .ThenByDescending(s => s.LastUsedAt ?? 0L)
+                .ThenBy(s => s.SortOrder),
+            FlyoutSortMode.RecentlyUsed => input
+                .OrderByDescending(s => s.Pinned)
+                .ThenByDescending(s => s.LastUsedAt ?? 0L)
+                .ThenByDescending(s => s.UsedCount)
+                .ThenBy(s => s.SortOrder),
+            _ => input.OrderBy(s => s.SortOrder),
+        };
+        return ordered.ToList();
     }
 
     partial void OnFilterChanged(string value) => ApplyFilter();

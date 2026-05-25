@@ -36,6 +36,7 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(EditIsMonospace))]
     [NotifyPropertyChangedFor(nameof(EditBodyFontFamily))]
     [NotifyPropertyChangedFor(nameof(EditGroup))]
+    [NotifyPropertyChangedFor(nameof(EditPinned))]
     private Snippet? _selectedSnippet;
 
     partial void OnSelectedSnippetChanging(Snippet? value)
@@ -111,6 +112,39 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    public bool EditPinned
+    {
+        get => SelectedSnippet?.Pinned ?? false;
+        set
+        {
+            if (SelectedSnippet is null) return;
+            if (SelectedSnippet.Pinned == value) return;
+            SelectedSnippet.Pinned = value;
+            try { _db.SetPinned(SelectedSnippet.Id, value); } catch (Exception ex) { CrashLog.Write("SetPinned", ex); }
+            OnPropertyChanged();
+        }
+    }
+
+    public IReadOnlyList<FlyoutSortModeOption> FlyoutSortModes { get; } =
+    [
+        new(FlyoutSortMode.Manual,        "Manual order"),
+        new(FlyoutSortMode.MostUsed,      "Most used first (pinned on top)"),
+        new(FlyoutSortMode.RecentlyUsed,  "Recently used first (pinned on top)"),
+    ];
+
+    public FlyoutSortModeOption SelectedFlyoutSort
+    {
+        get => FlyoutSortModes.FirstOrDefault(m => m.Mode == _settings.FlyoutSortMode)
+               ?? FlyoutSortModes[0];
+        set
+        {
+            if (value is null) return;
+            _settings.FlyoutSortMode = value.Mode;
+            OnPropertyChanged();
+            StatusMessage = $"Flyout order: {value.Label}.";
+        }
+    }
+
     private void ScheduleSave(Snippet snippet)
     {
         _pendingSaveId = snippet.Id;
@@ -160,6 +194,11 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
+
+    public sealed record FlyoutSortModeOption(FlyoutSortMode Mode, string Label)
+    {
+        public override string ToString() => Label;
+    }
 
     public event EventHandler? DirtyChanged;
     public event EventHandler<(Key key, ModifierKeys modifiers)>? HotkeyRebindRequested;

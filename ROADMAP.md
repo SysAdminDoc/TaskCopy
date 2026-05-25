@@ -84,7 +84,7 @@ Goal: scale snippets past 50, add power-user editing affordances.
 - [x] **F5 — Placeholders (`{{date}}`, `{{time}}`, `{{clipboard}}`, `{{cursor}}`, `{{ask:Field}}`)**
 - [x] **F6 — Snippet groups / folders** (`groups` table + nullable `group_id` on `snippets`; group dropdown in Settings + Manage groups modal; flyout pivot deferred — flyout still shows all snippets with search to narrow)
 - [ ] **F7 — Per-snippet quick hotkey** (`quick_hotkey TEXT NULL` column + multi-register in `HotkeyService`)
-- [ ] **F8 — Frecency / Pin / "Recent" ordering** (`used_count`/`last_used_at`/`pinned` columns)
+- [x] **F8 — Frecency / Pin / "Recent" ordering** (`used_count`/`last_used_at`/`pinned` columns)
 - [x] **F9 — JSON import/export + automatic on-startup backup** (rotated 3-deep via `VACUUM INTO`)
 - [x] **F14 — Snippet preview popup on hover + monospace body toggle** (per-snippet `is_monospace`) — preview tooltips already shipped in v0.2 (I9); monospace toggle shipped here, hover popup deferred (current tooltip covers it).
 - [ ] **F15 — Optional clipboard auto-capture (Recent clips section)** (`AddClipboardFormatListener` + `recent_clips` table; respects `ExcludeClipboardContentFromMonitors`)
