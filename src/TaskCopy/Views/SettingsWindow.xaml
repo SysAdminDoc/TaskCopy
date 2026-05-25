@@ -77,7 +77,27 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <TextBlock Text="Title" Style="{StaticResource Mocha.Body.Header}" Margin="2,0,0,4" />
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Title" Style="{StaticResource Mocha.Body.Header}" Margin="2,0,0,4" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,2,4">
+                    <TextBlock Text="Group:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <ComboBox Width="180"
+                              ItemsSource="{Binding Groups}"
+                              SelectedItem="{Binding EditGroup}"
+                              DisplayMemberPath="Name"
+                              IsEnabled="{Binding HasSelection}"
+                              ToolTip="Move this snippet to a group, or pick (Ungrouped)." />
+                    <Button Style="{StaticResource Mocha.Button}"
+                            Content="Manage…"
+                            Command="{Binding ManageGroupsCommand}"
+                            Margin="6,0,0,0"
+                            ToolTip="Add / rename / delete / reorder groups." />
+                </StackPanel>
+            </Grid>
             <TextBox Grid.Row="1"
                      Style="{StaticResource Mocha.TextBox}"
                      Text="{Binding EditTitle, UpdateSourceTrigger=PropertyChanged}"

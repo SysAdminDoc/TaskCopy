@@ -176,6 +176,7 @@ public partial class App : Application
         }
 
         var vm = new SettingsViewModel(_db, _settings, _startup, _hotkeys);
+        vm.ManageGroupsRequested += (_, _) => ShowManageGroups(vm);
         _settingsWindow = new SettingsWindow(vm);
         _settingsWindow.Closed += (_, _) =>
         {
@@ -260,6 +261,21 @@ public partial class App : Application
                     break;
             }
         });
+    }
+
+    private void ShowManageGroups(SettingsViewModel parentVm)
+    {
+        if (_db is null) return;
+        var vm = new ManageGroupsViewModel(_db);
+        var w = new ManageGroupsWindow(vm) { Owner = _settingsWindow };
+        w.Closed += (_, _) =>
+        {
+            // Refresh group list in the parent settings VM so the dropdown picks up
+            // new/renamed/deleted groups, and re-load snippets so any group_id
+            // cleared by ON DELETE SET NULL is reflected.
+            parentVm.LoadFromStore();
+        };
+        w.ShowDialog();
     }
 
     private void ShowAbout()

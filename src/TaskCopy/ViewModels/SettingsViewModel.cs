@@ -21,6 +21,10 @@ public partial class SettingsViewModel : ObservableObject
     private long? _pendingSaveId;
 
     public ObservableCollection<Snippet> Snippets { get; } = new();
+    public ObservableCollection<SnippetGroup> Groups { get; } = new();
+
+    /// <summary>Pseudo-group representing "no group" for the editor ComboBox.</summary>
+    public static readonly SnippetGroup UngroupedSentinel = new() { Id = 0, Name = "(Ungrouped)" };
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteSnippetCommand))]
@@ -31,6 +35,7 @@ public partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(EditBody))]
     [NotifyPropertyChangedFor(nameof(EditIsMonospace))]
     [NotifyPropertyChangedFor(nameof(EditBodyFontFamily))]
+    [NotifyPropertyChangedFor(nameof(EditGroup))]
     private Snippet? _selectedSnippet;
 
     partial void OnSelectedSnippetChanging(Snippet? value)
@@ -88,6 +93,24 @@ public partial class SettingsViewModel : ObservableObject
             ? new System.Windows.Media.FontFamily("Cascadia Mono, Consolas, Courier New")
             : new System.Windows.Media.FontFamily("Segoe UI Variable Text, Segoe UI");
 
+    public SnippetGroup? EditGroup
+    {
+        get
+        {
+            if (SelectedSnippet?.GroupId is not long gid) return UngroupedSentinel;
+            return Groups.FirstOrDefault(g => g.Id == gid) ?? UngroupedSentinel;
+        }
+        set
+        {
+            if (SelectedSnippet is null) return;
+            long? newId = (value is null || value.Id == 0) ? null : value.Id;
+            if (SelectedSnippet.GroupId == newId) return;
+            SelectedSnippet.GroupId = newId;
+            try { _db.SetGroup(SelectedSnippet.Id, newId); } catch (Exception ex) { CrashLog.Write("SetGroup", ex); }
+            OnPropertyChanged();
+        }
+    }
+
     private void ScheduleSave(Snippet snippet)
     {
         _pendingSaveId = snippet.Id;
@@ -140,6 +163,10 @@ public partial class SettingsViewModel : ObservableObject
 
     public event EventHandler? DirtyChanged;
     public event EventHandler<(Key key, ModifierKeys modifiers)>? HotkeyRebindRequested;
+    public event EventHandler? ManageGroupsRequested;
+
+    [RelayCommand]
+    private void ManageGroups() => ManageGroupsRequested?.Invoke(this, EventArgs.Empty);
 
     public SettingsViewModel(SnippetDatabase db, SettingsStore settings,
                               StartupService startup, HotkeyService hotkeys)
@@ -156,12 +183,21 @@ public partial class SettingsViewModel : ObservableObject
     {
         Snippets.Clear();
         foreach (var s in _db.GetAll()) Snippets.Add(s);
+        ReloadGroups();
 
         HotkeyKey = _settings.HotkeyKey;
         HotkeyModifiers = _settings.HotkeyModifiers;
         HotkeyDisplay = HotkeyService.FormatHotkey(HotkeyKey, HotkeyModifiers);
         StartWithWindows = _startup.IsEnabled;
         AutoPaste = _settings.AutoPaste;
+    }
+
+    public void ReloadGroups()
+    {
+        Groups.Clear();
+        Groups.Add(UngroupedSentinel);
+        foreach (var g in _db.GetGroups()) Groups.Add(g);
+        OnPropertyChanged(nameof(EditGroup));
     }
 
     [RelayCommand]
