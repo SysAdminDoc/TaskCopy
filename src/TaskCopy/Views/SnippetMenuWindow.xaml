@@ -338,8 +338,17 @@
                 </StackPanel>
             </Border>
 
+            <!-- F32: multi-selection footer hint -->
+            <TextBlock Grid.Row="8"
+                       Text="{Binding MultiSelectionLabel}"
+                       Style="{StaticResource Mocha.Body.Header}"
+                       HorizontalAlignment="Center"
+                       Margin="0,4,0,4"
+                       Visibility="{Binding HasMultiSelection, Converter={StaticResource BoolToVisibilityConverter}}" />
+
             <!-- Separator -->
-            <Border Grid.Row="8" Style="{StaticResource Mocha.Separator}" />
+            <Border Grid.Row="8" Style="{StaticResource Mocha.Separator}"
+                    Visibility="{Binding HasMultiSelection, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
 
             <!-- Settings -->
             <Button Grid.Row="9"

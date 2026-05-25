@@ -50,6 +50,15 @@ public partial class SnippetMenuWindow : Window
         switch (e.Key)
         {
             case Key.Escape:
+                // F32: Esc clears the multi-selection first if any; then the
+                // filter; then closes. Three-state Esc keeps the action
+                // reversible from any picker state.
+                if (_vm.HasMultiSelection)
+                {
+                    _vm.ClearMultiSelection();
+                    e.Handled = true;
+                    return;
+                }
                 if (_vm.ClearFilterIfAny())
                 {
                     SearchBox.CaretIndex = 0;
@@ -85,7 +94,23 @@ public partial class SnippetMenuWindow : Window
                 return;
 
             case Key.Enter:
-                _vm.CopySelected();
+                // F32: if the user has multi-picked snippets, Enter pastes them all.
+                if (_vm.HasMultiSelection)
+                {
+                    _vm.TryCopyMultiSelection();
+                }
+                else
+                {
+                    _vm.CopySelected();
+                }
+                e.Handled = true;
+                return;
+
+            // F32: Ctrl+Space toggles the highlighted row's membership in the
+            // multi-paste set. Ctrl+Click (in OnSnippetRowClicked) does the same
+            // via mouse.
+            case Key.Space when Keyboard.Modifiers == ModifierKeys.Control:
+                _vm.ToggleMultiSelectionAtIndex(_vm.SelectedIndex);
                 e.Handled = true;
                 return;
         }
@@ -112,6 +137,16 @@ public partial class SnippetMenuWindow : Window
     {
         if (sender is ListBoxItem { DataContext: SnippetRow row })
         {
+            // F32: Ctrl+Click toggles membership in the multi-paste set instead
+            // of immediately pasting. Use the visible index so the toggle hits
+            // the row the user actually clicked even mid-filter.
+            if (Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                var idx = _vm.Snippets.IndexOf(row);
+                if (idx >= 0) _vm.ToggleMultiSelectionAtIndex(idx);
+                e.Handled = true;
+                return;
+            }
             _vm.CopyCommand.Execute(row.Snippet);
             e.Handled = true;
         }

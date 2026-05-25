@@ -14,8 +14,12 @@ public partial class SnippetMenuViewModel : ObservableObject
     private List<Snippet> _all = new();
     private List<RecentClip> _allRecent = new();
 
-    public ObservableCollection<SnippetRow> Snippets { get; } = new();
-    public ObservableCollection<RecentClipRow> RecentClips { get; } = new();
+    // I37: BulkObservableCollection suppresses per-item CollectionChanged
+    // events during ApplyFilter's rebuild, then fires one Reset. WPF rebinds
+    // the whole list in one frame instead of issuing N add/remove events —
+    // measurable improvement at >500-snippet libraries during typing.
+    public BulkObservableCollection<SnippetRow> Snippets { get; } = new();
+    public BulkObservableCollection<RecentClipRow> RecentClips { get; } = new();
     public ObservableCollection<GroupChip> GroupChips { get; } = new();
 
     [ObservableProperty]
@@ -44,11 +48,29 @@ public partial class SnippetMenuViewModel : ObservableObject
     private int _selectedIndex = -1;
 
     /// <summary>
+    /// F32: ordered list of snippet IDs the user has multi-picked via Ctrl+Click
+    /// or Ctrl+Enter. When non-empty, Enter pastes all of them concatenated with
+    /// <see cref="SettingsStore.MultiPasteSeparator"/>. Esc clears.
+    /// </summary>
+    private readonly List<long> _multiSelection = new();
+    public IReadOnlyList<long> MultiSelection => _multiSelection;
+
+    [ObservableProperty]
+    private bool _hasMultiSelection;
+
+    /// <summary>Label for the footer hint: "Paste 3 selected (Enter)" or empty.</summary>
+    public string MultiSelectionLabel => _multiSelection.Count == 0
+        ? string.Empty
+        : $"Paste {_multiSelection.Count} selected (Enter)";
+
+    /// <summary>
     /// Raised when the user picks a snippet. The orchestrator (App) expands
     /// placeholders, writes the clipboard, records use, closes the flyout,
     /// and triggers auto-paste.
     /// </summary>
     public event EventHandler<Snippet>? SnippetCopyRequested;
+    /// <summary>F32: raised when the user confirms multi-paste with Enter.</summary>
+    public event EventHandler<IReadOnlyList<Snippet>>? MultiSnippetCopyRequested;
     /// <summary>Raised when the user picks a recent-clipboard row (F19).</summary>
     public event EventHandler<RecentClip>? RecentClipCopyRequested;
     /// <summary>Raised when the user promotes a recent clip to a real snippet (F19).</summary>
@@ -169,10 +191,12 @@ public partial class SnippetMenuViewModel : ObservableObject
 
     private void ApplyFilter()
     {
-        Snippets.Clear();
-        RecentClips.Clear();
         var q = (Filter ?? string.Empty).Trim();
         var groupId = SelectedGroupId;
+        // I37: build the new lists in plain List<T>, then ReplaceAll into the
+        // BulkObservableCollections so WPF sees one Reset notification.
+        var nextSnippets = new List<SnippetRow>();
+        var nextRecent = new List<RecentClipRow>();
 
         // F27: score + rank candidates so title-prefix matches rise above body matches.
         // For empty query the score is 1 across the board and we fall back to the
@@ -200,9 +224,10 @@ public partial class SnippetMenuViewModel : ObservableObject
             if (groupId == -1L && s.GroupId is not null) continue;
             if (groupId > 0L && s.GroupId != groupId) continue;
 
-            Snippets.Add(new SnippetRow(s, displayIndex));
+            nextSnippets.Add(new SnippetRow(s, displayIndex));
             displayIndex++;
         }
+        Snippets.ReplaceAll(nextSnippets);
         HasSnippets = Snippets.Count > 0;
 
         // Recent clips — filter is applied to body only.
@@ -210,9 +235,10 @@ public partial class SnippetMenuViewModel : ObservableObject
         {
             if (string.IsNullOrEmpty(q) || c.Body.Contains(q, StringComparison.OrdinalIgnoreCase))
             {
-                RecentClips.Add(new RecentClipRow(c));
+                nextRecent.Add(new RecentClipRow(c));
             }
         }
+        RecentClips.ReplaceAll(nextRecent);
         HasRecentClips = RecentClips.Count > 0;
 
         SelectedIndex = HasSnippets ? 0 : -1;
@@ -273,6 +299,59 @@ public partial class SnippetMenuViewModel : ObservableObject
         if (string.IsNullOrEmpty(Filter)) return false;
         Filter = string.Empty;
         return true;
+    }
+
+    /// <summary>
+    /// F32: toggle the highlighted snippet's membership in the multi-paste set.
+    /// Returns true if a change happened (so the caller can refresh the row UI).
+    /// </summary>
+    public bool ToggleMultiSelectionAtIndex(int oneBasedOrZeroBased, bool isOneBased = false)
+    {
+        var idx = isOneBased ? oneBasedOrZeroBased - 1 : oneBasedOrZeroBased;
+        if (idx < 0 || idx >= Snippets.Count) return false;
+        var id = Snippets[idx].Snippet.Id;
+        if (_multiSelection.Remove(id)) { /* removed */ }
+        else { _multiSelection.Add(id); }
+        HasMultiSelection = _multiSelection.Count > 0;
+        OnPropertyChanged(nameof(MultiSelectionLabel));
+        UpdateRowSelectionState();
+        return true;
+    }
+
+    public void ClearMultiSelection()
+    {
+        if (_multiSelection.Count == 0) return;
+        _multiSelection.Clear();
+        HasMultiSelection = false;
+        OnPropertyChanged(nameof(MultiSelectionLabel));
+        UpdateRowSelectionState();
+    }
+
+    public bool IsMultiSelected(long snippetId) => _multiSelection.Contains(snippetId);
+
+    /// <summary>
+    /// F32: if there's a multi-selection, paste it. Returns true when the
+    /// event fired so the caller knows to skip the single-snippet path.
+    /// </summary>
+    public bool TryCopyMultiSelection()
+    {
+        if (_multiSelection.Count == 0) return false;
+        var snippets = _multiSelection
+            .Select(id => _all.FirstOrDefault(s => s.Id == id))
+            .Where(s => s is not null)
+            .Cast<Snippet>()
+            .ToList();
+        if (snippets.Count == 0) return false;
+        MultiSnippetCopyRequested?.Invoke(this, snippets);
+        return true;
+    }
+
+    private void UpdateRowSelectionState()
+    {
+        // Force per-row re-render of any UI bound to IsMultiSelected. The
+        // BulkObservableCollection doesn't fire per-item PropertyChanged, so
+        // expose a virtual "version" property the view can rebind on.
+        OnPropertyChanged(nameof(MultiSelection));
     }
 
     [RelayCommand]

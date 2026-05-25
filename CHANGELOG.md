@@ -5,6 +5,23 @@ All notable changes to TaskCopy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] — 2026-05-25
+
+### Added
+- **Multi-clip paste (F32).** Ctrl+click (or Ctrl+Space when keyboard-focused) toggles a snippet's membership in a multi-paste set. When ≥1 row is selected, the flyout footer shows "Paste N selected (Enter)" and Enter ships the concatenated bundle with the configurable separator from `settings.multipaste.separator` (defaults to `\n\n`). Each contributing snippet's `used_count` is bumped; lifetime stats include the multi-paste body length. Esc has a three-stage clear (multi-selection → filter → close).
+
+### Changed
+- **`SnippetMenuViewModel.Snippets` and `RecentClips` are now `BulkObservableCollection<T>` (I37).** `ApplyFilter` writes into a temporary `List<T>` then calls `ReplaceAll` so WPF sees one `CollectionChanged(Reset)` instead of N add/remove events. Measurable improvement at >500-snippet libraries during typing-while-filter.
+
+### Deferred
+- **I41 (drag-to-group)** — needs duplicating the flyout's chip-strip into Settings, which is real UX design work better suited to a dedicated session. Tracked in ROADMAP v0.5+.
+
+### Architecture
+- New: `ViewModels/BulkObservableCollection.cs` — `ObservableCollection<T>` subclass with `ReplaceAll(IEnumerable<T>)` that suspends per-item events during the rebuild.
+- New settings KV: `settings.multipaste.separator` (default `\n\n`).
+- New ViewModel surface: `SnippetMenuViewModel.MultiSelection`, `HasMultiSelection`, `MultiSelectionLabel`, `ToggleMultiSelectionAtIndex`, `ClearMultiSelection`, `IsMultiSelected`, `TryCopyMultiSelection`, `MultiSnippetCopyRequested` event.
+- New App handler: `HandleMultiSnippetCopyAsync` expands each body separately (so placeholders keep their per-snippet context), concatenates with the configured separator, and ships through the existing auto-paste + stats path.
+
 ## [0.5.0] — 2026-05-25
 
 ### Added

@@ -22,6 +22,7 @@ public sealed class SettingsStore
     private const string KeyFlyoutLastY = "flyout.last_y";
     private const string KeyStatsTotalPastes = "stats.total_pastes";
     private const string KeyStatsTotalChars = "stats.total_chars";
+    private const string KeyMultiPasteSeparator = "multipaste.separator";
 
     private readonly SnippetDatabase _db;
 
@@ -170,6 +171,20 @@ public sealed class SettingsStore
     {
         get => long.TryParse(_db.GetSetting(KeyStatsTotalChars), out var v) ? v : 0L;
         set => _db.SetSetting(KeyStatsTotalChars, value.ToString());
+    }
+
+    /// <summary>
+    /// F32: separator used between bodies when the user multi-picks snippets
+    /// in the flyout. Default = double-newline; user can override via Settings.
+    /// </summary>
+    public string MultiPasteSeparator
+    {
+        get
+        {
+            var v = _db.GetSetting(KeyMultiPasteSeparator);
+            return v is null ? "\n\n" : v;
+        }
+        set => _db.SetSetting(KeyMultiPasteSeparator, value ?? string.Empty);
     }
 
     /// <summary>

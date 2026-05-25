@@ -64,6 +64,11 @@ Goal: close the v0.3 deferred gaps, harden correctness, and ship a binary anybod
 
 ---
 
+## v0.5.1 — "Multi-clip paste + flyout perf" ✅ SHIPPED (2026-05-25)
+
+- [x] **F32** — Multi-clip paste. Ctrl+click / Ctrl+Space toggles selection; Enter pastes the concatenated bundle with `settings.multipaste.separator` (default `\n\n`). Esc has three-stage clear.
+- [x] **I37** — `BulkObservableCollection<T>` for `Snippets` + `RecentClips`. `ApplyFilter` does one `CollectionChanged(Reset)` instead of N add/remove events.
+
 ## v0.5.0 — "Snippet history + stats + CLI reliability" ✅ SHIPPED (2026-05-25)
 
 Schema bumped V3 → V4. Adds the most-requested data-safety net (per-snippet edit history) and unlocks future per-app rules.

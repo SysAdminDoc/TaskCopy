@@ -292,6 +292,7 @@ public partial class App : Application
         };
         vm.QuitRequested += (_, _) => QuitApp();
         vm.SnippetCopyRequested += async (_, s) => await HandleSnippetCopyAsync(s);
+        vm.MultiSnippetCopyRequested += async (_, list) => await HandleMultiSnippetCopyAsync(list);
         vm.RecentClipCopyRequested += async (_, clip) => await HandleRecentClipCopyAsync(clip);
         vm.PromoteRecentClipRequested += (_, clip) => PromoteRecentClipToSnippet(clip);
 
@@ -429,6 +430,86 @@ public partial class App : Application
         if (_settings is null) return;
         _settings.StatsTotalPastes = _settings.StatsTotalPastes + 1;
         _settings.StatsTotalChars = _settings.StatsTotalChars + Math.Max(0, expandedLength);
+    }
+
+    /// <summary>
+    /// F32: paste a concatenated bundle of multi-picked snippets. Each body
+    /// is expanded (so date/clipboard placeholders still work), joined with
+    /// the user's separator, and shipped through the same auto-paste + stats
+    /// path as a single snippet.
+    /// </summary>
+    private async Task HandleMultiSnippetCopyAsync(IReadOnlyList<Snippet> snippets)
+    {
+        if (_clipboard is null || _db is null || _settings is null || snippets.Count == 0) return;
+
+        var previousClipboard = TryReadClipboardText();
+        var sep = _settings.MultiPasteSeparator;
+        var sb = new System.Text.StringBuilder();
+        int? cursorOffsetFromEnd = null;
+        var ids = new List<long>(snippets.Count);
+
+        for (int i = 0; i < snippets.Count; i++)
+        {
+            if (i > 0) sb.Append(sep);
+            var snippet = snippets[i];
+            var ctx = new TemplatingContext
+            {
+                PreviousClipboard = previousClipboard,
+                PromptFor = f => Dispatcher.Invoke(() => AskWindow.Prompt(f)),
+            };
+            ExpansionResult expansion;
+            try { expansion = SnippetTemplating.Expand(snippet.Body, ctx); }
+            catch (Exception ex)
+            {
+                CrashLog.Write("MultiPaste.Expand", ex);
+                expansion = new ExpansionResult { Body = snippet.Body };
+            }
+            if (expansion.Cancelled) return;
+            // The first {{cursor}} encountered wins — concatenated bundles
+            // don't make sense with multiple cursors.
+            if (cursorOffsetFromEnd is null && expansion.CursorOffsetFromEnd is int n)
+            {
+                // Recompute offset from the end of the full concatenated body.
+                var thisExpandedFromEnd = expansion.Body.Length - (expansion.Body.Length - n);
+                cursorOffsetFromEnd = thisExpandedFromEnd
+                    + sep.Length * (snippets.Count - 1 - i)
+                    + snippets.Skip(i + 1).Sum(s => s.Body.Length);
+            }
+            sb.Append(expansion.Body);
+            ids.Add(snippet.Id);
+        }
+
+        var combined = sb.ToString();
+        _clipboardWatcher?.SuppressNext(combined);
+        if (!_clipboard.TryCopy(combined)) return;
+
+        // Bump used_count for every contributing snippet.
+        foreach (var id in ids)
+        {
+            try { _db.RecordUse(id); } catch { /* per-id failure is non-fatal */ }
+        }
+
+        _snippetMenu?.Close();
+        await Task.Delay(20);
+        if (_autoPaste is null) return;
+        // Multi-paste always uses Ctrl+V mode — per-snippet "Type characters"
+        // doesn't compose well when each snippet wants a different mode.
+        var result = await _autoPaste.TryAutoPasteDetailedAsync(
+            cursorOffsetFromEnd,
+            typedBody: combined,
+            pasteMode: 0).ConfigureAwait(true);
+        if (result == AutoPasteService.Result.ForegroundRestoreFailed && !_autoPasteFailToastShown)
+        {
+            _autoPasteFailToastShown = true;
+            _trayIcon?.ShowNotification(
+                title: "TaskCopy",
+                message: "Auto-paste was skipped — the target window may be running elevated. The combined text is on your clipboard.",
+                icon: NotificationIcon.Info);
+        }
+        if (result == AutoPasteService.Result.Pasted)
+        {
+            try { BumpUsageStat(combined.Length); } catch { }
+        }
     }
 
     private async Task HandleRecentClipCopyAsync(RecentClip clip)
