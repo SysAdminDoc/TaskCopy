@@ -5,7 +5,11 @@ Single-click clipboard snippet manager for Windows. Right-click the tray icon (o
 **Stack:** C# / .NET 10 WPF · H.NotifyIcon.Wpf · NHotkey.Wpf · SQLite · CommunityToolkit.Mvvm · Catppuccin Mocha / Latte
 **Reality check:** literally extending the Windows 11 taskbar right-click menu requires Windhawk DLL injection. The tray + cursor-flyout pattern delivers the same UX with zero injection. A Windhawk companion mod can add the literal taskbar trigger as a v0.5 power-user add-on.
 
-This file is the single source of truth for what's done and what's next. The detailed evidence, rationale, and acceptance criteria for each F-/I-/B- item live in [`RESEARCH_FEATURE_PLAN.md`](RESEARCH_FEATURE_PLAN.md); the architecture rationale lives in [`research/architecture-research.md`](research/architecture-research.md). What shipped in each release lives in [`CHANGELOG.md`](CHANGELOG.md).
+This file is the single source of truth for what's next. Completed work is
+summarized in [`COMPLETED.md`](COMPLETED.md), release-level detail lives in
+[`CHANGELOG.md`](CHANGELOG.md), current research synthesis lives in
+[`RESEARCH_REPORT.md`](RESEARCH_REPORT.md), and historical audit evidence lives
+in [`docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md`](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md).
 
 ---
 
@@ -145,7 +149,7 @@ Schema bumped V3 → V4. Adds the most-requested data-safety net (per-snippet ed
 
 ## v0.4.4 — "Quality of life + Accessibility" ✅ SHIPPED (2026-05-25)
 
-Phase B + selected Phase C items from `RESEARCH_FEATURE_PLAN.md`.
+Phase B + selected Phase C items from the archived research feature plan.
 
 - [x] **F42 — High-contrast theme variant** (new `Themes/HighContrast.xaml`, auto-selects when `SystemParameters.HighContrast` is on).
 - [x] **F47 — Don't-ask-again for delete confirm** (new `ConfirmDeleteWindow`, `settings.delete.skip_confirm`).
@@ -156,7 +160,7 @@ Phase B + selected Phase C items from `RESEARCH_FEATURE_PLAN.md`.
 
 ## v0.4.3 — "Make it build" ✅ SHIPPED (2026-05-25)
 
-Phase A from `RESEARCH_FEATURE_PLAN.md` — restores green CI and closes the v0.4.x backup-safety + theme-runtime gaps.
+Phase A from the archived research feature plan — restores green CI and closes the v0.4.x backup-safety + theme-runtime gaps.
 
 - [x] **B16 — fix the 5 `-warnaserror` CI errors** (App.xaml.cs CS8604 guard, SettingsWindow.xaml.cs CS0103 using, SettingsViewModel.cs CS9273+CS9258 `field` rename, AboutWindow.xaml.cs IL3000 → `AppContext.BaseDirectory`).
 - [x] **B17 — `Theme.Auto` follows runtime OS theme** via `SystemEvents.UserPreferenceChanged` + `ThemeService.SystemThemeChanged` event + I16-A relaunch prompt reuse.
@@ -182,7 +186,7 @@ Phase A from `RESEARCH_FEATURE_PLAN.md` — restores green CI and closes the v0.
 
 ## Active backlog — future releases
 
-This is the only active to-do checklist. `RESEARCH_FEATURE_PLAN.md` is archived evidence and acceptance detail; completed work belongs in `CHANGELOG.md`.
+This is the only active to-do checklist. Historical evidence and acceptance detail live in [`docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md`](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md); completed work belongs in [`COMPLETED.md`](COMPLETED.md) and [`CHANGELOG.md`](CHANGELOG.md).
 
 ### App features
 

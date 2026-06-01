@@ -13,6 +13,13 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 
 **v0.5.12** — premium UX polish. Settings, the flyout, dialogs, empty states, focus states, and high-contrast accent handling have been tightened into a calmer, more consistent interface while preserving the same workflow. The v0.5 line also includes hardening/regression tests, FTS5 search at scale, syntax-highlighted code editing, opt-in shell placeholders, image snippets, reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
 
+## Project planning
+
+- [ROADMAP.md](ROADMAP.md) — active future work.
+- [COMPLETED.md](COMPLETED.md) — shipped feature summary.
+- [RESEARCH_REPORT.md](RESEARCH_REPORT.md) — current research synthesis.
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md) — archived historical audit and acceptance detail.
+
 ## Features (v0.5.12)
 
 ### Picker & paste

@@ -1,11 +1,11 @@
 # TaskCopy — Research and Feature Plan (post-v0.4.2 audit)
 
-> **Archive note (2026-05-25):** This file is retained as research evidence and detailed rationale only. Its old checklists have been consolidated into `ROADMAP.md`, which is the single active to-do source. Completed work is recorded in `CHANGELOG.md`.
+> **Archive note (2026-05-25):** This file is retained as research evidence and detailed rationale only. Its old checklists have been consolidated into [`../../../ROADMAP.md`](../../../ROADMAP.md), which is the single active to-do source. Completed work is recorded in [`../../../COMPLETED.md`](../../../COMPLETED.md) and [`../../../CHANGELOG.md`](../../../CHANGELOG.md).
 
 **Date:** 2026-05-25 (later that day, post-CI verdict)
 **Branch / head:** `master` @ `a6fdb61` (release: v0.4.2 "Async paste path")
 **Reviewer:** autonomous research pass (no implementation in this pass)
-**Companion to:** [`ROADMAP.md`](ROADMAP.md), [`research/architecture-research.md`](research/architecture-research.md), [`CHANGELOG.md`](CHANGELOG.md)
+**Companion to:** [`../../../ROADMAP.md`](../../../ROADMAP.md), [`../../../RESEARCH_REPORT.md`](../../../RESEARCH_REPORT.md), [`../../../research/architecture-research.md`](../../../research/architecture-research.md), [`../../../CHANGELOG.md`](../../../CHANGELOG.md)
 
 This pass replaces the prior plan. v0.4.0 / v0.4.1 / v0.4.2 shipped the prior plan's items (see CHANGELOG); this pass focuses on **what's broken at the v0.4.2 baseline** and **what the prior passes did not cover**. The headline finding is that all three v0.4.x CI runs failed — `dotnet build -c Release -warnaserror` reports 5 errors, so the published v0.4.x binaries cannot ship until those are fixed.
 
