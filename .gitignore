@@ -76,3 +76,7 @@ publish/
 
 # Windhawk mod scratch (mod source itself stays tracked under windhawk/)
 windhawk/build/
+
+# Markdown files local-only (except README)
+*.md
+!README.md
