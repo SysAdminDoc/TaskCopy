@@ -25,6 +25,8 @@ public sealed class SettingsStore
     private const string KeyMultiPasteSeparator = "multipaste.separator";
     private const string KeyBackupEncrypted = "backup.encrypted";
     private const string KeyBackupPwToken = "backup.pw_token";
+    private const string KeyStoreEncrypted = "store.encrypted";
+    private const string KeyStorePwToken = "store.pw_token";
 
     private readonly SnippetDatabase _db;
 
@@ -206,6 +208,23 @@ public sealed class SettingsStore
     {
         get => _db.GetSetting(KeyBackupPwToken) ?? string.Empty;
         set => _db.SetSetting(KeyBackupPwToken, value ?? string.Empty);
+    }
+
+    /// <summary>
+    /// F30: when true, snippet titles, bodies, image payloads, edit history,
+    /// and recent clipboard bodies are AES-GCM encrypted in the SQLite store.
+    /// </summary>
+    public bool StoreEncrypted
+    {
+        get => string.Equals(_db.GetSetting(KeyStoreEncrypted), "1", StringComparison.Ordinal);
+        set => _db.SetSetting(KeyStoreEncrypted, value ? "1" : "0");
+    }
+
+    /// <summary>F30: PBKDF2/HMAC verification token for the snippet-store password.</summary>
+    public string StorePasswordToken
+    {
+        get => _db.GetSetting(KeyStorePwToken) ?? string.Empty;
+        set => _db.SetSetting(KeyStorePwToken, value ?? string.Empty);
     }
 
     /// <summary>

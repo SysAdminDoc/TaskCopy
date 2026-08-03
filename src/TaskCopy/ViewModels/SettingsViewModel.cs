@@ -616,6 +616,9 @@ public partial class SettingsViewModel : ObservableObject
         _suppressEncryptionToggleEvent = true;
         try { BackupEncrypted = _settings.BackupEncrypted; }
         finally { _suppressEncryptionToggleEvent = false; }
+        _suppressStoreEncryptionToggleEvent = true;
+        try { StoreEncrypted = _settings.StoreEncrypted; }
+        finally { _suppressStoreEncryptionToggleEvent = false; }
     }
 
     public void ReloadGroups()
@@ -1085,8 +1088,15 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>F49: App owns the password capture (Views layer); VM exposes the toggle.</summary>
     public event EventHandler<bool>? ToggleBackupEncryptionRequested;
 
+    [ObservableProperty]
+    private bool _storeEncrypted;
+
+    /// <summary>F30: App owns password capture + in-place store conversion.</summary>
+    public event EventHandler<bool>? ToggleStoreEncryptionRequested;
+
     /// <summary>True while LoadFromStore is populating from disk — suppresses the F49 prompt event.</summary>
     private bool _suppressEncryptionToggleEvent;
+    private bool _suppressStoreEncryptionToggleEvent;
 
     partial void OnBackupEncryptedChanged(bool value)
     {
@@ -1098,6 +1108,12 @@ public partial class SettingsViewModel : ObservableObject
         ToggleBackupEncryptionRequested?.Invoke(this, value);
     }
 
+    partial void OnStoreEncryptedChanged(bool value)
+    {
+        if (_suppressStoreEncryptionToggleEvent) return;
+        ToggleStoreEncryptionRequested?.Invoke(this, value);
+    }
+
     /// <summary>App calls this when the password capture failed or the user cancelled.</summary>
     public void RevertBackupEncryptedBinding(bool actualValue)
     {
@@ -1107,6 +1123,14 @@ public partial class SettingsViewModel : ObservableObject
         _suppressEncryptionToggleEvent = true;
         try { BackupEncrypted = actualValue; }
         finally { _suppressEncryptionToggleEvent = false; }
+    }
+
+    public void RevertStoreEncryptedBinding(bool actualValue)
+    {
+        if (StoreEncrypted == actualValue) return;
+        _suppressStoreEncryptionToggleEvent = true;
+        try { StoreEncrypted = actualValue; }
+        finally { _suppressStoreEncryptionToggleEvent = false; }
     }
 
     [RelayCommand]

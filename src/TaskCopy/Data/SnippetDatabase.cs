@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security.Cryptography;
 using Microsoft.Data.Sqlite;
 using TaskCopy.Models;
 using TaskCopy.Services;
@@ -7,9 +8,14 @@ namespace TaskCopy.Data;
 
 public sealed class SnippetDatabase
 {
+    private const string KeyStoreEncrypted = "store.encrypted";
+    private const string KeyStorePwToken = "store.pw_token";
+
     private readonly string _connectionString;
+    private byte[]? _storeEncryptionKey;
 
     public string DbPath { get; }
+    public bool StoreEncryptionUnlocked => _storeEncryptionKey is not null;
 
     public SnippetDatabase(string dbPath)
     {
@@ -22,6 +28,20 @@ public sealed class SnippetDatabase
             Mode = SqliteOpenMode.ReadWriteCreate
         }.ToString();
         InitializeDatabase();
+    }
+
+    public void UnlockStoreEncryptionKey(byte[] key)
+    {
+        if (key.Length == 0) throw new ArgumentException("Store encryption key is empty.", nameof(key));
+        ClearStoreEncryptionKey();
+        _storeEncryptionKey = (byte[])key.Clone();
+    }
+
+    public void ClearStoreEncryptionKey()
+    {
+        if (_storeEncryptionKey is null) return;
+        CryptographicOperations.ZeroMemory(_storeEncryptionKey);
+        _storeEncryptionKey = null;
     }
 
     private SqliteConnection Open()
@@ -45,6 +65,199 @@ public sealed class SnippetDatabase
             wal.ExecuteNonQuery();
         }
         Migrations.Apply(conn);
+    }
+
+    public void EnableStoreEncryption(string passwordToken, byte[] key)
+    {
+        if (string.IsNullOrEmpty(passwordToken)) throw new ArgumentException("Password token required.", nameof(passwordToken));
+        UnlockStoreEncryptionKey(key);
+        ReprotectStorePayloads(encrypt: true, passwordToken);
+    }
+
+    public void DisableStoreEncryption(byte[] key)
+    {
+        UnlockStoreEncryptionKey(key);
+        try
+        {
+            ReprotectStorePayloads(encrypt: false, passwordToken: string.Empty);
+        }
+        finally
+        {
+            ClearStoreEncryptionKey();
+        }
+    }
+
+    private string ProtectText(string value)
+        => _storeEncryptionKey is { } key
+            ? StoreCrypto.EncryptText(value ?? string.Empty, key)
+            : value;
+
+    private string UnprotectText(string value)
+    {
+        if (!StoreCrypto.IsEncryptedText(value)) return value;
+        var key = _storeEncryptionKey
+                  ?? throw new InvalidOperationException("Snippet store is encrypted; unlock it before reading snippets.");
+        return StoreCrypto.DecryptText(value, key);
+    }
+
+    private byte[]? ProtectBlob(byte[]? value)
+        => value is null
+            ? null
+            : _storeEncryptionKey is { } key
+                ? StoreCrypto.EncryptBytes(value, key)
+                : value;
+
+    private byte[]? UnprotectBlob(byte[]? value)
+    {
+        if (value is null || !StoreCrypto.IsEncryptedBlob(value)) return value;
+        var key = _storeEncryptionKey
+                  ?? throw new InvalidOperationException("Snippet store is encrypted; unlock it before reading snippets.");
+        return StoreCrypto.DecryptBytes(value, key);
+    }
+
+    private void ReprotectStorePayloads(bool encrypt, string passwordToken)
+    {
+        var key = _storeEncryptionKey
+                  ?? throw new InvalidOperationException("Snippet store encryption key is not loaded.");
+
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = "SELECT id, title, body, image_png FROM snippets;";
+            var rows = new List<(long Id, string Title, string Body, byte[]? ImagePng)>();
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    rows.Add((
+                        reader.GetInt64(0),
+                        reader.GetString(1),
+                        reader.GetString(2),
+                        reader.IsDBNull(3) ? null : reader.GetFieldValue<byte[]>(3)));
+                }
+            }
+
+            foreach (var row in rows)
+            {
+                using var update = conn.CreateCommand();
+                update.Transaction = tx;
+                update.CommandText = """
+                    UPDATE snippets
+                    SET title = $title, body = $body, image_png = $png
+                    WHERE id = $id;
+                    """;
+                update.Parameters.AddWithValue("$title", ReprotectText(row.Title, key, encrypt));
+                update.Parameters.AddWithValue("$body", ReprotectText(row.Body, key, encrypt));
+                update.Parameters.Add("$png", SqliteType.Blob).Value =
+                    (object?)ReprotectBlob(row.ImagePng, key, encrypt) ?? DBNull.Value;
+                update.Parameters.AddWithValue("$id", row.Id);
+                update.ExecuteNonQuery();
+            }
+        }
+
+        ReprotectTextTable(conn, tx, "recent_clips", "body", key, encrypt);
+        ReprotectTextTable(conn, tx, "snippet_body_history", "body", key, encrypt);
+
+        using (var settings = conn.CreateCommand())
+        {
+            settings.Transaction = tx;
+            settings.CommandText = """
+                INSERT INTO settings (key, value) VALUES ($enabledKey, $enabled)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+                INSERT INTO settings (key, value) VALUES ($tokenKey, $token)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+                """;
+            settings.Parameters.AddWithValue("$enabledKey", KeyStoreEncrypted);
+            settings.Parameters.AddWithValue("$enabled", encrypt ? "1" : "0");
+            settings.Parameters.AddWithValue("$tokenKey", KeyStorePwToken);
+            settings.Parameters.AddWithValue("$token", encrypt ? passwordToken : string.Empty);
+            settings.ExecuteNonQuery();
+        }
+
+        using (var fts = conn.CreateCommand())
+        {
+            fts.Transaction = tx;
+            fts.CommandText = "INSERT INTO snippets_fts(snippets_fts) VALUES ('rebuild');";
+            fts.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+        CompactStoreFiles(conn);
+    }
+
+    private static void ReprotectTextTable(
+        SqliteConnection conn,
+        SqliteTransaction tx,
+        string table,
+        string column,
+        byte[] key,
+        bool encrypt)
+    {
+        using var select = conn.CreateCommand();
+        select.Transaction = tx;
+        select.CommandText = $"SELECT id, {column} FROM {table};";
+        var rows = new List<(long Id, string Value)>();
+        using (var reader = select.ExecuteReader())
+        {
+            while (reader.Read()) rows.Add((reader.GetInt64(0), reader.GetString(1)));
+        }
+
+        foreach (var row in rows)
+        {
+            using var update = conn.CreateCommand();
+            update.Transaction = tx;
+            update.CommandText = $"UPDATE {table} SET {column} = $v WHERE id = $id;";
+            update.Parameters.AddWithValue("$v", ReprotectText(row.Value, key, encrypt));
+            update.Parameters.AddWithValue("$id", row.Id);
+            update.ExecuteNonQuery();
+        }
+    }
+
+    private static string ReprotectText(string value, byte[] key, bool encrypt)
+    {
+        var plaintext = value;
+        if (StoreCrypto.IsEncryptedText(value))
+        {
+            try { plaintext = StoreCrypto.DecryptText(value, key); }
+            catch when (encrypt) { plaintext = value; }
+        }
+        return encrypt ? StoreCrypto.EncryptText(plaintext, key) : plaintext;
+    }
+
+    private static byte[]? ReprotectBlob(byte[]? value, byte[] key, bool encrypt)
+    {
+        if (value is null) return null;
+        var plaintext = value;
+        if (StoreCrypto.IsEncryptedBlob(value))
+        {
+            try { plaintext = StoreCrypto.DecryptBytes(value, key); }
+            catch when (encrypt) { plaintext = value; }
+        }
+        return encrypt ? StoreCrypto.EncryptBytes(plaintext, key) : plaintext;
+    }
+
+    private static void CompactStoreFiles(SqliteConnection conn)
+    {
+        using (var checkpoint = conn.CreateCommand())
+        {
+            checkpoint.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+            checkpoint.ExecuteNonQuery();
+        }
+
+        using (var vacuum = conn.CreateCommand())
+        {
+            vacuum.CommandText = "VACUUM;";
+            vacuum.ExecuteNonQuery();
+        }
+
+        using (var finalCheckpoint = conn.CreateCommand())
+        {
+            finalCheckpoint.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+            finalCheckpoint.ExecuteNonQuery();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -92,8 +305,10 @@ public sealed class SnippetDatabase
 
     public bool TrySearchFtsIds(string query, out List<long> ids, int limit = 2_000)
     {
-        var ftsQuery = BuildFtsQuery(query);
         ids = new List<long>();
+        if (_storeEncryptionKey is not null) return false;
+
+        var ftsQuery = BuildFtsQuery(query);
         if (string.IsNullOrEmpty(ftsQuery)) return true;
 
         using var conn = Open();
@@ -144,7 +359,7 @@ public sealed class SnippetDatabase
         return Read(cmd);
     }
 
-    private static List<Snippet> Read(SqliteCommand cmd)
+    private List<Snippet> Read(SqliteCommand cmd)
     {
         using var reader = cmd.ExecuteReader();
         var list = new List<Snippet>();
@@ -153,8 +368,8 @@ public sealed class SnippetDatabase
             list.Add(new Snippet
             {
                 Id = reader.GetInt64(0),
-                Title = reader.GetString(1),
-                Body = reader.GetString(2),
+                Title = UnprotectText(reader.GetString(1)),
+                Body = UnprotectText(reader.GetString(2)),
                 SortOrder = reader.GetInt32(3),
                 CreatedAt = reader.GetInt64(4),
                 QuickHotkey = reader.IsDBNull(5) ? null : reader.GetString(5),
@@ -169,7 +384,7 @@ public sealed class SnippetDatabase
                 LastTargetAt = reader.IsDBNull(14) ? null : reader.GetInt64(14),
                 TargetAppGlob = reader.IsDBNull(15) ? null : reader.GetString(15),
                 ContentKind = reader.IsDBNull(16) ? 0 : (int)reader.GetInt64(16),
-                ImagePng = reader.IsDBNull(17) ? null : reader.GetFieldValue<byte[]>(17),
+                ImagePng = reader.IsDBNull(17) ? null : UnprotectBlob(reader.GetFieldValue<byte[]>(17)),
                 ImageWidth = reader.IsDBNull(18) ? null : (int)reader.GetInt64(18),
                 ImageHeight = reader.IsDBNull(19) ? null : (int)reader.GetInt64(19),
                 AllowShell = !reader.IsDBNull(20) && reader.GetInt64(20) != 0,
@@ -189,8 +404,8 @@ public sealed class SnippetDatabase
             VALUES ($t, $b, $o, $c, $g)
             RETURNING id;
             """;
-        cmd.Parameters.AddWithValue("$t", title);
-        cmd.Parameters.AddWithValue("$b", body);
+        cmd.Parameters.AddWithValue("$t", ProtectText(title));
+        cmd.Parameters.AddWithValue("$b", ProtectText(body));
         cmd.Parameters.AddWithValue("$o", nextOrder);
         cmd.Parameters.AddWithValue("$c", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         cmd.Parameters.AddWithValue("$g", (object?)groupId ?? DBNull.Value);
@@ -213,11 +428,11 @@ public sealed class SnippetDatabase
             VALUES ($t, '', $o, $c, $g, 1, $png, $w, $h)
             RETURNING id;
             """;
-        cmd.Parameters.AddWithValue("$t", title);
+        cmd.Parameters.AddWithValue("$t", ProtectText(title));
         cmd.Parameters.AddWithValue("$o", nextOrder);
         cmd.Parameters.AddWithValue("$c", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         cmd.Parameters.AddWithValue("$g", (object?)groupId ?? DBNull.Value);
-        cmd.Parameters.Add("$png", SqliteType.Blob).Value = pngBytes;
+        cmd.Parameters.Add("$png", SqliteType.Blob).Value = ProtectBlob(pngBytes) ?? Array.Empty<byte>();
         cmd.Parameters.AddWithValue("$w", width);
         cmd.Parameters.AddWithValue("$h", height);
         var id = (long)(cmd.ExecuteScalar() ?? 0L);
@@ -230,8 +445,8 @@ public sealed class SnippetDatabase
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE snippets SET title = $t, body = $b WHERE id = $id;";
-        cmd.Parameters.AddWithValue("$t", title);
-        cmd.Parameters.AddWithValue("$b", body);
+        cmd.Parameters.AddWithValue("$t", ProtectText(title));
+        cmd.Parameters.AddWithValue("$b", ProtectText(body));
         cmd.Parameters.AddWithValue("$id", id);
         cmd.ExecuteNonQuery();
     }
@@ -418,7 +633,7 @@ public sealed class SnippetDatabase
             ins.Transaction = tx;
             ins.CommandText = "INSERT INTO snippet_body_history (snippet_id, body, saved_at) VALUES ($s, $b, $now);";
             ins.Parameters.AddWithValue("$s", snippetId);
-            ins.Parameters.AddWithValue("$b", body);
+            ins.Parameters.AddWithValue("$b", ProtectText(body));
             ins.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
             ins.ExecuteNonQuery();
         }
@@ -457,7 +672,7 @@ public sealed class SnippetDatabase
             list.Add(new BodyHistoryEntry
             {
                 Id = reader.GetInt64(0),
-                Body = reader.GetString(1),
+                Body = UnprotectText(reader.GetString(1)),
                 SavedAt = reader.GetInt64(2),
             });
         }
@@ -560,6 +775,7 @@ public sealed class SnippetDatabase
     {
         using var conn = Open();
         using var tx = conn.BeginTransaction();
+        var protectedBody = ProtectText(body);
 
         // Deduplicate: if the most recent clip is identical, just bump its timestamp.
         long? dupId = null;
@@ -572,7 +788,7 @@ public sealed class SnippetDatabase
                 using var bodyCheck = conn.CreateCommand();
                 bodyCheck.CommandText = "SELECT body FROM recent_clips WHERE id = $id;";
                 bodyCheck.Parameters.AddWithValue("$id", last);
-                if (bodyCheck.ExecuteScalar() is string prev && prev == body)
+                if (bodyCheck.ExecuteScalar() is string prev && UnprotectText(prev) == body)
                 {
                     dupId = last;
                 }
@@ -591,7 +807,7 @@ public sealed class SnippetDatabase
         {
             using var ins = conn.CreateCommand();
             ins.CommandText = "INSERT INTO recent_clips (body, copied_at) VALUES ($b, $now);";
-            ins.Parameters.AddWithValue("$b", body);
+            ins.Parameters.AddWithValue("$b", protectedBody);
             ins.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
             ins.ExecuteNonQuery();
         }
@@ -625,7 +841,7 @@ public sealed class SnippetDatabase
             list.Add(new RecentClip
             {
                 Id = reader.GetInt64(0),
-                Body = reader.GetString(1),
+                Body = UnprotectText(reader.GetString(1)),
                 CopiedAt = reader.GetInt64(2),
             });
         }

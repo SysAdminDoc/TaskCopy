@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using TaskCopy.Data;
 using TaskCopy.Services;
@@ -177,6 +179,53 @@ public sealed class HardeningTests
         Assert.True(slot.IsEncrypted);
     }
 
+    [Fact]
+    public void SnippetDatabase_StoreEncryptionProtectsPayloadsAndRoundTrips()
+    {
+        using var temp = TempWorkspace.Create();
+        var db = temp.CreateDatabase();
+        var snippetId = db.Insert("Secret Title", "needle body secret");
+        db.InsertImage("Secret Image", [0x89, 0x50, 0x4E, 0x47], 1, 1);
+        db.RecordBodyHistory(snippetId, "history secret");
+        db.InsertRecentClip("recent secret", maxKeep: 10);
+
+        var token = StoreCrypto.MakePasswordToken("correct horse battery staple");
+        Assert.True(StoreCrypto.TryDeriveKey(token, "correct horse battery staple", out var key));
+        try
+        {
+            db.EnableStoreEncryption(token, key);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+
+        Assert.True(new SettingsStore(db).StoreEncrypted);
+        Assert.False(db.TrySearchFtsIds("needle", out _));
+        Assert.Equal("Secret Title", db.GetAll().First(s => s.Id == snippetId).Title);
+        Assert.Equal("history secret", Assert.Single(db.GetBodyHistory(snippetId)).Body);
+        Assert.Equal("recent secret", Assert.Single(db.GetRecentClips(10)).Body);
+        AssertRawStoreDoesNotContain(temp.DirectoryPath, "Secret Title");
+        AssertRawStoreDoesNotContain(temp.DirectoryPath, "needle body secret");
+        AssertRawStoreDoesNotContain(temp.DirectoryPath, "history secret");
+        AssertRawStoreDoesNotContain(temp.DirectoryPath, "recent secret");
+
+        db.ClearStoreEncryptionKey();
+        var locked = temp.CreateDatabase();
+        Assert.Throws<InvalidOperationException>(() => locked.GetAll());
+
+        Assert.True(StoreCrypto.TryDeriveKey(new SettingsStore(locked).StorePasswordToken, "correct horse battery staple", out var unlockKey));
+        try
+        {
+            locked.UnlockStoreEncryptionKey(unlockKey);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(unlockKey);
+        }
+        Assert.Equal("needle body secret", locked.GetAll().First(s => s.Id == snippetId).Body);
+    }
+
     private sealed class TempWorkspace : IDisposable
     {
         public string DirectoryPath { get; }
@@ -194,6 +243,19 @@ public sealed class HardeningTests
         public void Dispose()
         {
             try { Directory.Delete(DirectoryPath, recursive: true); } catch { }
+        }
+    }
+
+    private static void AssertRawStoreDoesNotContain(string directory, string needle)
+    {
+        var needleBytes = Encoding.UTF8.GetBytes(needle);
+        foreach (var path in Directory.EnumerateFiles(directory, "snippets.db*"))
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            var bytes = ms.ToArray();
+            Assert.True(bytes.AsSpan().IndexOf(needleBytes) < 0, $"{Path.GetFileName(path)} still contains '{needle}'.");
         }
     }
 }

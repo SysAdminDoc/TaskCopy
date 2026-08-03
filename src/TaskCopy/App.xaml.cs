@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
@@ -78,6 +79,17 @@ public partial class App : Application
 
         _db = new SnippetDatabase(Path.Combine(dataDir, "snippets.db"));
         _settings = new SettingsStore(_db);
+
+        if (_settings.StoreEncrypted && !UnlockSnippetStoreForSession())
+        {
+            MessageBox.Show(
+                "TaskCopy's snippet store is encrypted and cannot be opened without the correct password.",
+                "TaskCopy - Snippet store locked",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            Shutdown(1);
+            return;
+        }
 
         // F21: integrity guard. SQLite reports "ok" on a healthy DB; anything
         // else is either corruption or a fatal-ish migration scar. Surface the
@@ -350,6 +362,7 @@ public partial class App : Application
         vm.ResetToDefaultsRequested += (_, _) => ShowResetToDefaults(vm);
         vm.ShowBodyHistoryRequested += (_, snippet) => ShowBodyHistory(vm, snippet);
         vm.ToggleBackupEncryptionRequested += (_, enabled) => HandleBackupEncryptionToggle(vm, enabled);
+        vm.ToggleStoreEncryptionRequested += (_, enabled) => HandleStoreEncryptionToggle(vm, enabled);
         // F47: hand the modal helper down so SettingsViewModel doesn't need a
         // Views-namespace using directive.
         vm.DeleteConfirmer = title => ConfirmDeleteWindow.Prompt(title, _settingsWindow);
@@ -373,6 +386,34 @@ public partial class App : Application
             MessageBoxImage.Warning,
             MessageBoxResult.Cancel);
         return result == MessageBoxResult.OK;
+    }
+
+    private bool UnlockSnippetStoreForSession()
+    {
+        if (_db is null || _settings is null) return false;
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var prompt = attempt == 0
+                ? "Snippet store password"
+                : "Snippet store password - try again";
+            var password = AskWindow.PromptSecret(prompt, _settingsWindow);
+            if (string.IsNullOrEmpty(password)) return false;
+
+            if (StoreCrypto.TryDeriveKey(_settings.StorePasswordToken, password, out var key))
+            {
+                try
+                {
+                    _db.UnlockStoreEncryptionKey(key);
+                    return true;
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(key);
+                }
+            }
+        }
+
+        return false;
     }
 
     private bool ConfirmShellExecution(string command)
@@ -922,6 +963,99 @@ public partial class App : Application
         _inMemoryBackupPassword = null;
     }
 
+    private void HandleStoreEncryptionToggle(SettingsViewModel vm, bool enabled)
+    {
+        if (_db is null || _settings is null) return;
+
+        if (enabled)
+        {
+            var first = AskWindow.PromptSecret("Snippet store encryption - set password", _settingsWindow);
+            if (string.IsNullOrEmpty(first))
+            {
+                vm.RevertStoreEncryptedBinding(_settings.StoreEncrypted);
+                return;
+            }
+
+            var second = AskWindow.PromptSecret("Snippet store encryption - confirm password", _settingsWindow);
+            if (second != first)
+            {
+                MessageBox.Show("Passwords didn't match. Snippet store encryption stays OFF.",
+                    "TaskCopy - Snippet store encryption",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                vm.RevertStoreEncryptedBinding(_settings.StoreEncrypted);
+                return;
+            }
+
+            byte[]? key = null;
+            try
+            {
+                var token = StoreCrypto.MakePasswordToken(first);
+                if (!StoreCrypto.TryDeriveKey(token, first, out key))
+                    throw new InvalidOperationException("Could not derive the snippet-store key.");
+
+                _db.EnableStoreEncryption(token, key);
+                vm.StatusMessage = "Snippet store encryption is ON. TaskCopy will ask for this password at launch.";
+                vm.LoadFromStore();
+                MessageBox.Show(
+                    "Snippet store encryption is ON.\n\nTaskCopy will ask for this password at launch. If you forget it, encrypted snippets cannot be recovered.",
+                    "TaskCopy - Snippet store encryption",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write("StoreEncryption.Enable", ex);
+                MessageBox.Show($"Snippet store encryption failed: {ex.Message}",
+                    "TaskCopy - Snippet store encryption",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                vm.RevertStoreEncryptedBinding(_settings.StoreEncrypted);
+                return;
+            }
+            finally
+            {
+                if (key is not null) CryptographicOperations.ZeroMemory(key);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(_settings.StorePasswordToken))
+        {
+            var password = AskWindow.PromptSecret("Confirm snippet store password to disable encryption", _settingsWindow);
+            if (string.IsNullOrEmpty(password)
+                || !StoreCrypto.TryDeriveKey(_settings.StorePasswordToken, password, out var key))
+            {
+                MessageBox.Show("Password didn't match. Snippet store encryption stays ON.",
+                    "TaskCopy - Snippet store encryption",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                vm.RevertStoreEncryptedBinding(_settings.StoreEncrypted);
+                return;
+            }
+
+            try
+            {
+                _db.DisableStoreEncryption(key);
+                vm.StatusMessage = "Snippet store encryption is OFF. Existing snippet payloads were decrypted.";
+                vm.LoadFromStore();
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write("StoreEncryption.Disable", ex);
+                MessageBox.Show($"Snippet store decryption failed: {ex.Message}",
+                    "TaskCopy - Snippet store encryption",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                vm.RevertStoreEncryptedBinding(_settings.StoreEncrypted);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(key);
+            }
+        }
+        else
+        {
+            vm.RevertStoreEncryptedBinding(_settings.StoreEncrypted);
+        }
+    }
+
     /// <summary>F46: open the body-history modal for a specific snippet.</summary>
     private void ShowBodyHistory(SettingsViewModel parentVm, Models.Snippet snippet)
     {
@@ -1157,6 +1291,7 @@ public partial class App : Application
             _hotkeys?.Unregister();
             _trayIcon?.Dispose();
             _hotkeyHost?.Close();
+            _db?.ClearStoreEncryptionKey();
             _services?.Dispose();
             if (_singleInstanceMutex is { } m)
             {

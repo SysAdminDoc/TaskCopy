@@ -379,6 +379,11 @@
                               IsChecked="{Binding BackupEncrypted}"
                               Margin="20,0,0,0"
                               ToolTip="When ON, rotated backups are encrypted with AES-256-GCM. You will be prompted for a password. Lose the password = lose the encrypted backups (no recovery)." />
+                    <CheckBox Style="{StaticResource Mocha.CheckBox}"
+                              Content="Encrypt snippet store with password"
+                              IsChecked="{Binding StoreEncrypted}"
+                              Margin="20,0,0,0"
+                              ToolTip="When ON, snippet titles, bodies, images, edit history, and recent clipboard bodies are encrypted in snippets.db. You will be prompted for this password at launch." />
                 </WrapPanel>
 
                 <Grid Grid.Row="4" Grid.ColumnSpan="2" Margin="0,12,0,0">
