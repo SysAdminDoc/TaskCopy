@@ -63,7 +63,7 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 - [H.NotifyIcon.Wpf 2.4.1](https://github.com/HavenDV/H.NotifyIcon) — tray icon
 - [NHotkey.Wpf 3.0.0](https://github.com/thomaslevesque/NHotkey) — global hotkey
 - [CommunityToolkit.Mvvm 8.4.0](https://github.com/CommunityToolkit/dotnet) — MVVM primitives
-- [Microsoft.Data.Sqlite 9.0.0](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/) — snippet store
+- [Microsoft.Data.Sqlite.Core 9.0.0](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/) + [SQLitePCLRaw.bundle_winsqlite3 2.1.11](https://www.nuget.org/packages/SQLitePCLRaw.bundle_winsqlite3) — snippet store on the Windows system SQLite library
 - [YamlDotNet 16.1.0](https://github.com/aaubry/YamlDotNet) — Espanso YAML import
 - [AvalonEdit 6.3.1](https://github.com/icsharpcode/AvalonEdit) — code editor
 

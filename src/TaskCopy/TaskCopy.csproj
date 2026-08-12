@@ -34,7 +34,11 @@
     <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
     <PackageReference Include="NHotkey.Wpf" Version="3.0.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+    <!-- Use the patched system SQLite shipped by Windows instead of the
+         vulnerable bundled e_sqlite3 native binary. Microsoft.Data.Sqlite's
+         custom-provider guidance recommends Core + bundle_winsqlite3 here. -->
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="9.0.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_winsqlite3" Version="2.1.11" />
     <!-- I35: DI container available for v0.5 services (Velopack update check,
          Windhawk IPC bridge). Existing manual wiring keeps working; this just
          makes ServiceProvider available for new code that prefers it. -->
