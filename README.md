@@ -55,6 +55,7 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 - **Drag-reorder** in the Settings snippet list (or Up/Down buttons).
 - **AutomationProperties** on flyout + Settings for screen readers.
 - **Per-monitor DPI v2** manifest for sharp rendering across mixed-DPI setups.
+- **Localization hook** — en-US resources plus an es-ES proof culture; set `TASKCOPY_UI_CULTURE=es-ES` to review the translated surface.
 
 ## Stack
 

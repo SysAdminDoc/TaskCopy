@@ -7,8 +7,9 @@
         xmlns:models="clr-namespace:TaskCopy.Models"
         xmlns:avalon="http://icsharpcode.net/sharpdevelop/avalonedit"
         xmlns:local="clr-namespace:TaskCopy.Views"
+        xmlns:loc="clr-namespace:TaskCopy.Services"
         mc:Ignorable="d"
-        Title="TaskCopy — Settings"
+        Title="{loc:Loc Key=SettingsTitle}"
         Width="980" Height="680"
         MinWidth="760" MinHeight="520"
         Background="{DynamicResource Mocha.Base.Brush}"
@@ -118,10 +119,10 @@
             </Border>
 
             <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
-                <Button Style="{DynamicResource Mocha.Button.Accent}" Content="Add text" Command="{Binding AddSnippetCommand}" />
-                <Button Style="{DynamicResource Mocha.Button}" Content="Image" Command="{Binding AddImageFromClipboardCommand}" Margin="8,0,0,0"
+                <Button Style="{DynamicResource Mocha.Button.Accent}" Content="{loc:Loc Key=AddTextButton}" Command="{Binding AddSnippetCommand}" />
+                <Button Style="{DynamicResource Mocha.Button}" Content="{loc:Loc Key=AddImageButton}" Command="{Binding AddImageFromClipboardCommand}" Margin="8,0,0,0"
                         ToolTip="Create an image snippet from the current clipboard image. Images are never captured in the background." />
-                <Button Style="{DynamicResource Mocha.Button.Danger}" Content="Delete" Command="{Binding DeleteSnippetCommand}" Margin="8,0,0,0" />
+                <Button Style="{DynamicResource Mocha.Button.Danger}" Content="{loc:Loc Key=DeleteButton}" Command="{Binding DeleteSnippetCommand}" Margin="8,0,0,0" />
                 <Button Style="{DynamicResource Mocha.Button}" Content="↑" Command="{Binding MoveUpCommand}" Margin="8,0,0,0" Width="34" />
                 <Button Style="{DynamicResource Mocha.Button}" Content="↓" Command="{Binding MoveDownCommand}" Margin="4,0,0,0" Width="34" />
             </WrapPanel>

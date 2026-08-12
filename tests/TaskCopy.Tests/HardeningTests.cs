@@ -10,6 +10,29 @@ namespace TaskCopy.Tests;
 public sealed class HardeningTests
 {
     [Fact]
+    public void Localization_UsesEnglishBaselineAndSpanishProofCulture()
+    {
+        var prior = LocalizationService.CurrentCulture;
+        try
+        {
+            Assert.True(LocalizationService.TrySetCulture("en-US"));
+            Assert.Equal("TaskCopy — Settings", LocalizationService.Get("SettingsTitle"));
+
+            Assert.True(LocalizationService.TrySetCulture("es-ES"));
+            Assert.Equal("TaskCopy — Configuración", LocalizationService.Get("SettingsTitle"));
+            Assert.Equal("Eliminar", LocalizationService.Get("DeleteButton"));
+            Assert.Equal("missing.key", LocalizationService.Get("missing.key"));
+
+            Assert.False(LocalizationService.TrySetCulture("fr-FR"));
+            Assert.Equal("es-ES", LocalizationService.CurrentCulture.Name);
+        }
+        finally
+        {
+            LocalizationService.SetCulture(prior);
+        }
+    }
+
+    [Fact]
     public void AppGlob_MatchesWildcardsWithoutRegexSemantics()
     {
         Assert.True(AppGlob.Matches(null, null));

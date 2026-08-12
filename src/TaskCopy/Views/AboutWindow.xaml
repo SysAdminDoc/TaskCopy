@@ -1,7 +1,8 @@
 <Window x:Class="TaskCopy.Views.AboutWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="About TaskCopy"
+        xmlns:loc="clr-namespace:TaskCopy.Services"
+        Title="{loc:Loc Key=AboutTitle}"
         Width="460" Height="340"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
@@ -66,7 +67,7 @@
 
         <Button Grid.Row="4"
                 Style="{DynamicResource Mocha.Button}"
-                Content="Close"
+                Content="{loc:Loc Key=CloseButton}"
                 HorizontalAlignment="Right"
                 Width="92"
                 IsCancel="True"
