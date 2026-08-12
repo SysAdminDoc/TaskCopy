@@ -1,6 +1,6 @@
 # TaskCopy
 
-[![Version](https://img.shields.io/badge/version-0.5.12-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.13-blue)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://www.microsoft.com/windows)
 [![Stack](https://img.shields.io/badge/stack-.NET%2010%20%2F%20WPF-512BD4)](https://dotnet.microsoft.com)
@@ -11,7 +11,7 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 
 ## Status
 
-**v0.5.12** — premium UX polish. Settings, the flyout, dialogs, empty states, focus states, and high-contrast accent handling have been tightened into a calmer, more consistent interface while preserving the same workflow. The v0.5 line also includes hardening/regression tests, FTS5 search at scale, syntax-highlighted code editing, opt-in shell placeholders, image snippets, reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
+**v0.5.13** — live theme switching, an embedded localization hook with an es-ES proof culture, focused SettingsViewModel responsibilities, and an audited Windows system SQLite provider. The v0.5 line also includes hardening/regression tests, FTS5 search at scale, syntax-highlighted code editing, opt-in shell placeholders, image snippets, reusable form prompts, Espanso YAML import, encrypted backups, per-app rules, multi-clip paste, edit history, usage stats, sticky flyout position, high-contrast mode, external editor integration, and GitHub issue filing. See [CHANGELOG.md](CHANGELOG.md) for the full list and [ROADMAP.md](ROADMAP.md) for what's next.
 
 ## Project planning
 
@@ -20,7 +20,7 @@ Single-click clipboard snippet menu for Windows. Hit a hotkey or right-click the
 - [RESEARCH_REPORT.md](RESEARCH_REPORT.md) — current research synthesis.
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md) — archived historical audit and acceptance detail.
 
-## Features (v0.5.12)
+## Features (v0.5.13)
 
 ### Picker & paste
 - **Tray icon** — left-click opens snippet flyout at the cursor; right-click opens a native Mocha/Latte menu (Open snippets / Settings / About / Quit); double-click opens Settings.
