@@ -33,6 +33,24 @@ public sealed class HardeningTests
     }
 
     [Fact]
+    public void SnippetEditorService_PreviewsTemplatesAndRecordsHistory()
+    {
+        using var temp = TempWorkspace.Create();
+        var db = temp.CreateDatabase();
+        var id = db.Insert("Title", "old body");
+        var snippet = Assert.Single(db.GetAll());
+        snippet.Body = "Hello {{clipboard}}";
+
+        var editor = new SnippetEditorService(db);
+        Assert.Equal("Hello <clipboard>", editor.Preview(snippet.Body));
+
+        editor.Save(snippet);
+
+        Assert.Equal("Hello {{clipboard}}", db.GetAll().Single(s => s.Id == id).Body);
+        Assert.Equal("Hello {{clipboard}}", Assert.Single(db.GetBodyHistory(id)).Body);
+    }
+
+    [Fact]
     public void AppGlob_MatchesWildcardsWithoutRegexSemantics()
     {
         Assert.True(AppGlob.Matches(null, null));

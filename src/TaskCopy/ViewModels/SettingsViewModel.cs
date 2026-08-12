@@ -17,6 +17,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly StartupService _startup;
     private readonly HotkeyService _hotkeys;
     private readonly ClipboardService _clipboard;
+    private readonly SnippetEditorService _editor;
 
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
     private long? _pendingSaveId;
@@ -103,40 +104,8 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// F25: live render of SnippetTemplating.Expand on the current body so the
-    /// user sees what placeholders will resolve to at paste time. Uses a sample
-    /// clipboard value and stub Ask/Form responses so it stays pure.
-    /// </summary>
-    public string EditBodyPreview
-    {
-        get
-        {
-            var body = EditBody;
-            if (string.IsNullOrEmpty(body)) return string.Empty;
-            try
-            {
-                var ctx = new TemplatingContext
-                {
-                    PreviousClipboard = "<clipboard>",
-                    // Lambda param is named `f` because `field` is a contextual
-                    // keyword in property accessors as of C# 14 (CS9273/CS9258).
-                    PromptFor = f => $"<{f}>",
-                    PromptForMany = fields => fields.ToDictionary(
-                        f => f,
-                        f => $"<{f}>",
-                        StringComparer.OrdinalIgnoreCase),
-                    Now = DateTime.Now,
-                };
-                var result = SnippetTemplating.Expand(body, ctx);
-                return result.Body;
-            }
-            catch
-            {
-                return body;
-            }
-        }
-    }
+    /// <summary>F25: live preview delegated to the editor service.</summary>
+    public string EditBodyPreview => RenderEditorPreview();
 
     public bool EditIsMonospace
     {
@@ -462,10 +431,9 @@ public partial class SettingsViewModel : ObservableObject
         if (s is null) return;
         try
         {
-            _db.Update(s.Id, s.Title, s.Body);
-            // F46: record one history row per flush so a stray edit can be
-            // reverted via the History modal. Trim to 10 newest per snippet.
-            _db.RecordBodyHistory(s.Id, s.Body);
+            // F46: the editor service records one history row per flush and
+            // applies the database's bounded history policy.
+            PersistEditorChanges(s);
         }
         catch (Exception ex)
         {
@@ -572,6 +540,7 @@ public partial class SettingsViewModel : ObservableObject
         _startup = startup;
         _hotkeys = hotkeys;
         _clipboard = clipboard;
+        _editor = new SnippetEditorService(db);
 
         // Keep the status-bar counter in sync with the snippet + group lists.
         Snippets.CollectionChanged += (_, _) =>
@@ -806,343 +775,6 @@ public partial class SettingsViewModel : ObservableObject
         else
         {
             StatusMessage = $"{HotkeyDisplay} didn't reach TaskCopy in 5 s — another app may be grabbing it.";
-        }
-    }
-
-    [RelayCommand]
-    private void OpenLogFolder()
-    {
-        CrashLog.OpenFolder();
-        StatusMessage = $"Opened {CrashLog.LogDirectory}.";
-    }
-
-    [RelayCommand]
-    private void ExportSnippets()
-    {
-        var dlg = new Microsoft.Win32.SaveFileDialog
-        {
-            FileName = $"taskcopy-snippets-{DateTime.Now:yyyyMMdd}.json",
-            Filter = "JSON (*.json)|*.json",
-            DefaultExt = ".json",
-            AddExtension = true,
-        };
-        if (dlg.ShowDialog() != true) return;
-        try
-        {
-            var n = SnippetIO.Export(_db, dlg.FileName);
-            StatusMessage = $"Exported {n} snippet{(n == 1 ? "" : "s")} to {dlg.FileName}.";
-        }
-        catch (Exception ex)
-        {
-            CrashLog.Write("ExportSnippets", ex);
-            StatusMessage = $"Export failed: {ex.Message}";
-        }
-    }
-
-    [RelayCommand]
-    private void ImportSnippets()
-    {
-        // F44: .taskpack is the same JSON format with a curated extension so
-        // community snippet packs can register a file association and ship
-        // with a recognizable name. See README "Snippet packs" section.
-        // F38: .yml / .yaml routes to the Espanso importer instead so users
-        // can bring an existing Espanso match library over without rewriting.
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Filter = "TaskCopy pack / snippets / Espanso YAML (*.taskpack;*.json;*.yml;*.yaml)|*.taskpack;*.json;*.yml;*.yaml"
-                   + "|JSON only (*.json)|*.json"
-                   + "|TaskCopy pack only (*.taskpack)|*.taskpack"
-                   + "|Espanso YAML (*.yml;*.yaml)|*.yml;*.yaml",
-            CheckFileExists = true,
-        };
-        if (dlg.ShowDialog() != true) return;
-
-        var ext = System.IO.Path.GetExtension(dlg.FileName).ToLowerInvariant();
-        if (ext is ".yml" or ".yaml")
-        {
-            try
-            {
-                var packName = System.IO.Path.GetFileNameWithoutExtension(dlg.FileName);
-                var r = EspansoImport.Import(_db, dlg.FileName, packName);
-                LoadFromStore();
-                StatusMessage = $"Imported {r.Added} Espanso match{(r.Added == 1 ? "" : "es")}"
-                    + (r.Skipped > 0 ? $", skipped {r.Skipped} unsupported or duplicate" : "")
-                    + (r.GroupsCreated > 0 ? $", created group \"{packName}\"" : "")
-                    + ".";
-            }
-            catch (Exception ex)
-            {
-                CrashLog.Write("EspansoImport", ex);
-                StatusMessage = $"Espanso import failed: {ex.Message}";
-            }
-            return;
-        }
-        try
-        {
-            var r = SnippetIO.Import(_db, dlg.FileName);
-            // Reload so the new snippets appear in Settings immediately.
-            LoadFromStore();
-            StatusMessage = $"Imported {r.Added} snippet{(r.Added == 1 ? "" : "s")}"
-                + (r.Skipped > 0 ? $", skipped {r.Skipped} duplicate{(r.Skipped == 1 ? "" : "s")}" : "")
-                + (r.GroupsCreated > 0 ? $", created {r.GroupsCreated} group{(r.GroupsCreated == 1 ? "" : "s")}" : "")
-                + ".";
-        }
-        catch (Exception ex)
-        {
-            CrashLog.Write("ImportSnippets", ex);
-            StatusMessage = $"Import failed: {ex.Message}";
-        }
-    }
-
-    [RelayCommand]
-    private void OpenDataFolder()
-    {
-        var dir = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TaskCopy");
-        try
-        {
-            System.IO.Directory.CreateDirectory(dir);
-            Process.Start(new ProcessStartInfo { FileName = dir, UseShellExecute = true });
-            StatusMessage = $"Opened {dir}.";
-        }
-        catch (Exception ex)
-        {
-            CrashLog.Write("OpenDataFolder", ex);
-        }
-    }
-
-    /// <summary>App-level handler picks a backup slot via dialog + swaps it in.</summary>
-    public event EventHandler? RestoreBackupRequested;
-
-    [RelayCommand]
-    private void RestoreBackup() => RestoreBackupRequested?.Invoke(this, EventArgs.Empty);
-
-    /// <summary>
-    /// F52: clear the settings KV table back to defaults. Snippets/groups/trash
-    /// are preserved. The relaunch returns the user to a clean Settings state
-    /// — same UX the theme dropdown uses.
-    /// </summary>
-    public event EventHandler? ResetToDefaultsRequested;
-
-    [RelayCommand]
-    private void ResetToDefaults() => ResetToDefaultsRequested?.Invoke(this, EventArgs.Empty);
-
-    [RelayCommand]
-    private void CopyDiagnostics()
-    {
-        try
-        {
-            var bundle = BuildDiagnosticsMarkdown();
-            System.Windows.Clipboard.SetDataObject(bundle, copy: true);
-            StatusMessage = "Diagnostics bundle copied to clipboard — paste into a GitHub issue.";
-        }
-        catch (Exception ex)
-        {
-            CrashLog.Write("CopyDiagnostics", ex);
-            StatusMessage = $"Couldn't build diagnostics: {ex.Message}";
-        }
-    }
-
-    /// <summary>
-    /// F45: short-circuits "Copy diagnostics → open browser → paste into
-    /// Issues" into one click when the user has `gh` CLI on PATH and is
-    /// authenticated. Falls back to clipboard + a status hint otherwise.
-    /// </summary>
-    [RelayCommand]
-    private async Task FileIssue()
-    {
-        StatusMessage = "Checking for gh CLI…";
-        // Run the availability probe + the actual issue creation on a
-        // background thread; both spawn `gh` which is sync.
-        var ok = await System.Threading.Tasks.Task.Run(() => GhCli.IsAvailable());
-        if (!ok)
-        {
-            StatusMessage = "gh CLI not found on PATH. Diagnostics copied to clipboard — paste into a new GitHub issue.";
-            CopyDiagnostics();
-            return;
-        }
-
-        var bundle = BuildDiagnosticsMarkdown();
-        StatusMessage = "Opening gh issue create…";
-        var (success, output) = await System.Threading.Tasks.Task.Run(() =>
-        {
-            var s = GhCli.TryCreateIssue("SysAdminDoc/TaskCopy", "TaskCopy bug report", bundle, out var o);
-            return (s, o);
-        });
-
-        if (success)
-        {
-            StatusMessage = $"Issue filed: {output}";
-        }
-        else
-        {
-            StatusMessage = $"gh issue create failed ({output}). Diagnostics copied to clipboard instead.";
-            CopyDiagnostics();
-        }
-    }
-
-    private string BuildDiagnosticsMarkdown()
-    {
-        var sb = new System.Text.StringBuilder();
-        var version = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "unknown";
-        var os = Environment.OSVersion.VersionString;
-        var schema = Migrations.CurrentVersion;
-        var snippetCount = Snippets.Count;
-        var groupCount = Math.Max(0, Groups.Count - 1);
-        var lastBackup = _settings.LastBackupAt == 0
-            ? "(none)"
-            : DateTimeOffset.FromUnixTimeSeconds(_settings.LastBackupAt).ToLocalTime().ToString("yyyy-MM-dd HH:mm");
-
-        sb.AppendLine("```");
-        sb.AppendLine($"TaskCopy diagnostics — {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz}");
-        sb.AppendLine($"version    : {version}");
-        sb.AppendLine($"schema     : {schema}");
-        sb.AppendLine($"os         : {os}");
-        sb.AppendLine($"snippets   : {snippetCount}");
-        sb.AppendLine($"groups     : {groupCount}");
-        sb.AppendLine($"hotkey     : {HotkeyDisplay} ({(HotkeyIsRegistered ? "active" : "not registered")})");
-        sb.AppendLine($"lastBackup : {lastBackup}");
-        sb.AppendLine($"theme      : {_settings.Theme}");
-        sb.AppendLine($"autoPaste  : {_settings.AutoPaste}");
-        sb.AppendLine($"recentClips: {_settings.RecentClipsEnabled}");
-        sb.AppendLine("```");
-
-        // Tail crash.log if present.
-        try
-        {
-            if (System.IO.File.Exists(CrashLog.LogPath))
-            {
-                var allLines = System.IO.File.ReadAllLines(CrashLog.LogPath);
-                var tail = allLines.Length > 200 ? allLines[^200..] : allLines;
-                sb.AppendLine();
-                sb.AppendLine("<details><summary>crash.log (last 200 lines)</summary>");
-                sb.AppendLine();
-                sb.AppendLine("```");
-                foreach (var line in tail) sb.AppendLine(line);
-                sb.AppendLine("```");
-                sb.AppendLine();
-                sb.AppendLine("</details>");
-            }
-        }
-        catch { /* best-effort */ }
-
-        return sb.ToString();
-    }
-
-    public void SetHotkey(Key key, ModifierKeys modifiers)
-    {
-        var previousKey = HotkeyKey;
-        var previousModifiers = HotkeyModifiers;
-
-        if (_hotkeys.TryRegister(key, modifiers))
-        {
-            HotkeyKey = key;
-            HotkeyModifiers = modifiers;
-            _settings.HotkeyKey = key;
-            _settings.HotkeyModifiers = modifiers;
-            HotkeyDisplay = HotkeyService.FormatHotkey(key, modifiers);
-            StatusMessage = $"Hotkey set to {HotkeyDisplay}.";
-            return;
-        }
-
-        // Registration failed — keep the previous combo working and persisted.
-        _hotkeys.TryRegister(previousKey, previousModifiers);
-        var attempted = HotkeyService.FormatHotkey(key, modifiers);
-        StatusMessage = $"Hotkey {attempted} could not be registered — kept {HotkeyDisplay}. Try another combo.";
-    }
-
-    partial void OnStartWithWindowsChanged(bool value)
-    {
-        // B15: registry is the authority for next-launch behavior. Keep the
-        // SettingsStore mirror in sync so importers/exporters see the same
-        // value, but never trust the mirror over the live registry read.
-        _startup.SetEnabled(value);
-        _settings.StartWithWindows = _startup.IsEnabled;
-        StatusMessage = value ? "TaskCopy will start with Windows." : "TaskCopy will not start with Windows.";
-    }
-
-    partial void OnAutoPasteChanged(bool value)
-    {
-        _settings.AutoPaste = value;
-        StatusMessage = value ? "Auto-paste enabled." : "Auto-paste disabled.";
-    }
-
-    partial void OnRecentClipsEnabledChanged(bool value)
-    {
-        // Persisted + watcher-toggled by App via SetRecentClipsEnabled;
-        // SetRecentClipsEnabled is wired through the optional callback.
-        ToggleRecentClipsRequested?.Invoke(this, value);
-        StatusMessage = value
-            ? "Recent clipboard auto-capture is ON. Items flagged 'do not include' are still excluded."
-            : "Recent clipboard auto-capture is OFF.";
-    }
-
-    public event EventHandler<bool>? ToggleRecentClipsRequested;
-
-    [ObservableProperty]
-    private bool _backupEncrypted;
-
-    /// <summary>F49: App owns the password capture (Views layer); VM exposes the toggle.</summary>
-    public event EventHandler<bool>? ToggleBackupEncryptionRequested;
-
-    [ObservableProperty]
-    private bool _storeEncrypted;
-
-    /// <summary>F30: App owns password capture + in-place store conversion.</summary>
-    public event EventHandler<bool>? ToggleStoreEncryptionRequested;
-
-    /// <summary>True while LoadFromStore is populating from disk — suppresses the F49 prompt event.</summary>
-    private bool _suppressEncryptionToggleEvent;
-    private bool _suppressStoreEncryptionToggleEvent;
-
-    partial void OnBackupEncryptedChanged(bool value)
-    {
-        // Don't write to _settings here; App handles password capture + token
-        // generation + verification, then sets _settings.BackupEncrypted itself.
-        // We only emit the request; rolling back the binding on cancel is the
-        // App's responsibility.
-        if (_suppressEncryptionToggleEvent) return;
-        ToggleBackupEncryptionRequested?.Invoke(this, value);
-    }
-
-    partial void OnStoreEncryptedChanged(bool value)
-    {
-        if (_suppressStoreEncryptionToggleEvent) return;
-        ToggleStoreEncryptionRequested?.Invoke(this, value);
-    }
-
-    /// <summary>App calls this when the password capture failed or the user cancelled.</summary>
-    public void RevertBackupEncryptedBinding(bool actualValue)
-    {
-        // Set via the generated property under the suppress flag so the
-        // ToggleBackupEncryptionRequested event doesn't re-fire and loop.
-        if (BackupEncrypted == actualValue) return;
-        _suppressEncryptionToggleEvent = true;
-        try { BackupEncrypted = actualValue; }
-        finally { _suppressEncryptionToggleEvent = false; }
-    }
-
-    public void RevertStoreEncryptedBinding(bool actualValue)
-    {
-        if (StoreEncrypted == actualValue) return;
-        _suppressStoreEncryptionToggleEvent = true;
-        try { StoreEncrypted = actualValue; }
-        finally { _suppressStoreEncryptionToggleEvent = false; }
-    }
-
-    [RelayCommand]
-    private void ClearRecentClips()
-    {
-        try
-        {
-            _db.ClearRecentClips();
-            StatusMessage = "Recent clipboard items cleared.";
-        }
-        catch (Exception ex)
-        {
-            CrashLog.Write("ClearRecentClips", ex);
-            StatusMessage = $"Clear failed: {ex.Message}";
         }
     }
 }
