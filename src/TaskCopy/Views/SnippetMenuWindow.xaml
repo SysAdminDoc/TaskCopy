@@ -24,8 +24,8 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="{StaticResource Mocha.Base.Brush}"
-            BorderBrush="{StaticResource Mocha.Overlay0.Brush}"
+    <Border Background="{DynamicResource Mocha.Base.Brush}"
+            BorderBrush="{DynamicResource Mocha.Overlay0.Brush}"
             BorderThickness="1"
             CornerRadius="10"
             Margin="12"
@@ -69,13 +69,13 @@
             <!-- Header -->
             <TextBlock Grid.Row="0"
                        Text="{Binding StatusText}"
-                       Style="{StaticResource Mocha.Body.Header}"
+                       Style="{DynamicResource Mocha.Body.Header}"
                        Margin="16,4,16,8" />
 
             <!-- Search box (visible only when there are any snippets at all) -->
             <TextBox Grid.Row="1"
                      x:Name="SearchBox"
-                     Style="{StaticResource Mocha.TextBox}"
+                     Style="{DynamicResource Mocha.TextBox}"
                      Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"
                      Margin="12,0,12,8"
                      ToolTip="Type to filter; Up/Down to navigate; Enter to copy; Esc to clear/close; 1-9 to pick"
@@ -106,9 +106,9 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource Mocha.Button}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                            <Setter Property="Background" Value="{StaticResource Mocha.Mauve.Brush}" />
-                                            <Setter Property="Foreground" Value="{StaticResource Mocha.OnAccent.Brush}" />
-                                            <Setter Property="BorderBrush" Value="{StaticResource Mocha.Mauve.Brush}" />
+                                            <Setter Property="Background" Value="{DynamicResource Mocha.Mauve.Brush}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource Mocha.OnAccent.Brush}" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Mocha.Mauve.Brush}" />
                                             <Setter Property="FontWeight" Value="SemiBold" />
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -120,12 +120,12 @@
             </ItemsControl>
 
             <!-- Separator -->
-            <Border Grid.Row="3" Style="{StaticResource Mocha.Separator}" />
+            <Border Grid.Row="3" Style="{DynamicResource Mocha.Separator}" />
 
             <!-- Recent header (F19, visible only when capture is on and there's at least one clip) -->
             <TextBlock Grid.Row="4"
                        Text="Recent"
-                       Style="{StaticResource Mocha.Body.Header}"
+                       Style="{DynamicResource Mocha.Body.Header}"
                        Margin="16,4,16,4"
                        Visibility="{Binding HasRecentClips, Converter={StaticResource BoolToVisibilityConverter}}" />
 
@@ -147,7 +147,7 @@
                         <Setter Property="Padding" Value="0" />
                         <Setter Property="Margin" Value="4,1" />
                         <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="Foreground" Value="{StaticResource Mocha.Text.Brush}" />
+                        <Setter Property="Foreground" Value="{DynamicResource Mocha.Text.Brush}" />
                         <Setter Property="Cursor" Value="Hand" />
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                         <Setter Property="Focusable" Value="False" />
@@ -163,7 +163,7 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Mocha.Surface0.Brush}" />
+                                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource Mocha.Surface0.Brush}" />
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -171,12 +171,12 @@
                         </Setter>
                         <Setter Property="ContextMenu">
                             <Setter.Value>
-                                <ContextMenu Style="{StaticResource Mocha.ContextMenu}">
+                                <ContextMenu Style="{DynamicResource Mocha.ContextMenu}">
                                     <MenuItem Header="Copy"
-                                              Style="{StaticResource Mocha.MenuItem}"
+                                              Style="{DynamicResource Mocha.MenuItem}"
                                               Click="OnRecentCopyMenu" />
                                     <MenuItem Header="Promote to snippet…"
-                                              Style="{StaticResource Mocha.MenuItem}"
+                                              Style="{DynamicResource Mocha.MenuItem}"
                                               Click="OnRecentPromoteMenu" />
                                 </ContextMenu>
                             </Setter.Value>
@@ -191,18 +191,18 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0"
-                                    Style="{StaticResource Mocha.Badge}"
+                                    Style="{DynamicResource Mocha.Badge}"
                                     Padding="4,1"
                                     Margin="0,0,6,0"
                                     VerticalAlignment="Center">
                                 <TextBlock Text="R"
-                                           Style="{StaticResource Mocha.Body.Subtle}"
+                                           Style="{DynamicResource Mocha.Body.Subtle}"
                                            FontWeight="SemiBold"
                                            HorizontalAlignment="Center" />
                             </Border>
                             <TextBlock Grid.Column="1"
                                        Text="{Binding Preview}"
-                                       Style="{StaticResource Mocha.Body}"
+                                       Style="{DynamicResource Mocha.Body}"
                                        ToolTip="{Binding Body}" />
                         </Grid>
                     </DataTemplate>
@@ -210,7 +210,7 @@
             </ListBox>
 
             <!-- Separator between Recent and Snippets, shown only when Recent has rows -->
-            <Border Grid.Row="6" Style="{StaticResource Mocha.Separator}"
+            <Border Grid.Row="6" Style="{DynamicResource Mocha.Separator}"
                     Visibility="{Binding HasRecentClips, Converter={StaticResource BoolToVisibilityConverter}}" />
 
             <!-- Snippet list -->
@@ -232,7 +232,7 @@
                         <Setter Property="Padding" Value="0" />
                         <Setter Property="Margin" Value="4,1" />
                         <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="Foreground" Value="{StaticResource Mocha.Text.Brush}" />
+                        <Setter Property="Foreground" Value="{DynamicResource Mocha.Text.Brush}" />
                         <Setter Property="Cursor" Value="Hand" />
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                         <Setter Property="Focusable" Value="False" />
@@ -248,10 +248,10 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Mocha.Surface0.Brush}" />
+                                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource Mocha.Surface0.Brush}" />
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Mocha.Surface1.Brush}" />
+                                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource Mocha.Surface1.Brush}" />
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -269,13 +269,13 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0"
-                                    Style="{StaticResource Mocha.Badge}"
+                                    Style="{DynamicResource Mocha.Badge}"
                                     Padding="4,1"
                                     Margin="0,0,6,0"
                                     VerticalAlignment="Top"
                                     Visibility="{Binding HasIndexLabel, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <TextBlock Text="{Binding IndexLabel}"
-                                           Style="{StaticResource Mocha.Body.Subtle}"
+                                           Style="{DynamicResource Mocha.Body.Subtle}"
                                            FontWeight="SemiBold"
                                            HorizontalAlignment="Center" />
                             </Border>
@@ -284,7 +284,7 @@
                                         Height="50"
                                         CornerRadius="4"
                                         ClipToBounds="True"
-                                        Background="{StaticResource Mocha.Surface0.Brush}"
+                                        Background="{DynamicResource Mocha.Surface0.Brush}"
                                         Margin="0,0,0,6"
                                         HorizontalAlignment="Left"
                                         Visibility="{Binding IsImage, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -292,10 +292,10 @@
                                            Stretch="UniformToFill" />
                                 </Border>
                                 <TextBlock Text="{Binding Title}"
-                                           Style="{StaticResource Mocha.Body}"
+                                           Style="{DynamicResource Mocha.Body}"
                                            ToolTip="{Binding Title}" />
                                 <TextBlock Text="{Binding Preview}"
-                                           Style="{StaticResource Mocha.Body.Subtle}"
+                                           Style="{DynamicResource Mocha.Body.Subtle}"
                                            Margin="0,2,0,0">
                                     <TextBlock.ToolTip>
                                         <ToolTip>
@@ -308,14 +308,14 @@
                                 </TextBlock>
                             </StackPanel>
                             <Border Grid.Column="2"
-                                    Style="{StaticResource Mocha.Badge}"
+                                    Style="{DynamicResource Mocha.Badge}"
                                     Margin="8,0,2,0"
                                     VerticalAlignment="Top"
                                     Visibility="{Binding Pinned, Converter={StaticResource BoolToVisibilityConverter}}"
                                     ToolTip="Pinned">
                                 <TextBlock Text="Pinned"
-                                           Style="{StaticResource Mocha.Body.Subtle}"
-                                           Foreground="{StaticResource Mocha.Yellow.Brush}"
+                                           Style="{DynamicResource Mocha.Body.Subtle}"
+                                           Foreground="{DynamicResource Mocha.Yellow.Brush}"
                                            FontWeight="SemiBold" />
                             </Border>
                         </Grid>
@@ -338,10 +338,10 @@
                 </Border.Style>
                 <StackPanel>
                     <TextBlock Text="No snippets yet"
-                               Style="{StaticResource Mocha.Body.Section}"
+                               Style="{DynamicResource Mocha.Body.Section}"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="Open Settings to add your first one."
-                               Style="{StaticResource Mocha.Body.Caption}"
+                               Style="{DynamicResource Mocha.Body.Caption}"
                                HorizontalAlignment="Center"
                                TextAlignment="Center"
                                Margin="0,4,0,0" />
@@ -367,10 +367,10 @@
                 </Border.Style>
                 <StackPanel>
                     <TextBlock Text="No matches"
-                               Style="{StaticResource Mocha.Body.Section}"
+                               Style="{DynamicResource Mocha.Body.Section}"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="Press Esc to clear the filter."
-                               Style="{StaticResource Mocha.Body.Caption}"
+                               Style="{DynamicResource Mocha.Body.Caption}"
                                HorizontalAlignment="Center"
                                TextAlignment="Center"
                                Margin="0,4,0,0" />
@@ -380,34 +380,34 @@
             <!-- F32: multi-selection footer hint -->
             <TextBlock Grid.Row="8"
                        Text="{Binding MultiSelectionLabel}"
-                       Style="{StaticResource Mocha.Body.Header}"
+                       Style="{DynamicResource Mocha.Body.Header}"
                        HorizontalAlignment="Center"
                        Margin="0,4,0,4"
                        Visibility="{Binding HasMultiSelection, Converter={StaticResource BoolToVisibilityConverter}}" />
 
             <!-- Separator -->
-            <Border Grid.Row="8" Style="{StaticResource Mocha.Separator}"
+            <Border Grid.Row="8" Style="{DynamicResource Mocha.Separator}"
                     Visibility="{Binding HasMultiSelection, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
 
             <!-- Settings -->
             <Button Grid.Row="9"
-                    Style="{StaticResource Mocha.SnippetRow}"
+                    Style="{DynamicResource Mocha.SnippetRow}"
                     Command="{Binding EditCommand}">
-                <TextBlock Text="Settings…" Style="{StaticResource Mocha.Body}" />
+                <TextBlock Text="Settings…" Style="{DynamicResource Mocha.Body}" />
             </Button>
 
             <!-- About -->
             <Button Grid.Row="10"
-                    Style="{StaticResource Mocha.SnippetRow}"
+                    Style="{DynamicResource Mocha.SnippetRow}"
                     Command="{Binding AboutCommand}">
-                <TextBlock Text="About" Style="{StaticResource Mocha.Body}" />
+                <TextBlock Text="About" Style="{DynamicResource Mocha.Body}" />
             </Button>
 
             <!-- Quit -->
             <Button Grid.Row="11"
-                    Style="{StaticResource Mocha.SnippetRow}"
+                    Style="{DynamicResource Mocha.SnippetRow}"
                     Command="{Binding QuitCommand}">
-                <TextBlock Text="Quit TaskCopy" Style="{StaticResource Mocha.Body}" />
+                <TextBlock Text="Quit TaskCopy" Style="{DynamicResource Mocha.Body}" />
             </Button>
         </Grid>
     </Border>

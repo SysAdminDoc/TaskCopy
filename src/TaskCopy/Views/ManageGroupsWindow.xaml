@@ -6,9 +6,9 @@
         Title="TaskCopy — Manage groups"
         Width="460" Height="420"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Mocha.Base.Brush}"
-        Foreground="{StaticResource Mocha.Text.Brush}"
-        FontFamily="{StaticResource Mocha.Font}"
+        Background="{DynamicResource Mocha.Base.Brush}"
+        Foreground="{DynamicResource Mocha.Text.Brush}"
+        FontFamily="{DynamicResource Mocha.Font}"
         FontSize="13"
         UseLayoutRounding="True"
         d:DataContext="{d:DesignInstance vm:ManageGroupsViewModel}"
@@ -25,37 +25,37 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="2,0,0,12">
-            <TextBlock Text="Groups" Style="{StaticResource Mocha.Body.Title}" />
+            <TextBlock Text="Groups" Style="{DynamicResource Mocha.Body.Title}" />
             <TextBlock Text="Organize snippets into flyout chips. Deleting a group keeps its snippets and moves them to Ungrouped."
-                       Style="{StaticResource Mocha.Body.Caption}"
+                       Style="{DynamicResource Mocha.Body.Caption}"
                        Margin="0,2,0,0" />
         </StackPanel>
 
         <Grid Grid.Row="1">
             <ListBox x:Name="GroupList"
-                     Style="{StaticResource Mocha.ListBox}"
-                     ItemContainerStyle="{StaticResource Mocha.ListBoxItem}"
+                     Style="{DynamicResource Mocha.ListBox}"
+                     ItemContainerStyle="{DynamicResource Mocha.ListBoxItem}"
                      ItemsSource="{Binding Groups}"
                      SelectedItem="{Binding SelectedGroup}"
                      MouseDoubleClick="OnGroupDoubleClick"
                      Visibility="{Binding HasGroups, Converter={StaticResource BoolToVisibilityConverter}}">
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:SnippetGroup}">
-                        <TextBlock Text="{Binding Name}" Style="{StaticResource Mocha.Body}" />
+                        <TextBlock Text="{Binding Name}" Style="{DynamicResource Mocha.Body}" />
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-            <Border Style="{StaticResource Mocha.Panel}"
+            <Border Style="{DynamicResource Mocha.Panel}"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Center"
                     MaxWidth="320"
                     Visibility="{Binding HasGroups, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                 <StackPanel>
                     <TextBlock Text="No groups yet"
-                               Style="{StaticResource Mocha.Body.Section}"
+                               Style="{DynamicResource Mocha.Body.Section}"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="Create a group below, then assign snippets from Settings."
-                               Style="{StaticResource Mocha.Body.Caption}"
+                               Style="{DynamicResource Mocha.Body.Caption}"
                                TextAlignment="Center"
                                Margin="0,6,0,0" />
                 </StackPanel>
@@ -63,18 +63,18 @@
         </Grid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
-            <Button Style="{StaticResource Mocha.Button}" Content="Rename…" Click="OnRenameClicked" IsEnabled="{Binding HasSelection}" />
-            <Button Style="{StaticResource Mocha.Button.Danger}" Content="Delete" Command="{Binding DeleteGroupCommand}" Margin="8,0,0,0" />
-            <Button Style="{StaticResource Mocha.Button}" Content="↑" Command="{Binding MoveGroupUpCommand}" Margin="8,0,0,0" Width="34" />
-            <Button Style="{StaticResource Mocha.Button}" Content="↓" Command="{Binding MoveGroupDownCommand}" Margin="4,0,0,0" Width="34" />
+            <Button Style="{DynamicResource Mocha.Button}" Content="Rename…" Click="OnRenameClicked" IsEnabled="{Binding HasSelection}" />
+            <Button Style="{DynamicResource Mocha.Button.Danger}" Content="Delete" Command="{Binding DeleteGroupCommand}" Margin="8,0,0,0" />
+            <Button Style="{DynamicResource Mocha.Button}" Content="↑" Command="{Binding MoveGroupUpCommand}" Margin="8,0,0,0" Width="34" />
+            <Button Style="{DynamicResource Mocha.Button}" Content="↓" Command="{Binding MoveGroupDownCommand}" Margin="4,0,0,0" Width="34" />
         </StackPanel>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,16,0,0">
-            <TextBox Style="{StaticResource Mocha.TextBox}"
+            <TextBox Style="{DynamicResource Mocha.TextBox}"
                      Width="240"
                      Text="{Binding NewGroupName, UpdateSourceTrigger=PropertyChanged}"
                      AutomationProperties.Name="New group name" />
-            <Button Style="{StaticResource Mocha.Button.Accent}"
+            <Button Style="{DynamicResource Mocha.Button.Accent}"
                     Content="Add"
                     Command="{Binding AddGroupCommand}"
                     Margin="8,0,0,0" />
@@ -82,13 +82,13 @@
 
         <DockPanel Grid.Row="4" Margin="0,12,0,0">
             <Button DockPanel.Dock="Right"
-                    Style="{StaticResource Mocha.Button}"
+                    Style="{DynamicResource Mocha.Button}"
                     Content="Close"
                     Width="80"
                     IsCancel="True"
                     Click="OnClose" />
             <TextBlock Text="{Binding StatusMessage}"
-                       Style="{StaticResource Mocha.Body.Subtle}"
+                       Style="{DynamicResource Mocha.Body.Subtle}"
                        VerticalAlignment="Center"
                        TextWrapping="Wrap" />
         </DockPanel>

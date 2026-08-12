@@ -5,14 +5,13 @@ using TaskCopy.Data;
 namespace TaskCopy.Services;
 
 /// <summary>
-/// Swaps the merged palette resource dictionary at startup based on the
-/// stored Theme preference. Auto reads HKCU AppsUseLightTheme.
-/// Theme changes after startup require an app restart (the styles use
-/// StaticResource bindings; swapping mid-flight would not re-evaluate them).
+/// Swaps the merged palette resource dictionary based on the stored Theme
+/// preference. Auto reads HKCU AppsUseLightTheme. Palette brushes and styles
+/// are consumed through DynamicResource bindings, so an Apply call also
+/// updates windows that are already open.
 ///
-/// B17: also publishes a SystemThemeChanged event when the OS theme flips
-/// at runtime, so App can offer the same I16-A relaunch prompt the Settings
-/// dropdown uses. The listener only fires when the user opted into Auto mode.
+/// B17: also publishes a SystemThemeChanged event when the OS theme flips at
+/// runtime. The listener only fires when the resolved palette changes.
 /// </summary>
 public static class ThemeService
 {
@@ -87,9 +86,8 @@ public static class ThemeService
 
     /// <summary>
     /// Replace the first merged dictionary in App.Resources (the palette slot)
-    /// with the target theme. Must run before any window is shown — the styles
-    /// resolve brushes via StaticResource at parse time and won't react to a
-    /// later swap.
+    /// with the target theme. DynamicResource bindings re-resolve the shared
+    /// palette keys for existing windows after this replacement.
     /// </summary>
     public static void Apply(Theme concrete)
     {

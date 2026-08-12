@@ -356,7 +356,7 @@ public partial class App : Application
         var vm = new SettingsViewModel(_db, _settings, _startup, _hotkeys, _clipboard);
         vm.ManageGroupsRequested += (_, _) => ShowManageGroups(vm);
         vm.ToggleRecentClipsRequested += (_, enabled) => SetRecentClipsEnabled(enabled);
-        vm.ApplyThemeRequested += (_, label) => OfferThemeRelaunch(label);
+        vm.ApplyThemeRequested += (_, label) => ApplyThemeLive(label);
         vm.ShowTrashRequested += (_, _) => ShowTrash(vm);
         vm.RestoreBackupRequested += (_, _) => ShowRestoreBackup(vm);
         vm.ResetToDefaultsRequested += (_, _) => ShowResetToDefaults(vm);
@@ -1202,31 +1202,37 @@ public partial class App : Application
 
     /// <summary>
     /// B17: OS theme flipped while we're in Theme.Auto and the resolved
-    /// palette would change. Same prompt-and-relaunch UX as the manual theme
-    /// dropdown — UserPreferenceChanged fires on a non-UI thread, so dispatch
-    /// the MessageBox onto the UI thread.
+    /// palette would change. UserPreferenceChanged fires on a non-UI thread,
+    /// so dispatch the live palette swap onto the UI thread.
     /// </summary>
     private void OnSystemThemeChanged(object? sender, EventArgs e)
     {
         Dispatcher.BeginInvoke(() =>
-            OfferThemeRelaunch("System theme — TaskCopy is in Auto mode"));
+            ApplyThemeLive("system theme"));
     }
 
     /// <summary>
-    /// I16 (Option A): theme changes can't propagate into already-shown windows
-    /// because brushes are bound via StaticResource. Offer an explicit relaunch
-    /// that restores Settings on the other side via the --settings CLI handoff.
+    /// I16 (Option B): apply a palette swap to all open windows. The XAML uses
+    /// DynamicResource for palette keys, so no restart or focus-stealing prompt
+    /// is needed when the user changes theme or the OS resolves Auto mode.
     /// </summary>
-    private void OfferThemeRelaunch(string themeLabel)
+    private void ApplyThemeLive(string themeLabel)
     {
-        var result = MessageBox.Show(
-            $"Apply {themeLabel} now? TaskCopy will restart and Settings will reopen.",
-            "TaskCopy — Theme",
-            MessageBoxButton.OKCancel,
-            MessageBoxImage.Question,
-            MessageBoxResult.Cancel);
-        if (result != MessageBoxResult.OK) return;
-        RelaunchSelf("--settings");
+        try
+        {
+            ThemeService.Apply(ThemeService.Resolve(_settings?.Theme ?? Theme.Mocha));
+            if (_settingsWindow?.DataContext is SettingsViewModel vm)
+                vm.StatusMessage = $"Applied {themeLabel}.";
+        }
+        catch (Exception ex)
+        {
+            CrashLog.Write("ThemeService.ApplyLive", ex);
+            MessageBox.Show(
+                $"TaskCopy couldn't apply the theme: {ex.Message}",
+                "TaskCopy — Theme",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     private void ShowAbout()

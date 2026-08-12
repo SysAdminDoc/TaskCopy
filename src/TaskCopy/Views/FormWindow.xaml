@@ -8,9 +8,9 @@
         MaxHeight="560"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource Mocha.Base.Brush}"
-        Foreground="{StaticResource Mocha.Text.Brush}"
-        FontFamily="{StaticResource Mocha.Font}"
+        Background="{DynamicResource Mocha.Base.Brush}"
+        Foreground="{DynamicResource Mocha.Text.Brush}"
+        FontFamily="{DynamicResource Mocha.Font}"
         FontSize="13"
         UseLayoutRounding="True"
         ShowInTaskbar="False"
@@ -25,11 +25,11 @@
 
         <TextBlock Grid.Row="0"
                    Text="Snippet fields"
-                   Style="{StaticResource Mocha.Body.Title}"
+                   Style="{DynamicResource Mocha.Body.Title}"
                    Margin="0,0,0,4" />
         <TextBlock Grid.Row="1"
                    Text="Fill the values this snippet needs before paste."
-                   Style="{StaticResource Mocha.Body.Caption}"
+                   Style="{DynamicResource Mocha.Body.Caption}"
                    Margin="0,0,0,12" />
 
         <ScrollViewer Grid.Row="2"
@@ -44,12 +44,12 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,16,0,0">
-            <Button Style="{StaticResource Mocha.Button}"
+            <Button Style="{DynamicResource Mocha.Button}"
                     Content="Cancel"
                     Width="80"
                     IsCancel="True"
                     Click="OnCancel" />
-            <Button Style="{StaticResource Mocha.Button.Accent}"
+            <Button Style="{DynamicResource Mocha.Button.Accent}"
                     Content="OK"
                     Width="80"
                     Margin="8,0,0,0"

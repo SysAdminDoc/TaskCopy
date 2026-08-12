@@ -11,9 +11,9 @@
         Title="TaskCopy — Settings"
         Width="980" Height="680"
         MinWidth="760" MinHeight="520"
-        Background="{StaticResource Mocha.Base.Brush}"
-        Foreground="{StaticResource Mocha.Text.Brush}"
-        FontFamily="{StaticResource Mocha.Font}"
+        Background="{DynamicResource Mocha.Base.Brush}"
+        Foreground="{DynamicResource Mocha.Text.Brush}"
+        FontFamily="{DynamicResource Mocha.Font}"
         FontSize="13"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
@@ -43,17 +43,17 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Text="Library"
-                           Style="{StaticResource Mocha.Body.Title}" />
+                           Style="{DynamicResource Mocha.Body.Title}" />
                 <TextBlock Grid.Row="1"
                            Text="{Binding SnippetCountStatus}"
-                           Style="{StaticResource Mocha.Body.Caption}"
+                           Style="{DynamicResource Mocha.Body.Caption}"
                            Margin="0,2,0,0" />
             </Grid>
 
             <ListBox Grid.Row="1"
                      x:Name="SnippetList"
-                     Style="{StaticResource Mocha.ListBox}"
-                     ItemContainerStyle="{StaticResource Mocha.ListBoxItem}"
+                     Style="{DynamicResource Mocha.ListBox}"
+                     ItemContainerStyle="{DynamicResource Mocha.ListBoxItem}"
                      ItemsSource="{Binding Snippets}"
                      SelectedItem="{Binding SelectedSnippet}"
                      AllowDrop="True"
@@ -66,7 +66,7 @@
                      AutomationProperties.Name="Snippets"
                      AutomationProperties.HelpText="List of saved snippets. Drag to reorder. Del to delete, Ctrl+N to add, F2 to rename. Right-click to move to group. Use Add / Delete / Move buttons or arrow keys.">
                 <ListBox.ContextMenu>
-                    <ContextMenu x:Name="SnippetListContextMenu" Style="{StaticResource Mocha.ContextMenu}" />
+                    <ContextMenu x:Name="SnippetListContextMenu" Style="{DynamicResource Mocha.ContextMenu}" />
                 </ListBox.ContextMenu>
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:Snippet}">
@@ -80,7 +80,7 @@
                                     Height="34"
                                     CornerRadius="4"
                                     ClipToBounds="True"
-                                    Background="{StaticResource Mocha.Surface0.Brush}"
+                                    Background="{DynamicResource Mocha.Surface0.Brush}"
                                     Margin="0,0,8,0"
                                     Visibility="{Binding IsImage, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <Image Source="{Binding ImagePng, Converter={StaticResource ImagePngToImageSourceConverter}}"
@@ -88,10 +88,10 @@
                             </Border>
                             <StackPanel Grid.Column="1">
                                 <TextBlock Text="{Binding Title}"
-                                           Style="{StaticResource Mocha.Body}"
+                                           Style="{DynamicResource Mocha.Body}"
                                            ToolTip="{Binding Title}" />
                                 <TextBlock Text="{Binding Preview}"
-                                           Style="{StaticResource Mocha.Body.Subtle}"
+                                           Style="{DynamicResource Mocha.Body.Subtle}"
                                            Margin="0,2,0,0"
                                            ToolTip="{Binding Body}" />
                             </StackPanel>
@@ -101,29 +101,29 @@
             </ListBox>
 
             <Border Grid.Row="1"
-                    Style="{StaticResource Mocha.Panel}"
+                    Style="{DynamicResource Mocha.Panel}"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Center"
                     Margin="18"
                     Visibility="{Binding HasSnippets, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                 <StackPanel>
                     <TextBlock Text="No snippets yet"
-                               Style="{StaticResource Mocha.Body.Section}"
+                               Style="{DynamicResource Mocha.Body.Section}"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="Add a text snippet or capture the current clipboard image to start building your library."
-                               Style="{StaticResource Mocha.Body.Caption}"
+                               Style="{DynamicResource Mocha.Body.Caption}"
                                TextAlignment="Center"
                                Margin="0,6,0,0" />
                 </StackPanel>
             </Border>
 
             <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
-                <Button Style="{StaticResource Mocha.Button.Accent}" Content="Add text" Command="{Binding AddSnippetCommand}" />
-                <Button Style="{StaticResource Mocha.Button}" Content="Image" Command="{Binding AddImageFromClipboardCommand}" Margin="8,0,0,0"
+                <Button Style="{DynamicResource Mocha.Button.Accent}" Content="Add text" Command="{Binding AddSnippetCommand}" />
+                <Button Style="{DynamicResource Mocha.Button}" Content="Image" Command="{Binding AddImageFromClipboardCommand}" Margin="8,0,0,0"
                         ToolTip="Create an image snippet from the current clipboard image. Images are never captured in the background." />
-                <Button Style="{StaticResource Mocha.Button.Danger}" Content="Delete" Command="{Binding DeleteSnippetCommand}" Margin="8,0,0,0" />
-                <Button Style="{StaticResource Mocha.Button}" Content="↑" Command="{Binding MoveUpCommand}" Margin="8,0,0,0" Width="34" />
-                <Button Style="{StaticResource Mocha.Button}" Content="↓" Command="{Binding MoveDownCommand}" Margin="4,0,0,0" Width="34" />
+                <Button Style="{DynamicResource Mocha.Button.Danger}" Content="Delete" Command="{Binding DeleteSnippetCommand}" Margin="8,0,0,0" />
+                <Button Style="{DynamicResource Mocha.Button}" Content="↑" Command="{Binding MoveUpCommand}" Margin="8,0,0,0" Width="34" />
+                <Button Style="{DynamicResource Mocha.Button}" Content="↓" Command="{Binding MoveDownCommand}" Margin="4,0,0,0" Width="34" />
             </WrapPanel>
         </Grid>
 
@@ -142,16 +142,16 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Snippet" Style="{StaticResource Mocha.Body.Title}" Margin="2,0,0,8" />
+                <TextBlock Text="Snippet" Style="{DynamicResource Mocha.Body.Title}" Margin="2,0,0,8" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,2,4">
-                    <TextBlock Text="Group" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Text="Group" Style="{DynamicResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="0,0,6,0" />
                     <ComboBox Width="180"
                               ItemsSource="{Binding Groups}"
                               SelectedItem="{Binding EditGroup}"
                               DisplayMemberPath="Name"
                               IsEnabled="{Binding HasSelection}"
                               ToolTip="Move this snippet to a group, or pick (Ungrouped)." />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Manage…"
                             Command="{Binding ManageGroupsCommand}"
                             Margin="6,0,0,0"
@@ -159,7 +159,7 @@
                 </StackPanel>
             </Grid>
             <TextBox Grid.Row="1"
-                     Style="{StaticResource Mocha.TextBox}"
+                     Style="{DynamicResource Mocha.TextBox}"
                      Text="{Binding EditTitle, UpdateSourceTrigger=PropertyChanged}"
                      IsEnabled="{Binding HasSelection}"
                      AutomationProperties.Name="Snippet title" />
@@ -176,36 +176,36 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Body" Style="{StaticResource Mocha.Body.Section}" Margin="2,0,0,4" />
+                    <TextBlock Text="Body" Style="{DynamicResource Mocha.Body.Section}" Margin="2,0,0,4" />
                     <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,2,4">
-                        <CheckBox Style="{StaticResource Mocha.CheckBox}"
+                        <CheckBox Style="{DynamicResource Mocha.CheckBox}"
                                   Content="Pin"
                                   IsChecked="{Binding EditPinned}"
                                   IsEnabled="{Binding HasSelection}"
                                   ToolTip="Promote this snippet to the top of the flyout (in 'Most used' or 'Recently used' modes)." />
-                        <CheckBox Style="{StaticResource Mocha.CheckBox}"
+                        <CheckBox Style="{DynamicResource Mocha.CheckBox}"
                                   Content="Monospace"
                                   IsChecked="{Binding EditIsMonospace}"
                                   IsEnabled="{Binding HasSelection}"
                                   ToolTip="Switch this snippet's editor and tooltip to a monospaced font (good for code)."
                                   Margin="14,0,0,0" />
-                        <CheckBox Style="{StaticResource Mocha.CheckBox}"
+                        <CheckBox Style="{DynamicResource Mocha.CheckBox}"
                                   Content="Allow shell"
                                   IsChecked="{Binding EditAllowShell}"
                                   IsEnabled="{Binding HasSelection}"
                                   ToolTip="Allow {{shell:cmd}} placeholders in this snippet. Commands run locally; imported snippets never enable this automatically."
                                   Margin="14,0,0,0" />
-                        <TextBlock Text="Hotkey:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="14,0,6,0" />
+                        <TextBlock Text="Hotkey:" Style="{DynamicResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="14,0,6,0" />
                         <TextBlock Text="{Binding EditQuickHotkeyDisplay}"
-                                   Style="{StaticResource Mocha.Body}"
+                                   Style="{DynamicResource Mocha.Body}"
                                    VerticalAlignment="Center"
                                    MinWidth="100"
                                    Margin="0,0,6,0" />
-                        <Button Style="{StaticResource Mocha.Button}"
+                        <Button Style="{DynamicResource Mocha.Button}"
                                 Content="Capture…"
                                 Command="{Binding RebindQuickHotkeyCommand}"
                                 ToolTip="Bind any global combo (e.g. Ctrl+Alt+S) so this snippet copies (+ auto-pastes) from anywhere without opening the flyout." />
-                        <Button Style="{StaticResource Mocha.Button}"
+                        <Button Style="{DynamicResource Mocha.Button}"
                                 Content="Clear"
                                 Command="{Binding ClearQuickHotkeyBindingCommand}"
                                 Margin="4,0,0,0"
@@ -213,7 +213,7 @@
                     </WrapPanel>
                 </Grid>
                 <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="Paste:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="2,0,6,0" />
+                    <TextBlock Text="Paste:" Style="{DynamicResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="2,0,6,0" />
                     <ComboBox Width="160"
                               ItemsSource="{Binding PasteModeOptions}"
                               SelectedItem="{Binding EditPasteMode}"
@@ -221,33 +221,33 @@
                               IsEnabled="{Binding HasSelection}"
                               ToolTip="Auto (default) sends Ctrl+V. Type characters synthesises each character via Unicode SendInput — use it for terminals and other apps that swallow Ctrl+V."
                               Margin="0,0,14,0" />
-                    <TextBlock Text="Insert:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="2,0,8,0" />
-                    <Button Style="{StaticResource Mocha.Button}" Content="{}{{date}}" Click="OnInsertDate"
+                    <TextBlock Text="Insert:" Style="{DynamicResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="2,0,8,0" />
+                    <Button Style="{DynamicResource Mocha.Button}" Content="{}{{date}}" Click="OnInsertDate"
                             ToolTip="Inserts {{date}} — replaced by today's ISO date at paste time." />
-                    <Button Style="{StaticResource Mocha.Button}" Content="{}{{time}}" Click="OnInsertTime" Margin="4,0,0,0"
+                    <Button Style="{DynamicResource Mocha.Button}" Content="{}{{time}}" Click="OnInsertTime" Margin="4,0,0,0"
                             ToolTip="Inserts {{time}} — replaced by current local time at paste time." />
-                    <Button Style="{StaticResource Mocha.Button}" Content="{}{{clipboard}}" Click="OnInsertClipboard" Margin="4,0,0,0"
+                    <Button Style="{DynamicResource Mocha.Button}" Content="{}{{clipboard}}" Click="OnInsertClipboard" Margin="4,0,0,0"
                             ToolTip="Inserts {{clipboard}} — replaced by the contents of the clipboard before TaskCopy opened." />
-                    <Button Style="{StaticResource Mocha.Button}" Content="{}{{cursor}}" Click="OnInsertCursor" Margin="4,0,0,0"
+                    <Button Style="{DynamicResource Mocha.Button}" Content="{}{{cursor}}" Click="OnInsertCursor" Margin="4,0,0,0"
                             ToolTip="Inserts {{cursor}} — after auto-paste, places the caret here." />
-                    <Button Style="{StaticResource Mocha.Button}" Content="{}{{ask:…}}" Click="OnInsertAsk" Margin="4,0,0,0"
+                    <Button Style="{DynamicResource Mocha.Button}" Content="{}{{ask:…}}" Click="OnInsertAsk" Margin="4,0,0,0"
                             ToolTip="Inserts {{ask:Field}} — prompts for a value at paste time." />
-                    <Button Style="{StaticResource Mocha.Button}" Content="{}{{form:…}}" Click="OnInsertForm" Margin="4,0,0,0"
+                    <Button Style="{DynamicResource Mocha.Button}" Content="{}{{form:…}}" Click="OnInsertForm" Margin="4,0,0,0"
                             ToolTip="Inserts {{form:Field1|Field2}} — prompts for several reusable field values at paste time." />
-                    <Button Style="{StaticResource Mocha.Button}" Content="{}{{shell:…}}" Click="OnInsertShell" Margin="4,0,0,0"
+                    <Button Style="{DynamicResource Mocha.Button}" Content="{}{{shell:…}}" Click="OnInsertShell" Margin="4,0,0,0"
                             ToolTip="Inserts {{shell:cmd}} — runs only when Allow shell is enabled for this snippet." />
-                    <Border Width="1" Background="{StaticResource Mocha.Surface1.Brush}" Margin="10,4" />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Border Width="1" Background="{DynamicResource Mocha.Surface1.Brush}" Margin="10,4" />
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Open in editor…"
                             Command="{Binding OpenInExternalEditorCommand}"
                             ToolTip="Open the body in your preferred external editor (resolves Settings → Editor command, then $EDITOR, then `code --wait`, then notepad). Saves back on close." />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="History…"
                             Command="{Binding ShowBodyHistoryCommand}"
                             Margin="4,0,0,0"
                             ToolTip="Show up to 10 past versions of this snippet's body. Restore any of them with one click." />
-                    <TextBlock Text="Show in app:" Style="{StaticResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="14,0,6,0" />
-                    <TextBox Style="{StaticResource Mocha.TextBox}"
+                    <TextBlock Text="Show in app:" Style="{DynamicResource Mocha.Body.Subtle}" VerticalAlignment="Center" Margin="14,0,6,0" />
+                    <TextBox Style="{DynamicResource Mocha.TextBox}"
                              Width="200"
                              Text="{Binding EditTargetAppGlob, UpdateSourceTrigger=PropertyChanged}"
                              IsEnabled="{Binding HasSelection}"
@@ -255,7 +255,7 @@
                 </WrapPanel>
                 <Grid Grid.Row="2">
                     <TextBox x:Name="BodyEditor"
-                             Style="{StaticResource Mocha.TextBox}"
+                             Style="{DynamicResource Mocha.TextBox}"
                              Text="{Binding EditBody, UpdateSourceTrigger=PropertyChanged}"
                              IsEnabled="{Binding HasSelection}"
                              FontFamily="{Binding EditBodyFontFamily}"
@@ -277,10 +277,10 @@
                                        WordWrap="True"
                                        HorizontalScrollBarVisibility="Auto"
                                        VerticalScrollBarVisibility="Auto"
-                                       Background="{StaticResource Mocha.Mantle.Brush}"
-                                       Foreground="{StaticResource Mocha.Text.Brush}"
-                                       LineNumbersForeground="{StaticResource Mocha.Subtext0.Brush}"
-                                       BorderBrush="{StaticResource Mocha.Overlay0.Brush}"
+                                       Background="{DynamicResource Mocha.Mantle.Brush}"
+                                       Foreground="{DynamicResource Mocha.Text.Brush}"
+                                       LineNumbersForeground="{DynamicResource Mocha.Subtext0.Brush}"
+                                       BorderBrush="{DynamicResource Mocha.Overlay0.Brush}"
                                        BorderThickness="1"
                                        Padding="8,6"
                                        AutomationProperties.Name="Snippet body code editor"
@@ -288,7 +288,7 @@
                                        Visibility="{Binding EditIsMonospace, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </Grid>
                 <Border Grid.Row="3"
-                        Style="{StaticResource Mocha.Panel}"
+                        Style="{DynamicResource Mocha.Panel}"
                         Padding="10,8"
                         Margin="0,6,0,0"
                         MaxHeight="80"
@@ -299,21 +299,21 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <TextBlock Text="Preview"
-                                   Style="{StaticResource Mocha.Body.Header}"
+                                   Style="{DynamicResource Mocha.Body.Header}"
                                    Margin="0,0,0,4" />
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                             <TextBlock Text="{Binding EditBodyPreview}"
                                        FontFamily="{Binding EditBodyFontFamily}"
-                                       Foreground="{StaticResource Mocha.Subtext0.Brush}"
+                                       Foreground="{DynamicResource Mocha.Subtext0.Brush}"
                                        TextWrapping="Wrap" />
                         </ScrollViewer>
                     </Grid>
                 </Border>
             </Grid>
 
-            <Border Grid.Row="3" Style="{StaticResource Mocha.Separator}" Margin="0,12,0,8" />
+            <Border Grid.Row="3" Style="{DynamicResource Mocha.Separator}" Margin="0,12,0,8" />
 
-            <Border Grid.Row="4" Style="{StaticResource Mocha.Panel}" Padding="14,12">
+            <Border Grid.Row="4" Style="{DynamicResource Mocha.Panel}" Padding="14,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -330,7 +330,7 @@
 
                 <TextBlock Grid.Row="0" Grid.Column="0"
                            Text="Preferences"
-                           Style="{StaticResource Mocha.Body.Section}"
+                           Style="{DynamicResource Mocha.Body.Section}"
                            VerticalAlignment="Center" />
                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse Width="8" Height="8" VerticalAlignment="Center"
@@ -338,13 +338,13 @@
                              Margin="0,0,6,0"
                              ToolTip="{Binding HotkeyStatusLabel}" />
                     <TextBlock Text="{Binding HotkeyDisplay}"
-                               Style="{StaticResource Mocha.Body}"
+                               Style="{DynamicResource Mocha.Body}"
                                VerticalAlignment="Center"
                                Margin="0,0,10,0" />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Rebind…"
                             Command="{Binding RebindHotkeyCommand}" />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Test"
                             Command="{Binding TestHotkeyCommand}"
                             Margin="6,0,0,0"
@@ -352,34 +352,34 @@
                 </StackPanel>
 
                 <CheckBox Grid.Row="1" Grid.ColumnSpan="2"
-                          Style="{StaticResource Mocha.CheckBox}"
+                          Style="{DynamicResource Mocha.CheckBox}"
                           Content="Start TaskCopy with Windows"
                           IsChecked="{Binding StartWithWindows}"
                           Margin="0,10,0,0" />
 
                 <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
-                          Style="{StaticResource Mocha.CheckBox}"
+                          Style="{DynamicResource Mocha.CheckBox}"
                           Content="Auto-paste into the previous window after copy"
                           IsChecked="{Binding AutoPaste}"
                           ToolTip="When ON, TaskCopy refocuses the window that was active before you opened the flyout and sends Ctrl+V automatically."
                           Margin="0,6,0,0" />
 
                 <WrapPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,0">
-                    <CheckBox Style="{StaticResource Mocha.CheckBox}"
+                    <CheckBox Style="{DynamicResource Mocha.CheckBox}"
                               Content="Capture recent clipboard items"
                               IsChecked="{Binding RecentClipsEnabled}"
                               ToolTip="When ON, TaskCopy keeps the last ~50 plain-text clipboard items. Respects the standard 'do not include in clipboard history' flag set by password managers." />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Clear"
                             Command="{Binding ClearRecentClipsCommand}"
                             Margin="12,0,0,0"
                             ToolTip="Delete every stored recent clipboard item from the database." />
-                    <CheckBox Style="{StaticResource Mocha.CheckBox}"
+                    <CheckBox Style="{DynamicResource Mocha.CheckBox}"
                               Content="Encrypt backups with password"
                               IsChecked="{Binding BackupEncrypted}"
                               Margin="20,0,0,0"
                               ToolTip="When ON, rotated backups are encrypted with AES-256-GCM. You will be prompted for a password. Lose the password = lose the encrypted backups (no recovery)." />
-                    <CheckBox Style="{StaticResource Mocha.CheckBox}"
+                    <CheckBox Style="{DynamicResource Mocha.CheckBox}"
                               Content="Encrypt snippet store with password"
                               IsChecked="{Binding StoreEncrypted}"
                               Margin="20,0,0,0"
@@ -398,7 +398,7 @@
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" Grid.Column="0"
                                Text="Flyout order"
-                               Style="{StaticResource Mocha.Body.Header}"
+                               Style="{DynamicResource Mocha.Body.Header}"
                                VerticalAlignment="Center" />
                     <ComboBox Grid.Row="0" Grid.Column="1"
                               Width="240"
@@ -408,7 +408,7 @@
                               ToolTip="How the snippet flyout sorts items. Manual respects your drag order exactly; other modes always promote pinned snippets to the top." />
                     <TextBlock Grid.Row="1" Grid.Column="0"
                                Text="Flyout position"
-                               Style="{StaticResource Mocha.Body.Header}"
+                               Style="{DynamicResource Mocha.Body.Header}"
                                VerticalAlignment="Center"
                                Margin="0,8,0,0" />
                     <ComboBox Grid.Row="1" Grid.Column="1"
@@ -420,7 +420,7 @@
                               ToolTip="Where the snippet flyout opens. 'At cursor' is the default. 'Active monitor center' is more comfortable on ultrawide monitors." />
                     <TextBlock Grid.Row="2" Grid.Column="0"
                                Text="Theme"
-                               Style="{StaticResource Mocha.Body.Header}"
+                               Style="{DynamicResource Mocha.Body.Header}"
                                VerticalAlignment="Center"
                                Margin="0,8,0,0" />
                     <ComboBox Grid.Row="2" Grid.Column="1"
@@ -435,46 +435,46 @@
                 <WrapPanel Grid.Row="5" Grid.ColumnSpan="2"
                            Orientation="Horizontal"
                            Margin="0,12,0,0">
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Export snippets…"
                             Command="{Binding ExportSnippetsCommand}"
                             ToolTip="Save all snippets and groups as a JSON file." />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Install pack / import…"
                             Command="{Binding ImportSnippetsCommand}"
                             ToolTip="Load snippets from .taskpack, .json, or Espanso .yml/.yaml. Duplicates (by title) are skipped. Espanso imports go into a group named after the YAML file."
                             Margin="8,0,0,0" />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Trash…"
                             Command="{Binding ShowTrashCommand}"
                             Margin="8,0,0,0"
                             ToolTip="Restore recently deleted snippets. Auto-purged after 30 days." />
-                    <Border Width="1" Background="{StaticResource Mocha.Surface1.Brush}" Margin="12,4" />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Border Width="1" Background="{DynamicResource Mocha.Surface1.Brush}" Margin="12,4" />
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Restore backup…"
                             Command="{Binding RestoreBackupCommand}"
                             ToolTip="Pick a rotated backup (.bak.0/1/2) and swap it in for the current snippets.db. A pre-restore snapshot is taken so the operation is itself reversible." />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Copy diagnostics"
                             Command="{Binding CopyDiagnosticsCommand}"
                             Margin="8,0,0,0"
                             ToolTip="Bundles version, schema version, snippet count, last-backup timestamp, and the tail of crash.log into a Markdown block on the clipboard — paste it into a GitHub issue." />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="File issue"
                             Command="{Binding FileIssueCommand}"
                             Margin="8,0,0,0"
                             ToolTip="If you have the `gh` CLI on PATH and are authenticated, files a GitHub issue with the diagnostics bundle in one click. Falls back to clipboard otherwise." />
-                    <Button Style="{StaticResource Mocha.Button.Danger}"
+                    <Button Style="{DynamicResource Mocha.Button.Danger}"
                             Content="Reset to defaults…"
                             Command="{Binding ResetToDefaultsCommand}"
                             Margin="8,0,0,0"
                             ToolTip="Clear all preferences (hotkey, theme, auto-paste, etc.) and restart. Snippets, groups, and trash are NOT touched." />
-                    <Border Width="1" Background="{StaticResource Mocha.Surface1.Brush}" Margin="12,4" />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Border Width="1" Background="{DynamicResource Mocha.Surface1.Brush}" Margin="12,4" />
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Open log folder"
                             Command="{Binding OpenLogFolderCommand}"
                             ToolTip="Opens %LOCALAPPDATA%\TaskCopy\logs — useful when filing a bug." />
-                    <Button Style="{StaticResource Mocha.Button}"
+                    <Button Style="{DynamicResource Mocha.Button}"
                             Content="Open data folder"
                             Command="{Binding OpenDataFolderCommand}"
                             ToolTip="Opens %LOCALAPPDATA%\TaskCopy — contains snippets.db and backups."
@@ -485,18 +485,18 @@
 
             <Border Grid.Row="0"
                     Grid.RowSpan="3"
-                    Style="{StaticResource Mocha.Panel}"
+                    Style="{DynamicResource Mocha.Panel}"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Center"
                     MaxWidth="360"
                     Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                 <StackPanel>
                     <TextBlock Text="Select a snippet"
-                               Style="{StaticResource Mocha.Body.Title}"
+                               Style="{DynamicResource Mocha.Body.Title}"
                                TextAlignment="Center"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="Choose an item from the library, or add a new snippet to edit its title, body, rules, and paste behavior."
-                               Style="{StaticResource Mocha.Body.Caption}"
+                               Style="{DynamicResource Mocha.Body.Caption}"
                                TextAlignment="Center"
                                Margin="0,8,0,0" />
                 </StackPanel>
@@ -504,7 +504,7 @@
         </Grid>
 
         <!-- Status bar -->
-        <Border Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource Mocha.Separator}" Margin="0,12,0,6" />
+        <Border Grid.Row="1" Grid.ColumnSpan="2" Style="{DynamicResource Mocha.Separator}" Margin="0,12,0,6" />
         <Grid Grid.Row="1" Grid.ColumnSpan="2" VerticalAlignment="Bottom" Margin="2,0,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -512,11 +512,11 @@
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0"
                        Text="{Binding StatusMessage}"
-                       Style="{StaticResource Mocha.Body.Subtle}"
+                       Style="{DynamicResource Mocha.Body.Subtle}"
                        TextTrimming="CharacterEllipsis" />
             <TextBlock Grid.Column="1"
                        Text="{Binding SnippetCountStatus}"
-                       Style="{StaticResource Mocha.Body.Subtle}"
+                       Style="{DynamicResource Mocha.Body.Subtle}"
                        Margin="12,0,2,0" />
         </Grid>
     </Grid>

@@ -6,9 +6,9 @@
         Height="206"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource Mocha.Base.Brush}"
-        Foreground="{StaticResource Mocha.Text.Brush}"
-        FontFamily="{StaticResource Mocha.Font}"
+        Background="{DynamicResource Mocha.Base.Brush}"
+        Foreground="{DynamicResource Mocha.Text.Brush}"
+        FontFamily="{DynamicResource Mocha.Font}"
         FontSize="13"
         UseLayoutRounding="True"
         ShowInTaskbar="False"
@@ -23,17 +23,17 @@
 
         <TextBlock Grid.Row="0"
                    x:Name="PromptLabel"
-                   Style="{StaticResource Mocha.Body.Section}"
+                   Style="{DynamicResource Mocha.Body.Section}"
                    Margin="0,0,0,10" />
 
         <TextBox Grid.Row="1"
                  x:Name="ValueBox"
-                 Style="{StaticResource Mocha.TextBox}"
+                 Style="{DynamicResource Mocha.TextBox}"
                  KeyDown="OnKeyDown" />
 
         <PasswordBox Grid.Row="1"
                      x:Name="SecretBox"
-                     Style="{StaticResource Mocha.PasswordBox}"
+                     Style="{DynamicResource Mocha.PasswordBox}"
                      Visibility="Collapsed"
                      KeyDown="OnKeyDown" />
 
@@ -41,12 +41,12 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,12,0,0">
-            <Button Style="{StaticResource Mocha.Button}"
+            <Button Style="{DynamicResource Mocha.Button}"
                     Content="Cancel"
                     Width="80"
                     IsCancel="True"
                     Click="OnCancel" />
-            <Button Style="{StaticResource Mocha.Button.Accent}"
+            <Button Style="{DynamicResource Mocha.Button.Accent}"
                     Content="OK"
                     Width="80"
                     Margin="8,0,0,0"

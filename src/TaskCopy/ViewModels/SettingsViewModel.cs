@@ -416,15 +416,13 @@ public partial class SettingsViewModel : ObservableObject
             ThemeService.UpdatePreference(value.Value);
             OnPropertyChanged();
 
-            // I16 Option A: offer immediate-apply via relaunch since the brushes
-            // are bound StaticResource and a live dictionary swap won't propagate
-            // into already-shown windows. Mocha/Latte refactor to DynamicResource
-            // is the Option B follow-up.
+            // I16 Option B: the palette is DynamicResource-backed, so App can
+            // apply the new dictionary immediately without a relaunch.
             ApplyThemeRequested?.Invoke(this, value.Label);
         }
     }
 
-    /// <summary>App-level subscribes to offer "restart now to apply" UX.</summary>
+    /// <summary>App-level subscribes to apply the selected palette immediately.</summary>
     public event EventHandler<string>? ApplyThemeRequested;
 
     public FlyoutSortModeOption SelectedFlyoutSort

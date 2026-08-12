@@ -5,9 +5,9 @@
         Width="460" Height="340"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Mocha.Base.Brush}"
-        Foreground="{StaticResource Mocha.Text.Brush}"
-        FontFamily="{StaticResource Mocha.Font}"
+        Background="{DynamicResource Mocha.Base.Brush}"
+        Foreground="{DynamicResource Mocha.Text.Brush}"
+        FontFamily="{DynamicResource Mocha.Font}"
         FontSize="13"
         UseLayoutRounding="True">
 
@@ -22,41 +22,41 @@
 
         <TextBlock Grid.Row="0"
                    Text="TaskCopy"
-                   Style="{StaticResource Mocha.Body.Title}" />
+                   Style="{DynamicResource Mocha.Body.Title}" />
 
         <TextBlock Grid.Row="1"
                    x:Name="VersionText"
-                   Style="{StaticResource Mocha.Body.Subtle}"
+                   Style="{DynamicResource Mocha.Body.Subtle}"
                    Margin="0,4,0,0" />
 
         <TextBlock Grid.Row="2"
                    Text="Single-click clipboard snippet menu for Windows."
-                   Style="{StaticResource Mocha.Body.Caption}"
+                   Style="{DynamicResource Mocha.Body.Caption}"
                    Margin="0,12,0,0"
                    TextWrapping="Wrap" />
 
         <Border Grid.Row="3"
-                Style="{StaticResource Mocha.Panel}"
+                Style="{DynamicResource Mocha.Panel}"
                 Margin="0,16,0,0">
         <StackPanel>
             <TextBlock x:Name="UsageStatsText"
-                       Style="{StaticResource Mocha.Body.Section}"
-                       Foreground="{StaticResource Mocha.Mauve.Brush}"
+                       Style="{DynamicResource Mocha.Body.Section}"
+                       Foreground="{DynamicResource Mocha.Mauve.Brush}"
                        TextWrapping="Wrap"
                        Margin="0,0,0,8" />
-            <TextBlock Style="{StaticResource Mocha.Body.Subtle}"
+            <TextBlock Style="{DynamicResource Mocha.Body.Subtle}"
                        TextWrapping="Wrap"
                        Text="MIT licensed. Tray + global hotkey (Ctrl+Alt+V by default). Storage at %LOCALAPPDATA%\TaskCopy\." />
             <TextBlock x:Name="RepoLink"
-                       Style="{StaticResource Mocha.Body}"
-                       Foreground="{StaticResource Mocha.Blue.Brush}"
+                       Style="{DynamicResource Mocha.Body}"
+                       Foreground="{DynamicResource Mocha.Blue.Brush}"
                        Cursor="Hand"
                        Text="https://github.com/SysAdminDoc/TaskCopy"
                        Margin="0,8,0,0"
                        MouseLeftButtonUp="OnOpenRepo" />
             <TextBlock x:Name="LicenseLink"
-                       Style="{StaticResource Mocha.Body}"
-                       Foreground="{StaticResource Mocha.Blue.Brush}"
+                       Style="{DynamicResource Mocha.Body}"
+                       Foreground="{DynamicResource Mocha.Blue.Brush}"
                        Cursor="Hand"
                        Text="View LICENSE"
                        Margin="0,4,0,0"
@@ -65,7 +65,7 @@
         </Border>
 
         <Button Grid.Row="4"
-                Style="{StaticResource Mocha.Button}"
+                Style="{DynamicResource Mocha.Button}"
                 Content="Close"
                 HorizontalAlignment="Right"
                 Width="92"
